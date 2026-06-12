@@ -131,7 +131,8 @@ describe('UbmTimeline — T-O3.1', () => {
 
   it('rodapé de imutabilidade presente', () => {
     render(<UbmTimeline eventos={EVENTOS} />)
-    expect(screen.getByText(/REGISTRO IMUTÁVEL|costura não se desfaz/i)).toBeInTheDocument()
+    // BUG #3: microcopy atualizado pelo ux-ui ("Histórico permanente · não editável")
+    expect(screen.getByText(/histórico permanente|não editável/i)).toBeInTheDocument()
   })
 
   it('lista vazia exibe estado vazio (não erro)', () => {

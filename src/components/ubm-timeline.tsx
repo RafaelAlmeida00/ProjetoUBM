@@ -166,7 +166,7 @@ export function UbmTimeline({ eventos, compacto = false }: UbmTimelineProps) {
       {!compacto && (
         <footer className="ubm-timeline-footer">
           <span className="ubm-cota ubm-cota--muted">
-            REGISTRO IMUTÁVEL · A COSTURA NÃO SE DESFAZ
+            Histórico permanente · não editável
           </span>
         </footer>
       )}

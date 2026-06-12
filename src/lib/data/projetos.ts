@@ -37,6 +37,10 @@ export interface Indicacao {
   mensagem: string | null
   created_at: string
   deleted_at: string | null
+  // campos de identidade retornados pela RPC indicacoes_coordenador (Bug #6)
+  aluno_nome: string
+  aluno_email: string
+  curso: string
   [key: string]: unknown
 }
 
@@ -113,19 +117,17 @@ export async function obterTimelinePublica(projetoId: string): Promise<EventoTim
 }
 
 /**
- * Lista indicações de um projeto (autenticado, RLS aplica).
- * Visível: coordenador-do-curso-da-dor + admin + própria (RN25/CA25).
+ * Lista indicações de um projeto com identidade do candidato (Bug #6).
+ * Delega à RPC indicacoes_coordenador (SECURITY DEFINER):
+ *   - coord-do-curso-da-dor e admin: recebem aluno_nome, aluno_email, curso.
+ *   - demais papéis: RPC retorna vazio silenciosamente (CA25/RS9).
  */
 export async function listarIndicacoes(projetoId: string): Promise<Indicacao[]> {
   try {
     const supabase = await createSupabaseServerClient()
-    const { data, error } = await supabase
-      .from('indicacao')
-      .select(
-        'id, projeto_id, pessoa_id, papel_pretendido, mensagem, created_at, deleted_at',
-      )
-      .eq('projeto_id', projetoId)
-      .order('created_at', { ascending: true })
+    const { data, error } = await supabase.rpc('indicacoes_coordenador', {
+      p_projeto_id: projetoId,
+    })
     if (error || !data) return []
     return data as Indicacao[]
   } catch {

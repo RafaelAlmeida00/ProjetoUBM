@@ -77,7 +77,10 @@ const NAV_ITEMS: NavItem[] = [
 ]
 
 interface NavRailProps {
+  /** Papel único (legado — mantido para compat com testes existentes) */
   role?: string
+  /** Papéis reais do usuário (preferencial — lidos de papel_usuario, não do JWT claim) */
+  papeis?: string[]
   isAdmin?: boolean
   isOpen?: boolean
   onClose?: () => void
@@ -97,12 +100,16 @@ function LogoutItem({ onClose }: { onClose?: () => void }) {
   )
 }
 
-export function NavRail({ role, isAdmin, onClose }: NavRailProps) {
+export function NavRail({ role, papeis, isAdmin, onClose }: NavRailProps) {
   const pathname = usePathname()
+
+  // BUG D1: usa `papeis` (array real de papel_usuario) quando disponível;
+  // cai para `role` legado para compat com testes e render sem supabase.
+  const roleSet = papeis ?? (role ? [role] : [])
 
   const visibleItems = NAV_ITEMS.filter((item) => {
     if (item.adminOnly) return isAdmin
-    if (item.roles) return item.roles.includes(role ?? '')
+    if (item.roles) return item.roles.some((r) => roleSet.includes(r))
     return true
   })
 

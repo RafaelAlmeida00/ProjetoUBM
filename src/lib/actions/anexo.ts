@@ -20,6 +20,13 @@ export async function uploadAnexo(
 ): Promise<{ ok: true; anexo: AnexoMeta } | { ok: false; error: string }> {
   try {
     const supabase = await createSupabaseServerClient()
+
+    // Resolve sessão server-side (nunca confiar em client-supplied user_id)
+    const { data: { user } } = await supabase.auth.getUser()
+    if (!user) {
+      return { ok: false, error: 'Sessão necessária.' }
+    }
+
     const { data, error } = await supabase
       .from('anexo_dor')
       .insert({
@@ -28,6 +35,7 @@ export async function uploadAnexo(
         nome_original: meta.nome_original,
         mime_type: meta.mime_type,
         tamanho_bytes: meta.tamanho_bytes,
+        enviado_por: user.id,  // NOT NULL + RLS with_check: enviado_por = auth.uid()
       })
       .select('id, nome_original, mime_type, tamanho_bytes')
       .single()

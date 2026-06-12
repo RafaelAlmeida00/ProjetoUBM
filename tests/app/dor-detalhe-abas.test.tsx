@@ -215,7 +215,7 @@ describe('DorDetalhe — abas EQUIPE/TIMELINE (P1.1)', () => {
         timeline={EVENTOS}
       />,
     )
-    // A aba default agora é "Linha do tempo da dor"; a do projeto (005) é a 2ª.
+    // BUG #1: "Linha do tempo do projeto" é a 1ª/default; clicar nela garante painel visível.
     fireEvent.click(screen.getByRole('tab', { name: 'Linha do tempo do projeto' }))
     expect(document.querySelector('.ubm-timeline')).toBeInTheDocument()
   })

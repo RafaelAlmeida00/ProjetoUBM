@@ -104,7 +104,7 @@ function DorTimeline({ eventos }: { eventos: EventoTimelineDor[] }) {
         ))}
       </ol>
       <footer className="ubm-dor-timeline-footer">
-        <span className="ubm-cota ubm-cota--muted">REGISTRO IMUTÁVEL · A COSTURA NÃO SE DESFAZ</span>
+        <span className="ubm-cota ubm-cota--muted">Histórico permanente · não editável</span>
       </footer>
     </div>
   )
@@ -475,13 +475,12 @@ export function DorDetalhe({
           <UbmTabs
             aria-label="Linha do tempo e equipe do projeto"
             tabs={[
+              /* BUG #1: projeto primeiro (cliente: ver avanço do projeto antes do histórico da dor) */
               {
-                id: 'timeline-dor',
-                label: 'Linha do tempo da dor',
-                content: timelineDor.length > 0
-                  ? (
-                    <DorTimeline eventos={timelineDor} />
-                  )
+                id: 'timeline',
+                label: 'Linha do tempo do projeto',
+                content: timeline.length > 0
+                  ? <UbmTimeline eventos={timeline} />
                   : (
                     <div className="ubm-empty">
                       <div className="ubm-empty-node" aria-hidden="true" />
@@ -490,10 +489,12 @@ export function DorDetalhe({
                   ),
               },
               {
-                id: 'timeline',
-                label: 'Linha do tempo do projeto',
-                content: timeline.length > 0
-                  ? <UbmTimeline eventos={timeline} />
+                id: 'timeline-dor',
+                label: 'Linha do tempo da dor',
+                content: timelineDor.length > 0
+                  ? (
+                    <DorTimeline eventos={timelineDor} />
+                  )
                   : (
                     <div className="ubm-empty">
                       <div className="ubm-empty-node" aria-hidden="true" />

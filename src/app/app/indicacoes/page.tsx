@@ -165,7 +165,12 @@ export default async function IndicacoesPage() {
                             <span className="ubm-indication-avatar ubm-clip-node" aria-hidden="true">
                               {(ind.papel_pretendido === 'coordenador' ? 'C' : 'A')}
                             </span>
-                            <span className="ubm-indication-nome">{ind.pessoa_id}</span>
+                            <span className="ubm-indication-nome">
+                              {ind.aluno_nome || ind.aluno_email || ind.pessoa_id}
+                              {ind.curso ? (
+                                <span className="ubm-indication-curso"> · {ind.curso}</span>
+                              ) : null}
+                            </span>
                             <span className={`ubm-member-papel-chip ubm-member-papel-chip--${ind.papel_pretendido}`}>
                               {ind.papel_pretendido === 'coordenador' ? 'COORDENADOR' : 'ALUNO'}
                             </span>

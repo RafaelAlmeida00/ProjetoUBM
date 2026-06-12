@@ -39,6 +39,16 @@ export async function concederPapel(
 export async function revogarAdmin(userId: string): Promise<{ ok: boolean; error?: string }> {
   try {
     const supabase = await createSupabaseServerClient()
+
+    // Resolve sessão server-side para bloquear self-revoke
+    const { data: { user } } = await supabase.auth.getUser()
+    if (!user) {
+      return { ok: false, error: 'Sessão necessária.' }
+    }
+    if (user.id === userId) {
+      return { ok: false, error: 'Você não pode revogar o seu próprio acesso de administrador.' }
+    }
+
     const { error } = await supabase
       .from('admin_app')
       .delete()
