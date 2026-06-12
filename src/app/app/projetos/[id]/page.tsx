@@ -13,6 +13,8 @@ import {
   obterTimelinePublica,
   listarIndicacoes,
   listarFuncoesTarefas,
+  type FuncaoTarefa,
+  type Indicacao,
 } from '@/lib/data/projetos'
 import { UbmTimeline } from '@/components/ubm-timeline'
 import { UbmTeam } from '@/components/ubm-team'
@@ -46,8 +48,8 @@ export default async function ProjetoDetalhePage({ params }: Props) {
   // Para verificar membro autenticado, buscamos tarefas (RLS filtra por membro)
   let isMembro = false
   let isHost = false
-  let tarefas = []
-  let indicacoes = []
+  let tarefas: FuncaoTarefa[] = []
+  let indicacoes: Indicacao[] = []
 
   if (userId) {
     // Tentativa de ler tarefas (RLS permite só membros/admin)
