@@ -31,6 +31,8 @@ export async function criarTarefa(input: CriarTarefaInput): Promise<CriarTarefaR
       titulo: input.titulo,
       ...(input.descricao !== undefined && { descricao: input.descricao }),
     })
+      .select('id')
+      .single()
     if (error) return { ok: false, error: mapDbError(error.message) }
     const id = (data as { id?: string } | null)?.id ?? ''
     return { ok: true, tarefaId: id }

@@ -48,10 +48,11 @@ export default function Home() {
       {/* ───────── DORES PÚBLICAS (CTA vitrine) ───────── */}
       <section aria-labelledby="dores-vitrine-heading" className="ubm-landing-dores">
         <div className="ubm-landing-dores-copy">
-          <h2 id="dores-vitrine-heading">Veja as dores reais que estamos resolvendo</h2>
+          <span className="ubm-cota">Vitrine de dores</span>
+          <h2 id="dores-vitrine-heading">Dores reais de empresas reais</h2>
           <p>
             Empresas e órgãos públicos do Sul Fluminense já trouxeram seus desafios para a UBM.
-            Confira as dores publicadas e como a extensão universitária gera impacto real.
+            Veja as dores publicadas e como a extensão universitária vira impacto de verdade.
           </p>
         </div>
         <Link href="/dores" className="ubm-btn ubm-btn-secondary">

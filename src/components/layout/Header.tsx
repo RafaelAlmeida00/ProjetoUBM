@@ -24,11 +24,15 @@ export function Header({ user = null }: { user?: HeaderUser | null }) {
       <nav className="ubm-header-nav">
         {user ? (
           <>
-            <Link href="/app">Meu painel</Link>
+            <span style={{ color: 'hsl(var(--muted-foreground))', fontWeight: 500 }}>{user.nome}</span>
+            <Link  href="/app">Meu painel</Link>
             <SignOutButton />
           </>
         ) : (
+         <>
+          <Link href="/dores">Vitrine de Dores</Link>
           <Link href="/login">Entrar</Link>
+          </>
         )}
         <ThemeToggle />
       </nav>

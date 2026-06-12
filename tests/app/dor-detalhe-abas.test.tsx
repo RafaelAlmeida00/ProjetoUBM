@@ -3,6 +3,7 @@
  * TDD RED: tabs WAI-ARIA (setas/aria-selected/aria-controls);
  * aba TIMELINE = .ubm-timeline, aba EQUIPE = .ubm-team;
  * estados em_analise vs aprovado; não quebra testes da 004.
+ * P1.1: DorDetalhe integra UbmTabs (sem "EM BREVE").
  */
 import { describe, it, expect, vi } from 'vitest'
 import { render, screen, fireEvent } from '@testing-library/react'
@@ -11,6 +12,23 @@ import React from 'react'
 vi.mock('next/navigation', () => ({
   useRouter: () => ({ push: vi.fn() }),
   usePathname: () => '/app/dores/1',
+}))
+
+vi.mock('@/lib/actions/dor', () => ({
+  submeterDor: vi.fn().mockResolvedValue({ ok: true }),
+  editarDor: vi.fn().mockResolvedValue({ ok: true }),
+}))
+
+vi.mock('@/lib/actions/anexo', () => ({
+  removerAnexo: vi.fn().mockResolvedValue({ ok: true }),
+}))
+
+vi.mock('@/components/anexos/AnexoUploader', () => ({
+  AnexoUploader: () => <div data-testid="anexo-uploader" />,
+}))
+
+vi.mock('@/components/course/CourseMultiSelect', () => ({
+  CourseMultiSelect: () => <div data-testid="course-multi-select" />,
 }))
 
 import { UbmTabs } from '@/components/ubm-tabs'
@@ -139,5 +157,75 @@ describe('UbmTabs — T-O3.8', () => {
     // UbmTabs é novo componente — apenas renderiza sem erros
     const { container } = renderAbas()
     expect(container).not.toBeEmptyDOMElement()
+  })
+})
+
+// ── P1.1 — DorDetalhe integra UbmTabs (sem placeholder "EM BREVE") ──────────
+import { DorDetalhe } from '@/components/dores/DorDetalhe'
+import type { DorData } from '@/components/dores/DorDetalhe'
+
+const DOR_PUBLICADA: DorData = {
+  id: 'dor-1',
+  empresa_nome: 'Empresa Teste',
+  descricao: 'Descrição da dor',
+  status: 'publicada',
+  cursos: ['ADS'],
+  autor_id: 'user-autor',
+}
+
+describe('DorDetalhe — abas EQUIPE/TIMELINE (P1.1)', () => {
+  it('renderiza tablist com abas Linha do tempo e Equipe', () => {
+    render(
+      <DorDetalhe
+        dor={DOR_PUBLICADA}
+        currentUserId="user-qualquer"
+        isAdmin={false}
+        equipe={MEMBROS}
+        timeline={EVENTOS}
+      />,
+    )
+    expect(screen.getByRole('tablist')).toBeInTheDocument()
+    expect(screen.getByRole('tab', { name: /linha do tempo/i })).toBeInTheDocument()
+    expect(screen.getByRole('tab', { name: /equipe/i })).toBeInTheDocument()
+  })
+
+  it('NÃO renderiza "EM BREVE" (placeholder 004 removido)', () => {
+    render(
+      <DorDetalhe
+        dor={DOR_PUBLICADA}
+        currentUserId="user-qualquer"
+        isAdmin={false}
+        equipe={MEMBROS}
+        timeline={EVENTOS}
+      />,
+    )
+    expect(screen.queryByText(/EM BREVE/i)).toBeNull()
+  })
+
+  it('aba timeline mostra .ubm-timeline', () => {
+    render(
+      <DorDetalhe
+        dor={DOR_PUBLICADA}
+        currentUserId="user-qualquer"
+        isAdmin={false}
+        equipe={MEMBROS}
+        timeline={EVENTOS}
+      />,
+    )
+    expect(document.querySelector('.ubm-timeline')).toBeInTheDocument()
+  })
+
+  it('clicar em aba Equipe mostra .ubm-team', () => {
+    render(
+      <DorDetalhe
+        dor={DOR_PUBLICADA}
+        currentUserId="user-qualquer"
+        isAdmin={false}
+        equipe={MEMBROS}
+        timeline={EVENTOS}
+      />,
+    )
+    fireEvent.click(screen.getByRole('tab', { name: /equipe/i }))
+    expect(document.querySelector('.ubm-team')).toBeInTheDocument()
   })
 })

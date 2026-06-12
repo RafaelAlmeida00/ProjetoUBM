@@ -8,13 +8,15 @@
  */
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 
-// Mocks da cadeia fluente do Supabase: from().insert(), from().update().eq()
-const { mockInsert, mockUpdate, mockEq, mockFrom } = vi.hoisted(() => {
-  const mockInsert = vi.fn().mockResolvedValue({ data: { id: 'tarefa-nova' }, error: null })
+// Mocks da cadeia fluente do Supabase: from().insert().select().single(), from().update().eq()
+const { mockInsert, mockSelect, mockSingle, mockUpdate, mockEq, mockFrom } = vi.hoisted(() => {
+  const mockSingle = vi.fn().mockResolvedValue({ data: { id: 'tarefa-nova' }, error: null })
+  const mockSelect = vi.fn(() => ({ single: mockSingle }))
+  const mockInsert = vi.fn(() => ({ select: mockSelect }))
   const mockEq = vi.fn().mockResolvedValue({ error: null })
   const mockUpdate = vi.fn(() => ({ eq: mockEq }))
   const mockFrom = vi.fn(() => ({ insert: mockInsert, update: mockUpdate }))
-  return { mockInsert, mockUpdate, mockEq, mockFrom }
+  return { mockInsert, mockSelect, mockSingle, mockUpdate, mockEq, mockFrom }
 })
 
 vi.mock('@/lib/supabase/server', () => ({
@@ -33,7 +35,10 @@ import {
 describe('criarTarefa', () => {
   beforeEach(() => {
     vi.clearAllMocks()
-    mockInsert.mockResolvedValue({ data: { id: 'tarefa-nova' }, error: null })
+    // chain: insert() → select() → single()
+    mockSingle.mockResolvedValue({ data: { id: 'tarefa-nova' }, error: null })
+    mockSelect.mockReturnValue({ single: mockSingle })
+    mockInsert.mockReturnValue({ select: mockSelect })
     mockFrom.mockReturnValue({ insert: mockInsert, update: mockUpdate })
   })
 
@@ -76,7 +81,7 @@ describe('criarTarefa', () => {
   })
 
   it('mapeia erro de permissão (não-membro) para PT-BR (CA22)', async () => {
-    mockInsert.mockResolvedValueOnce({
+    mockSingle.mockResolvedValueOnce({
       data: null,
       error: { message: 'permission denied for table funcao_tarefa' },
     })
@@ -92,7 +97,7 @@ describe('criarTarefa', () => {
   })
 
   it('mapeia erro de titulo vazio para PT-BR', async () => {
-    mockInsert.mockResolvedValueOnce({
+    mockSingle.mockResolvedValueOnce({
       data: null,
       error: { message: 'check constraint "funcao_tarefa_titulo_check"' },
     })

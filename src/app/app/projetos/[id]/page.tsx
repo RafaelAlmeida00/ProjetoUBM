@@ -52,13 +52,16 @@ export default async function ProjetoDetalhePage({ params }: Props) {
   let indicacoes: Indicacao[] = []
 
   if (userId) {
-    // Tentativa de ler tarefas (RLS permite só membros/admin)
-    try {
-      tarefas = await listarFuncoesTarefas(id)
-      isMembro = true // Se RLS passou, é membro ou admin
-    } catch {
-      isMembro = false
-    }
+    // Verifica se é host (deve vir antes de isMembro para usar na derivação)
+    const hostId = (projeto as { host_coordenador_id?: string }).host_coordenador_id ?? null
+    isHost = !!userId && hostId === userId
+
+    // Busca tarefas (catch→[] por design — listarFuncoesTarefas nunca lança)
+    tarefas = await listarFuncoesTarefas(id)
+
+    // P1.2 fix: isMembro derivado de tarefas retornadas (RLS), host ou admin
+    // Tarefas só retornam para membros via RLS — se length>0, é membro.
+    isMembro = isAdmin || isHost || tarefas.length > 0
 
     // Admin e coord podem ver indicações
     if (isAdmin) {
@@ -68,15 +71,12 @@ export default async function ProjetoDetalhePage({ params }: Props) {
         indicacoes = []
       }
     }
-
-    // Verifica se é host (host_coordenador_id no projeto)
-    // C1 fix (G4): precedência de !! era maior que === → comparava boolean com string e dava sempre false.
-    const hostId = (projeto as { host_coordenador_id?: string }).host_coordenador_id ?? null
-    isHost = !!userId && hostId === userId
   }
 
   const semEquipe = projeto.status === 'em_analise' && equipe.length === 0
   const papelAtual = isAdmin ? 'admin' : isHost ? 'host' : isMembro ? 'aluno' : null
+
+  const statusLabel = projeto.status.replace(/_/g, ' ').toUpperCase()
 
   return (
     <main className="ubm-shell-main">
@@ -84,7 +84,7 @@ export default async function ProjetoDetalhePage({ params }: Props) {
         <span className="ubm-stamp-header-trail">
           <span>PROJETO</span>
           <b>·</b>
-          <span className="ubm-cota">{projeto.status.replace(/_/g, ' ').toUpperCase()}</span>
+          <span className="ubm-cota">{statusLabel}</span>
         </span>
         {isAdmin && (
           <span className="ubm-navrail-mode">MODO CURADORIA</span>
@@ -94,94 +94,97 @@ export default async function ProjetoDetalhePage({ params }: Props) {
       <div className="ubm-section">
         <div aria-live="polite" aria-atomic="true" id="projeto-status-live" />
 
-        {/* Equipe */}
-        <section aria-labelledby="equipe-heading" style={{ marginBottom: '2rem' }}>
-          <h2 id="equipe-heading" className="ubm-cota" style={{ marginBottom: '1rem' }}>
-            EQUIPE
-          </h2>
-          {semEquipe ? (
-            <div>
-              <p className="ubm-cota ubm-cota--muted">Equipe ainda não formada.</p>
-              {isAdmin && (
-                <ProjetoDetalheClient
-                  projetoId={id}
-                  indicacoes={indicacoes}
-                  papelAtual="admin"
-                  projetoStatus={projeto.status}
-                />
-              )}
-            </div>
-          ) : (
-            <>
-              <UbmTeam membros={equipe} />
-              {/* Ações do host */}
-              {isHost && projeto.status === 'aprovado' && (
-                <ProjetoDetalheClient
-                  projetoId={id}
-                  indicacoes={[]}
-                  papelAtual="host"
-                  projetoStatus={projeto.status}
-                />
-              )}
-              {/* Ações do admin */}
-              {isAdmin && (
-                <ProjetoDetalheClient
-                  projetoId={id}
-                  indicacoes={indicacoes}
-                  papelAtual="admin"
-                  projetoStatus={projeto.status}
-                />
-              )}
-            </>
-          )}
-        </section>
+        {/* Cabeçalho institucional do projeto */}
+        <header className="ubm-page-header">
+          <span className="ubm-cota ubm-section-kicker">PROJETO · {statusLabel}</span>
+          <h1 className="ubm-page-title">Sala da <em>equipe</em></h1>
+          <p className="ubm-page-lead">
+            Aqui a equipe se organiza: quem está dentro, o que cada um faz e como
+            o trabalho avança — etapa por etapa.
+          </p>
+        </header>
 
-        {/* Tarefas — privado para membros/admin (CA22) */}
-        <section aria-labelledby="tarefas-heading" style={{ marginBottom: '2rem' }}>
-          <h2 id="tarefas-heading" className="ubm-cota" style={{ marginBottom: '1rem' }}>
-            FUNÇÕES E TAREFAS
-          </h2>
-          {!isMembro && !isAdmin ? (
-            <div className="ubm-locked">
-              <span className="ubm-locked-title">Este projeto é da equipe.</span>
+        <div className="ubm-article">
+          {/* Equipe */}
+          <section className="ubm-section-block" aria-labelledby="equipe-heading">
+            <h2 id="equipe-heading" className="ubm-section-title">Equipe</h2>
+            {semEquipe ? (
+              <div className="ubm-detalhe-stack">
+                <p className="ubm-cota ubm-cota--muted">Equipe ainda não formada.</p>
+                {isAdmin && (
+                  <ProjetoDetalheClient
+                    projetoId={id}
+                    indicacoes={indicacoes}
+                    papelAtual="admin"
+                    projetoStatus={projeto.status}
+                  />
+                )}
+              </div>
+            ) : (
+              <div className="ubm-detalhe-stack">
+                <UbmTeam membros={equipe} />
+                {/* Ações do host */}
+                {isHost && projeto.status === 'aprovado' && (
+                  <ProjetoDetalheClient
+                    projetoId={id}
+                    indicacoes={[]}
+                    papelAtual="host"
+                    projetoStatus={projeto.status}
+                  />
+                )}
+                {/* Ações do admin */}
+                {isAdmin && (
+                  <ProjetoDetalheClient
+                    projetoId={id}
+                    indicacoes={indicacoes}
+                    papelAtual="admin"
+                    projetoStatus={projeto.status}
+                  />
+                )}
+              </div>
+            )}
+          </section>
+
+          {/* Funções e tarefas — privado para membros/admin (CA22) */}
+          <section className="ubm-section-block" aria-labelledby="tarefas-heading">
+            <h2 id="tarefas-heading" className="ubm-section-title">Funções e tarefas</h2>
+            {!isMembro && !isAdmin ? (
+              <div className="ubm-locked">
+                <span className="ubm-locked-title">Este projeto é da equipe.</span>
+                <p className="ubm-locked-msg">
+                  Funções e tarefas são visíveis apenas aos membros e à moderação.
+                </p>
+              </div>
+            ) : (
+              <ProjetoDetalheClient
+                projetoId={id}
+                indicacoes={[]}
+                papelAtual={papelAtual}
+                projetoStatus={projeto.status}
+                tarefas={tarefas}
+                currentUserId={userId}
+                equipe={equipe}
+                modoTarefas
+              />
+            )}
+          </section>
+
+          {/* Linha do tempo compacta */}
+          <section className="ubm-section-block" aria-labelledby="timeline-heading">
+            <h2 id="timeline-heading" className="ubm-section-title">Linha do tempo</h2>
+            <UbmTimeline eventos={timeline} compacto />
+          </section>
+
+          {/* Peça lacrada 006 */}
+          <section className="ubm-section-block">
+            <div className="ubm-locked" aria-label="Próximas etapas em breve">
+              <span className="ubm-cota ubm-cota--muted">EM BREVE · 006</span>
+              <span className="ubm-locked-title">Proposta e assinatura</span>
               <p className="ubm-locked-msg">
-                Funções e tarefas são visíveis apenas aos membros e à moderação.
+                Proposta e assinatura aparecerão aqui quando a equipe avançar.
               </p>
             </div>
-          ) : tarefas.length === 0 ? (
-            <div className="ubm-empty">
-              <div className="ubm-empty-node" aria-hidden="true" />
-              <p className="ubm-empty-msg">Nenhuma tarefa ainda. Organize o trabalho da equipe.</p>
-            </div>
-          ) : (
-            <ul aria-label="Tarefas do projeto">
-              {tarefas.map((t) => (
-                <li key={t.id} className="ubm-task ubm-machined">
-                  <span className="ubm-task-titulo">{t.titulo}</span>
-                  {t.responsavel_id !== userId && papelAtual === 'aluno' && (
-                    <span className="ubm-cota ubm-cota--muted">DE OUTRO MEMBRO</span>
-                  )}
-                </li>
-              ))}
-            </ul>
-          )}
-        </section>
-
-        {/* Timeline compacta */}
-        <section aria-labelledby="timeline-heading" style={{ marginBottom: '2rem' }}>
-          <h2 id="timeline-heading" className="ubm-cota" style={{ marginBottom: '1rem' }}>
-            LINHA DO TEMPO
-          </h2>
-          <UbmTimeline eventos={timeline} compacto />
-        </section>
-
-        {/* Peça lacrada 006 */}
-        <div className="ubm-locked" style={{ marginTop: '2rem' }} aria-label="Próximas etapas em breve">
-          <span className="ubm-locked-title">Proposta e assinatura</span>
-          <p className="ubm-locked-msg">
-            Proposta e assinatura aparecerão aqui quando a equipe avançar — em breve.
-          </p>
-          <span className="ubm-cota ubm-cota--muted">EM BREVE (006)</span>
+          </section>
         </div>
       </div>
     </main>

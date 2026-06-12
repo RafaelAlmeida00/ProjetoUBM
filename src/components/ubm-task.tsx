@@ -261,7 +261,7 @@ export function UbmTaskList({
 
       {/* Formulário de criação inline */}
       {criando && (
-        <div className="ubm-task-criar-form">
+        <div className="ubm-task-criar-form ubm-machined">
           <input
             type="text"
             value={novoTitulo}

@@ -141,12 +141,15 @@ describe('DorDetalhe — T8 (visão da dor parcial)', () => {
     expect(screen.getByText(/verificar/i)).toBeInTheDocument()
   })
 
-  it('timeline/equipe aparece como peça lacrada "EM BREVE (005)"', () => {
+  it('timeline/equipe aparece como abas reais (005 — substitui o placeholder "EM BREVE")', () => {
     render(
       <DorDetalhe dor={DOR_BASE} currentUserId={null} isAdmin={false} />
     )
-    // "EM BREVE" (span.ubm-cota) e "Em breve" (p.ubm-locked-title) — ambos presentes
-    expect(screen.getAllByText(/em breve/i).length).toBeGreaterThan(0)
+    // P1.1 (005): o placeholder "EM BREVE (005)" foi substituído por UbmTabs.
+    expect(screen.getByText(/linha do tempo e equipe/i)).toBeInTheDocument()
+    expect(screen.getByRole('tab', { name: /linha do tempo/i })).toBeInTheDocument()
+    expect(screen.getByRole('tab', { name: /equipe/i })).toBeInTheDocument()
+    expect(screen.queryByText(/em breve/i)).toBeNull()
   })
 
   it('dor com status tem rótulo textual (nunca só cor — a11y)', () => {

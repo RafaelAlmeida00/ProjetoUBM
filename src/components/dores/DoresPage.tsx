@@ -100,7 +100,7 @@ export function DoresPage({
         </div>
         <div className="ubm-stamp-header-actions">
           {isRepresentante && isVerificado && (
-            <Link href="/propor" className="ubm-btn ubm-btn-primary" style={{ height: '2.5rem', fontSize: '0.88rem' }}>
+            <Link href="/app/dores/nova" className="ubm-btn ubm-btn-primary" style={{ height: '2.5rem', fontSize: '0.88rem' }}>
               Propor nova dor
             </Link>
           )}
@@ -125,14 +125,13 @@ export function DoresPage({
       </div>
 
       {/* Tabs WAI-ARIA */}
-      <div role="tablist" aria-label="Visualização de dores">
+      <div role="tablist" aria-label="Visualização de dores" className="ubm-tablist">
         <button
           id={vitrineId}
           role="tab"
           aria-selected={abaAtiva === 'vitrine'}
           aria-controls={painelId}
           className={`ubm-btn ubm-btn-ghost${abaAtiva === 'vitrine' ? ' is-active' : ''}`}
-          style={{ marginRight: '0.5rem' }}
           onClick={() => setAbaAtiva('vitrine')}
           tabIndex={abaAtiva === 'vitrine' ? 0 : -1}
         >
@@ -199,7 +198,7 @@ export function DoresPage({
                 <div className="ubm-empty-node" aria-hidden />
                 <p className="ubm-empty-title">Você ainda não criou nenhuma dor.</p>
                 <p className="ubm-empty-msg">
-                  <Link href="/propor" className="ubm-link">Propor minha primeira dor</Link>
+                  <Link href="/app/dores/nova" className="ubm-link">Propor minha primeira dor</Link>
                 </p>
               </div>
             ) : (

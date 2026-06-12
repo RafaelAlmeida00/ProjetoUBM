@@ -206,6 +206,15 @@
   .ubm-btn-secondary:hover:not(:disabled) { border-color: hsl(var(--primary) / 0.5); transform: translateY(-2px); }
   .ubm-btn-ghost { background: transparent; color: hsl(var(--muted-foreground)); height: 2.6rem; clip-path: none; border-radius: var(--radius); }
   .ubm-btn-ghost:hover:not(:disabled) { background-color: hsl(var(--muted)); color: hsl(var(--foreground)); }
+  /* barra de abas: linha-base contínua sob os botões (ancora o sublinhado ativo) */
+  .ubm-tablist { display: flex; gap: 0.5rem; border-bottom: 1px solid hsl(var(--border)); }
+  .ubm-tablist .ubm-btn-ghost { border-radius: var(--radius) var(--radius) 0 0; margin-bottom: -1px; }
+  /* aba ativa (tablist /app/dores) — destaque azul-DOR + sublinhado de seleção */
+  .ubm-btn-ghost.is-active,
+  .ubm-btn-ghost[aria-selected="true"] {
+    color: hsl(var(--primary)); background-color: hsl(var(--primary) / 0.08);
+    box-shadow: inset 0 -2px 0 0 hsl(var(--primary));
+  }
 
   /* link com underline-tinta que se escreve */
   .ubm-link { color: hsl(var(--accent)); font-weight: 600; text-decoration: none; background-image: linear-gradient(hsl(var(--accent)), hsl(var(--accent))); background-size: 0% 1.5px; background-repeat: no-repeat; background-position: left bottom; transition: background-size 0.2s ease; padding-bottom: 2px; }
@@ -373,6 +382,30 @@
   .ubm-step-field input[type="text"]:focus, .ubm-step-field textarea:focus { outline: none; border-color: hsl(var(--primary)); box-shadow: 0 0 0 3px hsl(var(--primary) / 0.16); }
   .ubm-wizard-actions { display: flex; align-items: center; justify-content: space-between; gap: 0.75rem; }
   .ubm-wizard-actions:has(> :only-child) { justify-content: flex-end; }
+
+  /* ───────────── CAMPO DE FORMULÁRIO GENÉRICO (.ubm-input) ─────────────
+     input/textarea/select fora do wizard (nova dor, edição). Mesmos tokens
+     do campo do wizard — fecha o buraco da classe-fantasma .ubm-input. */
+  .ubm-input {
+    width: 100%; background-color: hsl(var(--background));
+    border: 1px solid hsl(var(--border)); border-radius: var(--radius);
+    padding: 0.7rem 0.85rem; font-size: 1rem; line-height: 1.5;
+    color: hsl(var(--foreground)); font-family: inherit;
+    transition: border-color 0.15s ease, box-shadow 0.15s ease;
+  }
+  textarea.ubm-input { min-height: 7rem; }
+  select.ubm-input { appearance: none; cursor: pointer; padding-right: 2.25rem;
+    background-image: linear-gradient(45deg, transparent 50%, hsl(var(--muted-foreground)) 50%),
+                      linear-gradient(135deg, hsl(var(--muted-foreground)) 50%, transparent 50%);
+    background-position: calc(100% - 1.05rem) 1.15rem, calc(100% - 0.7rem) 1.15rem;
+    background-size: 0.35rem 0.35rem; background-repeat: no-repeat;
+  }
+  .ubm-input::placeholder { color: hsl(var(--muted-foreground) / 0.75); }
+  .ubm-input:focus {
+    outline: none; border-color: hsl(var(--primary));
+    box-shadow: 0 0 0 3px hsl(var(--primary) / 0.16);
+  }
+  .ubm-input:disabled { opacity: 0.6; cursor: not-allowed; }
 
   .ubm-courses { display: flex; flex-wrap: wrap; gap: 0.5rem; border: 0; padding: 0; margin: 0; }
   .ubm-courses legend { font-size: 0.85rem; color: hsl(var(--muted-foreground)); margin-bottom: 0.6rem; }
@@ -1262,12 +1295,14 @@
   .ubm-task-items { list-style: none; padding: 0; margin: 0; display: flex; flex-direction: column; gap: 0.5rem; }
 
   .ubm-task {
-    --chamfer: 8px; display: flex; align-items: flex-start; gap: 0.7rem;
-    padding: 0.65rem 0.85rem; position: relative;
+    --chamfer: 10px; display: flex; align-items: flex-start; gap: 0.75rem;
+    padding: 0.75rem 0.95rem; position: relative;
+    transition: border-color 0.14s ease, background-color 0.14s ease;
   }
-  .ubm-task--done { opacity: 0.6; }
-  .ubm-task--done .ubm-task-titulo { text-decoration: line-through; }
-  .ubm-task--mine { border-left: 2.5px solid hsl(var(--primary) / 0.5); }
+  .ubm-task:hover { border-color: hsl(var(--primary) / 0.35); }
+  .ubm-task--done { opacity: 0.62; }
+  .ubm-task--done .ubm-task-titulo { text-decoration: line-through; text-decoration-color: hsl(var(--muted-foreground) / 0.6); }
+  .ubm-task--mine { border-left: 2.5px solid hsl(var(--primary) / 0.55); }
 
   .ubm-task-check {
     display: inline-flex; align-items: center; justify-content: center;
@@ -1307,8 +1342,11 @@
   }
   .ubm-task-edit-actions { display: flex; gap: 0.5rem; }
 
-  .ubm-task-btn-criar { margin-top: 0.5rem; width: 100%; }
-  .ubm-task-criar-form { display: flex; flex-direction: column; gap: 0.5rem; margin-top: 0.5rem; }
+  .ubm-task-btn-criar { margin-top: 0.25rem; width: 100%; justify-content: center; }
+  .ubm-task-criar-form {
+    --chamfer: 10px; display: flex; flex-direction: column; gap: 0.6rem;
+    margin-top: 0.5rem; padding: 0.85rem 0.95rem;
+  }
   .ubm-task-erro { font-size: 0.85rem; color: hsl(var(--destructive)); margin: 0; }
 
   /* ───────────── .ubm-team-builder (modal admin fechar equipe/host) ─────────────
@@ -1375,36 +1413,123 @@
     padding: 0.65rem 0.85rem;
   }
   .ubm-indication-nome { flex: 1; font-weight: 600; font-size: 0.92rem; color: hsl(var(--foreground)); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  /* Avatar-losango da linha de indicação (mesma família de UbmMember) */
+  .ubm-indication-avatar {
+    width: 1.85rem; height: 1.85rem; flex: none; display: grid; place-items: center;
+    background-color: hsl(var(--primary) / 0.14); color: hsl(var(--primary));
+    font-family: var(--font-mono), monospace; font-weight: 700; font-size: 0.72rem;
+  }
+
+  /* ───────────── S2/S3 — composição de páginas ligadas (005) ─────────────
+     Pilhas e blocos que harmonizam projeto-detalhe e indicações com o
+     vocabulário .ubm-article/.ubm-section-block. Deriva 100% de tokens. */
+
+  /* Pilha vertical de blocos dentro de uma seção (equipe + ações, etc.) */
+  .ubm-detalhe-stack { display: flex; flex-direction: column; gap: 1rem; }
+
+  /* Indicações: lista de CTAs de auto-indicação */
+  .ubm-indicacoes-cta-stack { display: flex; flex-direction: column; gap: 1rem; }
+
+  /* Indicações: grade de projetos com suas listas (coord/admin) */
+  .ubm-indicacoes-projetos { display: flex; flex-direction: column; gap: clamp(1.5rem, 4vw, 2.25rem); }
+  .ubm-indicacoes-projeto { display: flex; flex-direction: column; gap: 0.75rem; }
+  .ubm-indicacoes-projeto-head {
+    display: flex; align-items: baseline; justify-content: space-between;
+    gap: 0.75rem; padding-bottom: 0.5rem; border-bottom: 1px solid hsl(var(--border));
+  }
+  .ubm-indicacoes-projeto-contagem {
+    font-size: 0.8rem; font-weight: 600; color: hsl(var(--muted-foreground));
+  }
+  .ubm-indicacoes-compor { align-self: flex-start; margin-top: 0.25rem; }
+
+  /* ═══════════ COMPOSIÇÃO DE PÁGINA — cabeçalho institucional + artigo ═══════════
+     Vocabulário compartilhado por TODAS as telas de conteúdo (vitrine, detalhe,
+     nova dor). Deriva 100% dos tokens existentes (zero hex novo). Tipografia na
+     escala do design-system (h1 ~36 / h2 ~24 / h3 ~20 / body 16 / small 14).
+     A voz mono (.ubm-cota) é KICKER/metadado — NUNCA título de seção. */
+
+  /* Cabeçalho de página: kicker-cota + título serifado (h1) + lead legível */
+  .ubm-page-header {
+    max-width: 60rem; margin: 0 0 clamp(2rem, 5vw, 3rem);
+    display: flex; flex-direction: column; gap: 0.85rem;
+  }
+  .ubm-page-title {
+    font-family: var(--font-display), Georgia, serif; font-weight: 600;
+    font-size: clamp(2rem, 4.5vw, 2.75rem); line-height: 1.1;
+    letter-spacing: -0.02em; color: hsl(var(--foreground)); margin: 0;
+    text-wrap: balance;
+  }
+  /* destaque do título: o lado "solução" em azul-DOR, mesma fonte/peso (sem itálico solto) */
+  .ubm-page-title em, .ubm-page-title .ubm-page-title-accent {
+    font-style: normal; color: hsl(var(--primary));
+  }
+  .ubm-page-lead {
+    max-width: 60ch; font-size: clamp(1rem, 1.5vw, 1.12rem); line-height: 1.65;
+    color: hsl(var(--muted-foreground)); margin: 0;
+  }
+
+  /* Corpo de artigo: pilha vertical com ritmo constante e medida de leitura */
+  .ubm-article { display: grid; gap: clamp(1.75rem, 4vw, 2.5rem); max-width: 60rem; }
+
+  /* Título de seção (h2/h3) — serifado, kicker-cota opcional acima */
+  .ubm-section-block { display: flex; flex-direction: column; gap: 0.85rem; }
+  .ubm-section-title {
+    font-family: var(--font-display), Georgia, serif; font-weight: 600;
+    font-size: clamp(1.15rem, 2.5vw, 1.35rem); line-height: 1.25;
+    color: hsl(var(--foreground)); margin: 0;
+  }
+  .ubm-section-kicker { margin-bottom: -0.35rem; }
+
+  /* Bloco de prosa legível (descrição da dor etc.) */
+  .ubm-prose { max-width: 65ch; line-height: 1.7; color: hsl(var(--foreground)); margin: 0; }
+
+  /* Trilha de navegação (breadcrumb-cota) usável fora do header sticky */
+  .ubm-breadcrumb {
+    display: inline-flex; align-items: center; gap: 0.5rem; flex-wrap: wrap;
+    font-family: var(--font-mono), monospace; text-transform: uppercase;
+    letter-spacing: 0.12em; font-size: 0.72rem; font-weight: 600;
+    color: hsl(var(--muted-foreground)); margin-bottom: 1.25rem;
+  }
+  .ubm-breadcrumb b { color: hsl(var(--accent)); font-weight: 700; }
+  .ubm-breadcrumb span[aria-hidden] { opacity: 0.5; }
+
+  /* Linha de título com status ao lado (empresa + badge) */
+  .ubm-title-row { display: flex; align-items: center; gap: 1rem; flex-wrap: wrap; }
+
+  /* Barra de ações ao pé de uma página de conteúdo */
+  .ubm-page-actions {
+    margin-top: clamp(2.5rem, 6vw, 3.5rem); padding-top: 1.75rem;
+    border-top: 1px solid hsl(var(--border));
+    display: flex; flex-wrap: wrap; align-items: center; gap: 1rem;
+  }
 
   /* ───────────── VITRINE PÚBLICA DE DORES (/dores) — RN17/CA17 ─────────────
-     Deriva inteiramente dos tokens existentes (zero hex novo).
-     Cabeçalho institucional + contagem + CTA. Grade reusa .ubm-dor-grid. */
+     Reusa .ubm-page-header / .ubm-page-title / .ubm-dor-grid. */
   .ubm-dores-vitrine-page { min-height: 60vh; }
-  .ubm-dores-vitrine-header {
-    max-width: 56rem; margin-bottom: clamp(2rem, 5vw, 3rem);
+  .ubm-dores-vitrine-contagem {
+    display: block; margin: 0 0 1.1rem;
   }
-  .ubm-dores-vitrine-titulo {
-    font-weight: 300; font-size: clamp(2rem, 5vw, 3.2rem);
-    line-height: 1.05; letter-spacing: -0.025em;
-    color: hsl(var(--foreground)); margin: 0.6rem 0 1rem;
-  }
-  .ubm-dores-vitrine-titulo-destaque {
-    font-weight: 600; font-style: italic; color: hsl(var(--primary));
-  }
-  .ubm-dores-vitrine-subtitulo {
-    max-width: 56ch; font-size: 1.05rem; line-height: 1.65;
-    color: hsl(var(--muted-foreground));
-  }
-  .ubm-dores-vitrine-contagem { margin-bottom: 0.75rem; display: block; }
   .ubm-dores-vitrine-cta {
     margin-top: clamp(2.5rem, 6vw, 4rem); padding-top: 2rem;
     border-top: 1px solid hsl(var(--border));
     display: flex; flex-wrap: wrap; align-items: center; gap: 1.25rem;
   }
   .ubm-dores-vitrine-cta-txt {
-    color: hsl(var(--muted-foreground)); font-size: 0.98rem;
-    flex: 1 1 20rem;
+    color: hsl(var(--foreground)); font-size: 1.02rem; font-weight: 500;
+    flex: 1 1 22rem; margin: 0;
   }
+
+  /* Reveal escalonado da grade (narrativa — só transform/opacity, 60fps).
+     Respeita prefers-reduced-motion (regra global mais abaixo neutraliza). */
+  .ubm-reveal > * {
+    animation: ubm-pop 0.5s cubic-bezier(0.16, 1, 0.3, 1) both;
+  }
+  .ubm-reveal > *:nth-child(1) { animation-delay: 0.02s; }
+  .ubm-reveal > *:nth-child(2) { animation-delay: 0.07s; }
+  .ubm-reveal > *:nth-child(3) { animation-delay: 0.12s; }
+  .ubm-reveal > *:nth-child(4) { animation-delay: 0.17s; }
+  .ubm-reveal > *:nth-child(5) { animation-delay: 0.22s; }
+  .ubm-reveal > *:nth-child(n+6) { animation-delay: 0.27s; }
 
   /* ───────────── LANDING — seção "Veja as dores" ─────────────
      CTA compacto inserido entre HERO e CASE. Mesma linguagem. */
@@ -1414,11 +1539,11 @@
     display: flex; flex-wrap: wrap; align-items: center; gap: 1.5rem;
     border-top: 1px solid hsl(var(--border));
   }
-  .ubm-landing-dores-copy { flex: 1 1 24rem; }
+  .ubm-landing-dores-copy { flex: 1 1 24rem; display: flex; flex-direction: column; gap: 0.5rem; }
   .ubm-landing-dores-copy h2 {
     font-family: var(--font-display), Georgia, serif; font-weight: 600;
     font-size: clamp(1.3rem, 3vw, 1.8rem); color: hsl(var(--foreground));
-    margin: 0 0 0.5rem;
+    margin: 0.2rem 0 0;
   }
   .ubm-landing-dores-copy p {
     color: hsl(var(--muted-foreground)); font-size: 0.98rem; line-height: 1.6;

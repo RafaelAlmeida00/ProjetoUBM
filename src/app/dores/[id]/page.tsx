@@ -48,7 +48,7 @@ export default async function DorPublicaDetalhePage({ params }: Props) {
   return (
     <main className="ubm-dor-publica-detalhe ubm-section">
       {/* Trilha de navegação */}
-      <nav aria-label="Caminho" className="ubm-stamp-header-trail" style={{ marginBottom: '1.5rem' }}>
+      <nav aria-label="Caminho" className="ubm-breadcrumb">
         <Link href="/" className="ubm-link">Início</Link>
         <span aria-hidden="true">/</span>
         <Link href="/dores" className="ubm-link">Dores</Link>
@@ -57,11 +57,10 @@ export default async function DorPublicaDetalhePage({ params }: Props) {
       </nav>
 
       {/* Cabeçalho */}
-      <header style={{ marginBottom: '2rem' }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: '1rem', flexWrap: 'wrap', marginBottom: '0.5rem' }}>
-          <h1 className="font-display" style={{ fontSize: 'clamp(1.5rem, 4vw, 2rem)', lineHeight: 1.15, margin: 0 }}>
-            {dor.empresa_nome}
-          </h1>
+      <header className="ubm-page-header">
+        <span className="ubm-cota">Dor publicada</span>
+        <div className="ubm-title-row">
+          <h1 className="ubm-page-title">{dor.empresa_nome}</h1>
           <span className="ubm-status ubm-status--publicada">Publicada</span>
         </div>
         {dor.publicada_em && (
@@ -72,23 +71,17 @@ export default async function DorPublicaDetalhePage({ params }: Props) {
       </header>
 
       {/* Corpo */}
-      <div style={{ display: 'grid', gap: '2rem', maxWidth: '56rem' }}>
+      <div className="ubm-article">
         {/* Descrição */}
-        <section aria-labelledby="desc-heading">
-          <h2 id="desc-heading" className="ubm-cota" style={{ marginBottom: '0.75rem' }}>
-            Descrição
-          </h2>
-          <p style={{ lineHeight: 1.7, maxWidth: '65ch', color: 'hsl(var(--foreground))' }}>
-            {dor.descricao}
-          </p>
+        <section className="ubm-section-block" aria-labelledby="desc-heading">
+          <h2 id="desc-heading" className="ubm-section-title">A dor, nas palavras da empresa</h2>
+          <p className="ubm-prose">{dor.descricao}</p>
         </section>
 
         {/* Cursos sugeridos */}
         {dor.cursos.length > 0 && (
-          <section aria-labelledby="cursos-heading">
-            <h2 id="cursos-heading" className="ubm-cota" style={{ marginBottom: '0.75rem' }}>
-              Cursos Sugeridos
-            </h2>
+          <section className="ubm-section-block" aria-labelledby="cursos-heading">
+            <h2 id="cursos-heading" className="ubm-section-title">Cursos que podem encaixar</h2>
             <div className="ubm-dor-card-cursos">
               {dor.cursos.map((c) => (
                 <span key={c} className="ubm-dor-card-curso">
@@ -101,10 +94,8 @@ export default async function DorPublicaDetalhePage({ params }: Props) {
 
         {/* Anexos */}
         {dor.anexos.length > 0 && (
-          <section aria-labelledby="anexos-heading">
-            <h2 id="anexos-heading" className="ubm-cota" style={{ marginBottom: '0.75rem' }}>
-              Anexos
-            </h2>
+          <section className="ubm-section-block" aria-labelledby="anexos-heading">
+            <h2 id="anexos-heading" className="ubm-section-title">Anexos</h2>
             <ul className="ubm-attach-list" aria-label="Arquivos anexados à dor">
               {dor.anexos.map((a) => (
                 <li key={a.id}>
@@ -132,7 +123,7 @@ export default async function DorPublicaDetalhePage({ params }: Props) {
       </div>
 
       {/* CTA de volta */}
-      <div style={{ marginTop: '2.5rem', display: 'flex', gap: '1rem', flexWrap: 'wrap', alignItems: 'center' }}>
+      <div className="ubm-page-actions">
         <Link href="/dores" className="ubm-btn ubm-btn-secondary">
           ← Ver todas as dores
         </Link>

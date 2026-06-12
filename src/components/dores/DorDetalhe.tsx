@@ -1,10 +1,19 @@
 'use client'
 import { useState } from 'react'
 import Link from 'next/link'
-import { Lock, CornerUpLeft, AlertCircle, CheckCircle2, Clock } from 'lucide-react'
+import { Lock, CornerUpLeft, AlertCircle, CheckCircle2, Clock, Download, Trash2 } from 'lucide-react'
 import { StatusDor } from './StatusDor'
-import { submeterDor } from '@/lib/actions/dor'
+import { submeterDor, editarDor } from '@/lib/actions/dor'
+import { removerAnexo } from '@/lib/actions/anexo'
+import { AnexoUploader } from '@/components/anexos/AnexoUploader'
+import { CourseMultiSelect } from '@/components/course/CourseMultiSelect'
 import { CURSOS_UBM } from '@/lib/courses'
+import { UbmTabs } from '@/components/ubm-tabs'
+import { UbmTimeline } from '@/components/ubm-timeline'
+import { UbmTeam } from '@/components/ubm-team'
+import type { AnexoMeta } from '@/lib/actions/anexo'
+import type { CursoUbm } from '@/lib/courses'
+import type { MembroPublico, EventoTimeline } from '@/lib/data/projetos'
 
 export interface DorData {
   id: string
@@ -19,26 +28,67 @@ export interface DorData {
   autor_id: string
 }
 
+/** Anexo com signed URL para download (bucket privado) */
+export interface AnexoComUrl extends AnexoMeta {
+  signedUrl: string
+}
+
 interface DorDetalheProps {
   dor: DorData
   currentUserId: string | null
   isAdmin: boolean
+  /** Anexos da dor (com signed URLs) — passados pelo RSC */
+  anexos?: AnexoComUrl[]
+  /** true quando o usuário logado é o autor E a dor está em rascunho ou rejeitada */
+  isAutorEditavel?: boolean
+  /** P1.1 (005): equipe pública do projeto vinculado a esta dor */
+  equipe?: MembroPublico[]
+  /** P1.1 (005): timeline pública do projeto vinculado a esta dor */
+  timeline?: EventoTimeline[]
 }
 
 function labelCurso(value: string): string {
   return CURSOS_UBM.find((c) => c.value === value)?.label ?? value
 }
 
+function formatBytes(bytes: number): string {
+  if (bytes < 1024) return `${bytes} B`
+  if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`
+  return `${(bytes / (1024 * 1024)).toFixed(1)} MB`
+}
+
 /**
- * T8 — /app/dores/[id]: visão da dor (parcial — timeline/equipe = 005).
- * Sigilo: dor não-pública a terceiros → ubm-locked (nunca 404).
- * Aprovada-aguardando → ponte para verificar e-mail.
- * Rejeitada → motivo ao autor + CTA "Corrigir e reenviar".
+ * T8 + Delta 3 — /app/dores/[id]: visão da dor.
+ * Extensões Delta 3:
+ *   - isAutorEditavel: seção de edição (descrição + cursos) + AnexoUploader não-readOnly
+ *   - publicada + anexos: lista de download (signed URLs, readOnly)
+ *   - isAdmin + anexos: botão "Remover" por anexo (confirmação + removerAnexo)
  */
-export function DorDetalhe({ dor, currentUserId, isAdmin }: DorDetalheProps) {
+export function DorDetalhe({
+  dor,
+  currentUserId,
+  isAdmin,
+  anexos = [],
+  isAutorEditavel = false,
+  equipe = [],
+  timeline = [],
+}: DorDetalheProps) {
   const [enviando, setEnviando] = useState(false)
   const [enviado, setEnviado] = useState(false)
   const [erroEnvio, setErroEnvio] = useState('')
+
+  // Estado de edição
+  const [descricaoEdit, setDescricaoEdit] = useState(dor.descricao)
+  const [cursosEdit, setCursosEdit] = useState<CursoUbm[]>(
+    (dor.cursos as CursoUbm[]).filter((c) => CURSOS_UBM.some((cu) => cu.value === c))
+  )
+  const [salvando, setSalvando] = useState(false)
+  const [erroEdicao, setErroEdicao] = useState('')
+  const [salvoOk, setSalvoOk] = useState(false)
+
+  // Estado da lista de anexos (para admin remover)
+  const [anexosList, setAnexosList] = useState<AnexoComUrl[]>(anexos)
+  const [erroAnexo, setErroAnexo] = useState('')
 
   const isAutor = !!currentUserId && currentUserId === dor.autor_id
   const isAprovadaAguardando = dor.status === 'em_moderacao' && !!dor.aprovado_por
@@ -73,28 +123,57 @@ export function DorDetalhe({ dor, currentUserId, isAdmin }: DorDetalheProps) {
     }
   }
 
+  /* ── Salvar edição ── */
+  const handleSalvar = async () => {
+    setSalvando(true)
+    setErroEdicao('')
+    setSalvoOk(false)
+    const result = await editarDor({
+      dorId: dor.id,
+      descricao: descricaoEdit.trim(),
+      cursos: cursosEdit.length > 0 ? cursosEdit : undefined,
+    })
+    setSalvando(false)
+    if (result.ok) {
+      setSalvoOk(true)
+    } else {
+      setErroEdicao(result.error)
+    }
+  }
+
+  /* ── Admin: remover anexo impróprio ── */
+  const handleRemoverAnexo = async (anexoId: string, nomeArquivo: string) => {
+    const confirmado = window.confirm(`Remover o anexo "${nomeArquivo}"? Esta ação não pode ser desfeita.`)
+    if (!confirmado) return
+    setErroAnexo('')
+    const result = await removerAnexo(anexoId)
+    if (result.ok) {
+      setAnexosList((prev) => prev.filter((a) => a.id !== anexoId))
+    } else {
+      setErroAnexo(result.error)
+    }
+  }
+
   return (
     <article className="ubm-section" style={{ maxWidth: '56rem' }}>
       {/* ── Cabeçalho-carimbo ── */}
-      <header style={{ marginBottom: '1.5rem' }}>
-        <div className="ubm-stamp-header-trail" style={{ marginBottom: '0.75rem' }}>
+      <header className="ubm-page-header">
+        <div className="ubm-breadcrumb">
           <span>APP</span>
-          <span>/</span>
+          <span aria-hidden="true">/</span>
           <Link href="/app/dores" className="ubm-link">DORES</Link>
-          <span>/</span>
+          <span aria-hidden="true">/</span>
           <b>{dor.empresa_nome.toUpperCase()}</b>
         </div>
-        <div style={{ display: 'flex', alignItems: 'center', gap: '1rem', flexWrap: 'wrap' }}>
-          <h1 className="font-display" style={{ fontSize: 'clamp(1.5rem, 4vw, 2rem)', lineHeight: 1.15, margin: 0 }}>
-            {dor.empresa_nome}
-          </h1>
+        <div className="ubm-title-row">
+          <h1 className="ubm-page-title">{dor.empresa_nome}</h1>
           <StatusDor
             status={dor.status}
             aprovadoPor={dor.aprovado_por}
             pulso={dor.status === 'em_moderacao' && !dor.aprovado_por}
           />
         </div>
-        <p className="ubm-cota ubm-cota--muted" style={{ marginTop: '0.5rem' }}>
+        <p className="ubm-cota ubm-cota--muted">
           {dor.publicada_em
             ? `Publicada em ${new Date(dor.publicada_em).toLocaleDateString('pt-BR')}`
             : dor.criada_em
@@ -178,17 +257,80 @@ export function DorDetalhe({ dor, currentUserId, isAdmin }: DorDetalheProps) {
       )}
 
       {/* ── Corpo da dor ── */}
-      <div style={{ display: 'grid', gap: '2rem' }}>
-        <section>
-          <h2 className="ubm-cota" style={{ marginBottom: '0.75rem' }}>Descrição</h2>
-          <p style={{ lineHeight: 1.7, maxWidth: '65ch', color: 'hsl(var(--foreground))' }}>
-            {dor.descricao}
-          </p>
-        </section>
+      <div className="ubm-article" style={{ maxWidth: '100%' }}>
 
-        {dor.cursos.length > 0 && (
-          <section>
-            <h2 className="ubm-cota" style={{ marginBottom: '0.75rem' }}>Cursos Sugeridos</h2>
+        {/* ── Seção de EDIÇÃO (Delta 3) — autor em rascunho/rejeitada ── */}
+        {isAutorEditavel && (
+          <section className="ubm-section-block" aria-label="Editar dor">
+            <h2 className="ubm-section-title">Editar a dor</h2>
+            <div
+              className="ubm-machined"
+              style={{ padding: '1.25rem', display: 'flex', flexDirection: 'column', gap: '1rem' }}
+            >
+              <label htmlFor="edit-descricao" style={{ display: 'flex', flexDirection: 'column', gap: '0.25rem' }}>
+                <span className="ubm-cota">Descrição</span>
+                <textarea
+                  id="edit-descricao"
+                  aria-label="Descrição"
+                  value={descricaoEdit}
+                  onChange={(e) => { setDescricaoEdit(e.target.value); setSalvoOk(false) }}
+                  rows={5}
+                  className="ubm-input"
+                  style={{ resize: 'vertical' }}
+                />
+              </label>
+
+              <CourseMultiSelect value={cursosEdit} onChange={(v) => { setCursosEdit(v); setSalvoOk(false) }} />
+
+              {erroEdicao && (
+                <p role="alert" style={{ color: 'hsl(var(--destructive))', fontSize: '0.88rem', display: 'flex', gap: '0.4rem' }}>
+                  <AlertCircle size={14} aria-hidden />
+                  {erroEdicao}
+                </p>
+              )}
+              {salvoOk && (
+                <p style={{ color: 'hsl(var(--success))', fontSize: '0.88rem', display: 'flex', gap: '0.4rem' }}>
+                  <CheckCircle2 size={14} aria-hidden />
+                  Dor salva com sucesso.
+                </p>
+              )}
+
+              <div style={{ display: 'flex', justifyContent: 'flex-end' }}>
+                <button
+                  type="button"
+                  className="ubm-btn ubm-btn-primary"
+                  onClick={handleSalvar}
+                  disabled={salvando || descricaoEdit.trim().length < 10}
+                  style={{ minWidth: '8rem' }}
+                >
+                  {salvando ? 'Salvando…' : 'Salvar'}
+                </button>
+              </div>
+            </div>
+
+            {/* AnexoUploader (RN14) — não readOnly para o autor editar */}
+            <div style={{ marginTop: '1.25rem' }}>
+              <AnexoUploader
+                dorId={dor.id}
+                anexos={anexosList}
+                readOnly={false}
+              />
+            </div>
+          </section>
+        )}
+
+        {/* ── Seção de VISUALIZAÇÃO da descrição ── */}
+        {!isAutorEditavel && (
+          <section className="ubm-section-block">
+            <h2 className="ubm-section-title">A dor, nas palavras da empresa</h2>
+            <p className="ubm-prose">{dor.descricao}</p>
+          </section>
+        )}
+
+        {/* Cursos — modo visualização (fora de edição) */}
+        {!isAutorEditavel && dor.cursos.length > 0 && (
+          <section className="ubm-section-block">
+            <h2 className="ubm-section-title">Cursos que podem encaixar</h2>
             <div className="ubm-dor-card-cursos">
               {dor.cursos.map((c) => (
                 <span key={c} className="ubm-dor-card-curso">{labelCurso(c)}</span>
@@ -197,17 +339,82 @@ export function DorDetalhe({ dor, currentUserId, isAdmin }: DorDetalheProps) {
           </section>
         )}
 
-        {/* ── Timeline/equipe = peça lacrada "EM BREVE (005)" ── */}
-        <section>
-          <h2 className="ubm-cota" style={{ marginBottom: '0.75rem' }}>Linha do Tempo e Equipe</h2>
-          <div className="ubm-locked">
-            <Lock className="ubm-locked-icon" aria-hidden />
-            <span className="ubm-cota">EM BREVE</span>
-            <p className="ubm-locked-title">Em breve</p>
-            <p className="ubm-locked-msg">
-              Linha do tempo e equipe do projeto aparecerão aqui quando a dor virar projeto.
-            </p>
-          </div>
+        {/* ── Anexos publicada — lista de download (Delta 3) ── */}
+        {dor.status === 'publicada' && anexosList.length > 0 && (
+          <section className="ubm-section-block" aria-label="Anexos">
+            <h2 className="ubm-section-title">Anexos</h2>
+            {erroAnexo && (
+              <p role="alert" style={{ color: 'hsl(var(--destructive))', fontSize: '0.88rem', marginBottom: '0.5rem' }}>
+                {erroAnexo}
+              </p>
+            )}
+            <ul className="ubm-attach-list" aria-label="Arquivos para download">
+              {anexosList.map((a) => (
+                <li key={a.id} className="ubm-attach-item">
+                  <Download className="ubm-attach-item-icon" size={16} aria-hidden />
+                  <div className="ubm-attach-item-body" style={{ flex: 1 }}>
+                    <a
+                      href={a.signedUrl}
+                      download={a.nome_original}
+                      className="ubm-attach-item-name ubm-link"
+                      aria-label={a.nome_original}
+                    >
+                      {a.nome_original}
+                    </a>
+                    <span className="ubm-attach-item-meta">
+                      {formatBytes(a.tamanho_bytes)}
+                    </span>
+                  </div>
+                  {/* Admin: remover impróprio (RN14) */}
+                  {isAdmin && (
+                    <button
+                      type="button"
+                      className="ubm-attach-item-remove"
+                      aria-label={`Remover ${a.nome_original}`}
+                      onClick={() => handleRemoverAnexo(a.id, a.nome_original)}
+                      style={{ color: 'hsl(var(--destructive))' }}
+                    >
+                      <Trash2 size={14} aria-hidden />
+                    </button>
+                  )}
+                </li>
+              ))}
+            </ul>
+          </section>
+        )}
+
+        {/* ── Timeline/equipe via UbmTabs (005) ── */}
+        <section className="ubm-section-block">
+          <h2 className="ubm-section-title">Linha do tempo e equipe</h2>
+          <UbmTabs
+            aria-label="Linha do tempo e equipe do projeto"
+            tabs={[
+              {
+                id: 'timeline',
+                label: 'Linha do tempo',
+                content: timeline.length > 0
+                  ? <UbmTimeline eventos={timeline} />
+                  : (
+                    <div className="ubm-empty">
+                      <div className="ubm-empty-node" aria-hidden="true" />
+                      <p className="ubm-empty-msg">Nenhum evento registrado ainda.</p>
+                    </div>
+                  ),
+              },
+              {
+                id: 'equipe',
+                label: 'Equipe',
+                content: equipe.length > 0
+                  ? <UbmTeam membros={equipe} />
+                  : (
+                    <div className="ubm-empty">
+                      <div className="ubm-empty-node" aria-hidden="true" />
+                      <p className="ubm-empty-msg">Equipe ainda em formação.</p>
+                    </div>
+                  ),
+              },
+            ]}
+          />
         </section>
       </div>
     </article>

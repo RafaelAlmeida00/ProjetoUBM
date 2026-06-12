@@ -57,15 +57,16 @@ export default async function DoresVitrinePage() {
     <main className="ubm-dores-vitrine-page">
       <div className="ubm-section">
         {/* Cabeçalho institucional — prova social (design-system.md) */}
-        <header className="ubm-dores-vitrine-header">
-          <span className="ubm-cota">Extensão UBM · Dores reais</span>
-          <h1 className="ubm-dores-vitrine-titulo font-display">
-            Dores reais.<br />
-            <span className="ubm-dores-vitrine-titulo-destaque">Soluções reais.</span>
+        <header className="ubm-page-header">
+          <span className="ubm-cota">Extensão UBM · Vitrine de dores</span>
+          <h1 className="ubm-page-title">
+            Dores reais de empresas reais —{' '}
+            <span className="ubm-page-title-accent">resolvidas por quem está aprendendo a resolver.</span>
           </h1>
-          <p className="ubm-dores-vitrine-subtitulo">
-            Empresas, startups e órgãos públicos do Sul Fluminense que trouxeram seus desafios
-            para os alunos da UBM resolverem. Cada dor publicada pode virar um projeto de extensão.
+          <p className="ubm-page-lead">
+            Empresas, startups e órgãos públicos do Sul Fluminense trouxeram seus desafios para os
+            alunos da UBM. Foi assim que nasceu o <strong>Governo Presente!</strong>, com a Prefeitura
+            de Barra Mansa. Cada dor publicada aqui pode virar o próximo projeto de extensão.
           </p>
         </header>
 
@@ -74,7 +75,7 @@ export default async function DoresVitrinePage() {
             <div className="ubm-empty-node" aria-hidden="true" />
             <p className="ubm-empty-title">As primeiras dores chegam em breve.</p>
             <p className="ubm-empty-msg">
-              Nenhuma dor foi publicada ainda. Quer ser o primeiro?{' '}
+              Nenhuma dor foi publicada ainda. Que tal ser a primeira empresa da vitrine?{' '}
               <Link href="/propor" className="ubm-link">
                 Proponha sua dor →
               </Link>
@@ -85,7 +86,7 @@ export default async function DoresVitrinePage() {
             <p className="ubm-dores-vitrine-contagem ubm-cota ubm-cota--muted">
               {dores.length} {dores.length === 1 ? 'dor publicada' : 'dores publicadas'}
             </p>
-            <ul className="ubm-dor-grid" aria-label="Lista de dores publicadas">
+            <ul className="ubm-dor-grid ubm-reveal" aria-label="Lista de dores publicadas">
               {dores.map((dor) => (
                 <DorVitrineCard key={dor.id} dor={dor} />
               ))}

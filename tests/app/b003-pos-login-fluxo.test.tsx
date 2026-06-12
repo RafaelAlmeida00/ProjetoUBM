@@ -180,7 +180,7 @@ describe('ProporSubmitForm — draft completo para CacheSkipGate (RN25/CA27)', (
 // ─────────────────────────────────────────────────────────────────────────────
 
 describe('DoresPage — CTA Nova dor para representante verificado (task #3)', () => {
-  it('representante verificado vê link "Propor nova dor" apontando para /propor', () => {
+  it('representante verificado vê link "Propor nova dor" apontando para /app/dores/nova', () => {
     render(
       <DoresPage
         doresPublicadas={[]}
@@ -191,7 +191,7 @@ describe('DoresPage — CTA Nova dor para representante verificado (task #3)', (
       />,
     )
     const cta = screen.getByRole('link', { name: /propor nova dor/i })
-    expect(cta).toHaveAttribute('href', '/propor')
+    expect(cta).toHaveAttribute('href', '/app/dores/nova')
   })
 
   it('representante NÃO verificado vê aviso de verificação, não CTA de criar dor', () => {
@@ -227,7 +227,7 @@ describe('DoresPage — CTA Nova dor para representante verificado (task #3)', (
     expect(screen.getByRole('tab', { name: /minhas dores/i })).toBeInTheDocument()
   })
 
-  it('estado vazio em Minhas dores mostra link "Propor minha primeira dor" para /propor', () => {
+  it('estado vazio em Minhas dores mostra link "Propor minha primeira dor" para /app/dores/nova', () => {
     render(
       <DoresPage
         doresPublicadas={[]}
@@ -242,6 +242,6 @@ describe('DoresPage — CTA Nova dor para representante verificado (task #3)', (
     fireEvent.click(abaMinhas)
 
     const link = screen.getByRole('link', { name: /propor minha primeira dor/i })
-    expect(link).toHaveAttribute('href', '/propor')
+    expect(link).toHaveAttribute('href', '/app/dores/nova')
   })
 })
