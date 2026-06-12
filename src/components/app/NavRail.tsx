@@ -1,0 +1,140 @@
+'use client'
+import Link from 'next/link'
+import { usePathname } from 'next/navigation'
+import {
+  LayoutDashboard,
+  FileQuestion,
+  Building2,
+  Users,
+  ClipboardList,
+  DatabaseZap,
+  PlusCircle,
+  ShieldAlert,
+  UserCircle,
+  LogOut,
+} from 'lucide-react'
+import { logoutCompleto } from '@/lib/auth/logout'
+
+interface NavItem {
+  href: string
+  label: string
+  icon: React.ReactNode
+  roles?: string[]
+  adminOnly?: boolean
+}
+
+const NAV_ITEMS: NavItem[] = [
+  { href: '/app', label: 'Bancada', icon: <LayoutDashboard aria-hidden /> },
+  { href: '/app/dores', label: 'Dores', icon: <FileQuestion aria-hidden /> },
+  {
+    href: '/propor',
+    label: 'Propor dor',
+    icon: <PlusCircle aria-hidden />,
+    roles: ['representante'],
+  },
+  {
+    href: '/admin/dores',
+    label: 'Moderar dores',
+    icon: <ShieldAlert aria-hidden />,
+    adminOnly: true,
+  },
+  { href: '/admin/usuarios', label: 'Usuários', icon: <Users aria-hidden />, adminOnly: true },
+  { href: '/admin/empresas', label: 'Empresas', icon: <Building2 aria-hidden />, adminOnly: true },
+  {
+    href: '/admin/auditoria',
+    label: 'Auditoria',
+    icon: <ClipboardList aria-hidden />,
+    adminOnly: true,
+  },
+  {
+    href: '/admin/backfill',
+    label: 'Backfill',
+    icon: <DatabaseZap aria-hidden />,
+    adminOnly: true,
+  },
+]
+
+interface NavRailProps {
+  role?: string
+  isAdmin?: boolean
+  isOpen?: boolean
+  onClose?: () => void
+}
+
+/** Item "Sair" do bloco Meu Perfil — reusa a lógica de logout (signOut + volta à landing). */
+function LogoutItem({ onClose }: { onClose?: () => void }) {
+  const sair = async () => {
+    onClose?.()
+    await logoutCompleto()
+  }
+  return (
+    <button type="button" className="ubm-navrail-item" onClick={sair} aria-label="Sair da conta">
+      <LogOut aria-hidden />
+      <span>Sair</span>
+    </button>
+  )
+}
+
+export function NavRail({ role, isAdmin, onClose }: NavRailProps) {
+  const pathname = usePathname()
+
+  const visibleItems = NAV_ITEMS.filter((item) => {
+    if (item.adminOnly) return isAdmin
+    if (item.roles) return item.roles.includes(role ?? '')
+    return true
+  })
+
+  const isActive = (href: string) => pathname === href || pathname.startsWith(href + '/')
+  const contaAtiva = isActive('/app/conta')
+
+  return (
+    <nav className="ubm-navrail-nav" aria-label="Navegação principal">
+      {/* ── Bloco A: navegação (descendo, rola se faltar espaço) ── */}
+      <div className="ubm-navrail-top">
+        {isAdmin && (
+          <div data-testid="mode-chip" className="ubm-navrail-mode">
+            <ShieldAlert aria-hidden size={12} />
+            MODO MODERAÇÃO
+          </div>
+        )}
+        <ul className="ubm-navrail" role="list">
+          {visibleItems.map((item) => (
+            <li key={item.href}>
+              <Link
+                href={item.href}
+                className="ubm-navrail-item"
+                aria-current={isActive(item.href) ? 'page' : undefined}
+                onClick={onClose}
+              >
+                {item.icon}
+                <span>{item.label}</span>
+              </Link>
+            </li>
+          ))}
+        </ul>
+      </div>
+
+      {/* ── Bloco B: Meu Perfil, fixo no rodapé, empilhando para cima ── */}
+      <div className="ubm-navrail-bottom">
+        <ul className="ubm-navrail-perfil" role="list">
+          {/* âncora (base) — Meu Perfil */}
+          <li>
+            <Link
+              href="/app/conta"
+              className="ubm-navrail-item"
+              aria-current={contaAtiva ? 'page' : undefined}
+              onClick={onClose}
+            >
+              <UserCircle aria-hidden />
+              <span>Meu Perfil</span>
+            </Link>
+          </li>
+          {/* sobe via column-reverse — Sair */}
+          <li>
+            <LogoutItem onClose={onClose} />
+          </li>
+        </ul>
+      </div>
+    </nav>
+  )
+}

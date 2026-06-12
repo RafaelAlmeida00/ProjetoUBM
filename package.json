@@ -1,0 +1,8 @@
+{
+  "name": "workspace",
+  "private": true,
+  "description": "Camada de execução (TDD). Delega os testes ao app em src/ — faz o hook Stop exercitar a suíte (C2).",
+  "scripts": {
+    "test": "npm run test --prefix src"
+  }
+}

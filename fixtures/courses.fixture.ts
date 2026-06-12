@@ -1,0 +1,20 @@
+// 17 graduações da UBM (spec §9) — labels esperados (sem a opção "Não sei").
+export const GRADUACOES_ESPERADAS = [
+  'Administração',
+  'Biomedicina',
+  'Ciências Contábeis',
+  'Direito',
+  'Educação Física',
+  'Enfermagem',
+  'Engenharia Civil',
+  'Engenharia de Software',
+  'Engenharia Elétrica',
+  'Engenharia Mecânica',
+  'Farmácia',
+  'Fisioterapia',
+  'Medicina Veterinária',
+  'Música',
+  'Nutrição',
+  'Psicologia',
+  'Terapia Ocupacional',
+] as const
