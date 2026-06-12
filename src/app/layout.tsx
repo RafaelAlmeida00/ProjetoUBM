@@ -6,6 +6,7 @@ import { Header } from '@/components/layout/Header'
 import { Footer } from '@/components/layout/Footer'
 import { createSupabaseServerClient } from '@/lib/supabase/server'
 import { PaletteStyle } from '@/components/theme/PaletteStyle'
+import { Analytics } from '@vercel/analytics/next'
 
 const geistSans = Geist({ variable: '--font-geist-sans', subsets: ['latin'] })
 const geistMono = Geist_Mono({ variable: '--font-geist-mono', subsets: ['latin'] })
@@ -58,6 +59,7 @@ export default async function RootLayout({ children }: Readonly<{ children: Reac
           <main className="flex flex-1 flex-col">{children}</main>
           <Footer />
         </AppProviders>
+        <Analytics />
       </body>
     </html>
   )
