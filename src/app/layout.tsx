@@ -7,6 +7,7 @@ import { Footer } from '@/components/layout/Footer'
 import { createSupabaseServerClient } from '@/lib/supabase/server'
 import { PaletteStyle } from '@/components/theme/PaletteStyle'
 import { Analytics } from '@vercel/analytics/next'
+import { SpeedInsights } from '@vercel/speed-insights/next'
 
 const geistSans = Geist({ variable: '--font-geist-sans', subsets: ['latin'] })
 const geistMono = Geist_Mono({ variable: '--font-geist-mono', subsets: ['latin'] })
@@ -60,6 +61,7 @@ export default async function RootLayout({ children }: Readonly<{ children: Reac
           <Footer />
         </AppProviders>
         <Analytics />
+        <SpeedInsights />
       </body>
     </html>
   )
