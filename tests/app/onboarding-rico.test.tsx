@@ -33,6 +33,11 @@ vi.mock('@/lib/actions/empresa', () => ({
   obterOuCriarEmpresa: vi.fn().mockResolvedValue({ id: 'e1', nome: 'Empresa Teste' }),
 }))
 
+vi.mock('@/lib/actions/perfil', () => ({
+  atualizarPerfil: vi.fn().mockResolvedValue({ ok: true }),
+  getPerfilAction: vi.fn().mockResolvedValue(null),
+}))
+
 vi.mock('next/headers', () => ({
   cookies: vi.fn().mockReturnValue({ getAll: () => [], setAll: () => {} }),
 }))
@@ -140,11 +145,13 @@ describe('OnboardingPage rico — CA25 (aluno com cursos)', () => {
   })
 
   it('CA25-2: ao concluir como aluno sem curso, onboardingAluno é chamada (cursos opcionais...)', async () => {
-    // Aluno pode concluir sem cursos? Conforme spec RN23 — sim, N >=0 na UI
+    // Aluno pode concluir sem cursos? Conforme spec RN23 — sim, N >=0 na UI.
+    // Fix identidade: Nome obrigatório — preencher antes de Concluir.
     render(<OnboardingPage />)
     fireEvent.click(screen.getByRole('radio', { name: /aluno/i }))
     fireEvent.click(screen.getByRole('button', { name: /continuar/i }))
     await waitFor(() => expect(screen.getByRole('button', { name: /concluir/i })).toBeInTheDocument())
+    fireEvent.change(screen.getByLabelText(/nome/i), { target: { value: 'João Silva' } })
     fireEvent.click(screen.getByRole('button', { name: /concluir/i }))
     await waitFor(() => expect(onboardingAlunoMock).toHaveBeenCalled())
   })
@@ -155,6 +162,8 @@ describe('OnboardingPage rico — CA25 (aluno com cursos)', () => {
     fireEvent.click(screen.getByRole('radio', { name: /aluno/i }))
     fireEvent.click(screen.getByRole('button', { name: /continuar/i }))
     await waitFor(() => expect(screen.getByRole('button', { name: /concluir/i })).toBeInTheDocument())
+    // Fix identidade: Nome obrigatório — preencher antes de Concluir.
+    fireEvent.change(screen.getByLabelText(/nome/i), { target: { value: 'João Silva' } })
     // Selecionar um curso se possível
     const administracaoOption = screen.queryByLabelText(/administra/i)
     if (administracaoOption) fireEvent.click(administracaoOption)
@@ -182,21 +191,25 @@ describe('OnboardingPage rico — CA29 (coordenador admin-only)', () => {
   })
 
   it('CA29-2: coordenador pode concluir em estado passivo (sem auto-selecionar curso)', async () => {
+    // Fix identidade: Nome obrigatório — com nome preenchido, botão deve estar habilitado.
     render(<OnboardingPage />)
     fireEvent.click(screen.getByRole('radio', { name: /coordenador/i }))
     fireEvent.click(screen.getByRole('button', { name: /continuar/i }))
     await waitFor(() => expect(screen.getByRole('button', { name: /concluir/i })).toBeInTheDocument())
-    // Deve poder concluir sem selecionar curso
+    // Sem nome → botão desabilitado; com nome → habilitado
+    fireEvent.change(screen.getByLabelText(/nome/i), { target: { value: 'Prof. Lima' } })
     const btn = screen.getByRole('button', { name: /concluir/i })
     expect(btn).not.toBeDisabled()
   })
 
   it('CA29-3: ao concluir como coordenador, chama assumirPapel("coordenador") e redireciona', async () => {
+    // Fix identidade: Nome obrigatório — preencher antes de Concluir.
     assumirPapelMock.mockResolvedValue({ ok: true })
     render(<OnboardingPage />)
     fireEvent.click(screen.getByRole('radio', { name: /coordenador/i }))
     fireEvent.click(screen.getByRole('button', { name: /continuar/i }))
     await waitFor(() => expect(screen.getByRole('button', { name: /concluir/i })).toBeInTheDocument())
+    fireEvent.change(screen.getByLabelText(/nome/i), { target: { value: 'Prof. Lima' } })
     fireEvent.click(screen.getByRole('button', { name: /concluir/i }))
     await waitFor(() => expect(assumirPapelMock).toHaveBeenCalledWith('coordenador'))
     await waitFor(() => expect(pushMock).toHaveBeenCalled())

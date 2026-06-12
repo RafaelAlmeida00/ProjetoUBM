@@ -32,6 +32,11 @@ vi.mock('@/lib/actions/assumir-papel', () => ({
   assumirPapel: (...args: unknown[]) => assumirPapelMock(...args),
 }))
 
+vi.mock('@/lib/actions/perfil', () => ({
+  atualizarPerfil: vi.fn().mockResolvedValue({ ok: true }),
+  getPerfilAction: vi.fn().mockResolvedValue(null),
+}))
+
 vi.mock('@/lib/actions/empresa', () => ({
   buscarEmpresa: vi.fn().mockResolvedValue([{ id: 'e1', nome: 'Corp SA' }]),
   obterOuCriarEmpresa: vi.fn().mockResolvedValue({ ok: true, empresa: { id: 'e1', nome: 'Corp SA' } }),
@@ -127,9 +132,14 @@ describe('OnboardingPage — T-B15: e-mail corporativo obrigatório para represe
     })
   })
 
-  it('B15-3b: "Concluir" HABILITADO com empresa preenchida + e-mail corporativo válido', async () => {
+  it('B15-3b: "Concluir" HABILITADO com nome + empresa preenchida + e-mail corporativo válido', async () => {
     // Caso positivo: prova que a régua LIBERA e-mail corporativo real.
+    // Fix identidade: Nome também é obrigatório para representante.
     const user = await chegar_em_infos_representante()
+
+    // Preenche nome
+    const nomeField = screen.getByLabelText(/nome/i)
+    await user.type(nomeField, 'Ana Costa')
 
     // Preenche empresa
     const empresaBtn = screen.getByTestId('empresa-combobox-btn')

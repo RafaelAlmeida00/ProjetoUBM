@@ -25,6 +25,10 @@ interface DoresPageProps {
    *  o CTA de onboarding quando o usuário está logado mas ainda não concluiu o cadastro.
    *  Padrão false (retro-compatível). */
   isAutenticado?: boolean
+  /** true quando o usuário já tem ao menos um papel (aluno, coordenador, representante).
+   *  Quando false + isAutenticado=true: usuário logado sem nenhum papel → mostra CTA de onboarding.
+   *  Padrão true (safe default: não naguear usuários onboardados quando prop não é passada). */
+  temPapel?: boolean
 }
 
 function labelCurso(value: string): string {
@@ -79,6 +83,7 @@ export function DoresPage({
   isRepresentante,
   isVerificado,
   isAutenticado = false,
+  temPapel = true,
 }: DoresPageProps) {
   const tabsId = useId()
   const [abaAtiva, setAbaAtiva] = useState<'vitrine' | 'minhas'>('vitrine')
@@ -87,8 +92,10 @@ export function DoresPage({
   const minhasId = `${tabsId}-minhas`
   const painelId = `${tabsId}-painel`
 
-  // Usuário autenticado mas sem papel ainda (onboarding não concluído)
-  const semPapel = isAutenticado && !isRepresentante
+  // Usuário autenticado mas sem NENHUM papel ainda (onboarding não concluído).
+  // Usa temPapel quando disponível; sem a prop (retro-compat), safe default = true
+  // (não naguear aluno/coord que não passam a prop).
+  const semPapel = isAutenticado && !temPapel
 
   return (
     <section className="ubm-section">

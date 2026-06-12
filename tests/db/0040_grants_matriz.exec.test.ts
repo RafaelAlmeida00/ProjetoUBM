@@ -97,6 +97,7 @@ describe('0040 grants — anon NÃO tem execute em nenhuma outra DEFINER (matriz
       'is_dor_course_coordinator', // 005 — idem
       'equipe_publica',         // 005 — visibilidade pública equipe
       'timeline_publica',       // 005 — visibilidade pública timeline
+      'ler_timeline_dor',       // 004 delta-edição — RS-ED7b: timeline de dor publicada visível a anon
     ]  // submeter_dor_landing é a ÚNICA porta de escrita anon
     const rows = (await db.query<{ proname: string }>(
       `select p.proname

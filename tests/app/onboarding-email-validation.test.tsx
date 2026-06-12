@@ -23,6 +23,11 @@ vi.mock('@/lib/actions/assumir-papel', () => ({
   assumirPapel: vi.fn().mockResolvedValue({ ok: true }),
 }))
 
+vi.mock('@/lib/actions/perfil', () => ({
+  atualizarPerfil: vi.fn().mockResolvedValue({ ok: true }),
+  getPerfilAction: vi.fn().mockResolvedValue(null),
+}))
+
 vi.mock('@/components/onboarding/CacheSkipGate', () => ({
   CacheSkipGate: ({ children }: { children: React.ReactNode }) => <>{children}</>,
 }))

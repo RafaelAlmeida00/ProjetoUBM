@@ -31,6 +31,11 @@ vi.mock('@/lib/actions/empresa', () => ({
   obterOuCriarEmpresa: vi.fn().mockResolvedValue({ id: 'e1', nome: 'Empresa Teste' }),
 }))
 
+vi.mock('@/lib/actions/perfil', () => ({
+  atualizarPerfil: vi.fn().mockResolvedValue({ ok: true }),
+  getPerfilAction: vi.fn().mockResolvedValue(null),
+}))
+
 // next/headers não existe em jsdom
 vi.mock('next/headers', () => ({ cookies: vi.fn().mockReturnValue({ getAll: () => [], setAll: () => {} }) }))
 
@@ -63,12 +68,14 @@ describe('OnboardingPage — T3', () => {
   })
 
   it('ao concluir como coordenador (passivo), chama assumirPapel e redireciona', async () => {
-    // Novo fluxo: estágio 1 → Continuar → estágio 2 (tela passiva) → Concluir
+    // Novo fluxo: estágio 1 → Continuar → estágio 2 (tela passiva + Nome) → Concluir
+    // Fix identidade: Nome obrigatório — preencher antes de Concluir.
     assumirPapelMock.mockResolvedValueOnce({ ok: true })
     render(<OnboardingPage />)
     fireEvent.click(screen.getByRole('radio', { name: /coordenador/i }))
     fireEvent.click(screen.getByRole('button', { name: /continuar/i }))
     await waitFor(() => expect(screen.getByRole('button', { name: /concluir/i })).toBeInTheDocument())
+    fireEvent.change(screen.getByLabelText(/nome/i), { target: { value: 'Prof. Braga' } })
     fireEvent.click(screen.getByRole('button', { name: /concluir/i }))
     await waitFor(() => expect(assumirPapelMock).toHaveBeenCalledWith('coordenador'))
     await waitFor(() => expect(pushMock).toHaveBeenCalled())
@@ -76,11 +83,13 @@ describe('OnboardingPage — T3', () => {
 
   it('erro no concluir (coordenador) mostra mensagem PT-BR e mantém tela', async () => {
     // Erro é exibido na tela de "Concluir" (estágio 2), não no "Continuar" (estágio 1)
+    // Fix identidade: Nome obrigatório — preencher antes de Concluir.
     assumirPapelMock.mockResolvedValueOnce({ ok: false, error: 'Erro ao definir papel' })
     render(<OnboardingPage />)
     fireEvent.click(screen.getByRole('radio', { name: /coordenador/i }))
     fireEvent.click(screen.getByRole('button', { name: /continuar/i }))
     await waitFor(() => expect(screen.getByRole('button', { name: /concluir/i })).toBeInTheDocument())
+    fireEvent.change(screen.getByLabelText(/nome/i), { target: { value: 'Prof. Braga' } })
     fireEvent.click(screen.getByRole('button', { name: /concluir/i }))
     // Deve mostrar mensagem de erro genérica (mapeada pelo mapError da action)
     await waitFor(() => {

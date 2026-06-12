@@ -12,6 +12,10 @@ import {
   ShieldAlert,
   UserCircle,
   LogOut,
+  Briefcase,
+  Star,
+  Bell,
+  Palette,
 } from 'lucide-react'
 import { logoutCompleto } from '@/lib/auth/logout'
 
@@ -26,6 +30,17 @@ interface NavItem {
 const NAV_ITEMS: NavItem[] = [
   { href: '/app', label: 'Bancada', icon: <LayoutDashboard aria-hidden /> },
   { href: '/app/dores', label: 'Dores', icon: <FileQuestion aria-hidden /> },
+  // 005: vitrine pública de projetos — todos os logados
+  { href: '/casos', label: 'Casos', icon: <Briefcase aria-hidden /> },
+  // 005: auto-indicação — só aluno e coordenador (representante não se indica)
+  {
+    href: '/app/indicacoes',
+    label: 'Indicações',
+    icon: <Star aria-hidden />,
+    roles: ['aluno', 'coordenador'],
+  },
+  // 005: central de notificações — todos os logados
+  { href: '/app/notificacoes', label: 'Notificações', icon: <Bell aria-hidden /> },
   {
     href: '/propor',
     label: 'Propor dor',
@@ -50,6 +65,13 @@ const NAV_ITEMS: NavItem[] = [
     href: '/admin/backfill',
     label: 'Backfill',
     icon: <DatabaseZap aria-hidden />,
+    adminOnly: true,
+  },
+  // 007: editor de paletas — só admin (RN6/NC-1: sem troca por usuário)
+  {
+    href: '/admin/paletas',
+    label: 'Paletas',
+    icon: <Palette aria-hidden />,
     adminOnly: true,
   },
 ]

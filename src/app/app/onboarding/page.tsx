@@ -1,9 +1,10 @@
 'use client'
 import { Suspense, useState } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
-import { Loader2 } from 'lucide-react'
+import { Loader2, AlertCircle } from 'lucide-react'
 import { assumirPapel, type Papel } from '@/lib/actions/assumir-papel'
 import { onboardingRepresentante, onboardingAluno } from '@/lib/actions/onboarding'
+import { atualizarPerfil } from '@/lib/actions/perfil'
 import { EmpresaCombobox } from '@/components/empresa/EmpresaCombobox'
 import { CourseMultiSelect } from '@/components/course/CourseMultiSelect'
 import { Node } from '@/components/brand/Node'
@@ -33,6 +34,48 @@ const PAPEIS: { id: Papel; label: string; desc: string }[] = [
 type Etapa = 'tipo' | 'infos'
 
 /**
+ * Campo Nome compartilhado entre os 3 fluxos de infos.
+ * Usa as primitivas .ubm-field/.ubm-field-label/.ubm-field-help/.ubm-field-error (ux-ui 2026-06-12).
+ */
+function NomeField({
+  value,
+  onChange,
+}: {
+  value: string
+  onChange: (v: string) => void
+}) {
+  const nomeErro = value.length > 0 && value.trim().length < 2
+  return (
+    <div className="ubm-field">
+      <label htmlFor="onb-nome" className="ubm-field-label">
+        Nome <span className="ubm-req">*</span>
+      </label>
+      <input
+        id="onb-nome"
+        type="text"
+        aria-required="true"
+        aria-describedby="onb-nome-help onb-nome-err"
+        aria-invalid={nomeErro ? 'true' : undefined}
+        className="ubm-combobox-input"
+        value={value}
+        onChange={(e) => onChange(e.target.value)}
+        placeholder="Como você quer ser chamado(a)"
+        autoComplete="name"
+      />
+      <p id="onb-nome-help" className="ubm-field-help">
+        É assim que você aparece para colegas e coordenadores na plataforma.
+      </p>
+      {nomeErro && (
+        <p id="onb-nome-err" role="alert" className="ubm-field-error">
+          <AlertCircle aria-hidden />
+          Informe seu nome para continuar.
+        </p>
+      )}
+    </div>
+  )
+}
+
+/**
  * Componente interno que usa useSearchParams — deve ficar dentro de Suspense.
  */
 function OnboardingContent() {
@@ -44,6 +87,10 @@ function OnboardingContent() {
   const [selected, setSelected] = useState<Papel | null>(null)
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
+
+  // Nome — obrigatório para todos os papéis
+  const [nome, setNome] = useState('')
+  const nomeValido = nome.trim().length >= 2
 
   // Infos por tipo — representante
   const [empresa, setEmpresa] = useState<EmpresaResult | null>(null)
@@ -62,8 +109,14 @@ function OnboardingContent() {
 
   const podeAvancar = !!selected
 
-  // Representante: empresa + e-mail corporativo válido (não-gratuito, com @) obrigatórios
-  const podeConcluirRepresentante = !!empresa && isEmailCorporativo(emailCorporativo)
+  // Representante: empresa + e-mail corporativo válido + nome
+  const podeConcluirRepresentante = !!empresa && isEmailCorporativo(emailCorporativo) && nomeValido
+
+  // Aluno: nome obrigatório (cursos opcionais)
+  const podeConcluirAluno = nomeValido
+
+  // Coordenador: nome obrigatório
+  const podeConcluirCoordenador = nomeValido
 
   const handleConcluir = async () => {
     if (!selected) return
@@ -79,7 +132,7 @@ function OnboardingContent() {
         }
         const result = await onboardingRepresentante({
           empresaId: empresa.id,
-          nome: '',
+          nome: nome.trim(),
           departamento: departamento || null,
           cargo: cargo || null,
           emailCorporativo,
@@ -90,17 +143,23 @@ function OnboardingContent() {
           return
         }
       } else if (selected === 'aluno') {
-        const result = await onboardingAluno({ nome: '', cursoIds: cursos as string[] })
+        const result = await onboardingAluno({ nome: nome.trim(), cursoIds: cursos as string[] })
         if (!result.ok) {
           setError((result as { ok: false; error: string }).error)
           setLoading(false)
           return
         }
       } else if (selected === 'coordenador') {
-        // Coordenador: apenas assume o papel (curso atribuído pelo admin — CA29/RN24)
-        const result = await assumirPapel('coordenador')
-        if (!result.ok) {
+        // Coordenador: assume papel + grava nome via atualizarPerfil (assumir_papel não toca perfil)
+        const papelResult = await assumirPapel('coordenador')
+        if (!papelResult.ok) {
           setError('Não conseguimos definir seu papel. Tente novamente.')
+          setLoading(false)
+          return
+        }
+        const perfilResult = await atualizarPerfil({ nomePublico: nome.trim() })
+        if (!perfilResult.ok) {
+          setError('Papel definido, mas não conseguimos salvar seu nome. Tente novamente.')
           setLoading(false)
           return
         }
@@ -265,7 +324,7 @@ function OnboardingContent() {
                 marginBottom: '0.5rem',
               }}
             >
-              Sobre sua empresa
+              Sobre você e sua empresa
             </h1>
             <p
               style={{
@@ -274,10 +333,12 @@ function OnboardingContent() {
                 fontSize: '0.95rem',
               }}
             >
-              Informe a empresa que você representa e seu papel nela.
+              Informe seu nome, a empresa que você representa e seu papel nela.
             </p>
 
             <div style={{ display: 'flex', flexDirection: 'column', gap: '1.25rem' }}>
+              <NomeField value={nome} onChange={setNome} />
+
               <EmpresaCombobox
                 value={empresa}
                 onChange={setEmpresa}
@@ -396,7 +457,7 @@ function OnboardingContent() {
                 marginBottom: '0.5rem',
               }}
             >
-              Seus cursos
+              Seus dados
             </h1>
             <p
               style={{
@@ -405,10 +466,13 @@ function OnboardingContent() {
                 fontSize: '0.95rem',
               }}
             >
-              Quais cursos da UBM você cursa? Pode selecionar mais de um.
+              Informe seu nome e os cursos da UBM que você cursa.
             </p>
 
-            <CourseMultiSelect value={cursos} onChange={setCursos} />
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '1.25rem' }}>
+              <NomeField value={nome} onChange={setNome} />
+              <CourseMultiSelect value={cursos} onChange={setCursos} />
+            </div>
           </>
         )}
 
@@ -423,7 +487,7 @@ function OnboardingContent() {
                 marginBottom: '0.5rem',
               }}
             >
-              Aguardando atribuição
+              Seu nome e aguardando atribuição
             </h1>
             <p
               style={{
@@ -432,27 +496,31 @@ function OnboardingContent() {
                 fontSize: '0.95rem',
               }}
             >
-              O curso que você coordena será atribuído pelo administrador da UBM.
-              Isso garante que a coordenação seja validada antes de liberar o acesso.
+              Informe seu nome. O curso que você coordena será atribuído pelo administrador da UBM.
             </p>
-            <div
-              className="ubm-machined"
-              style={{
-                padding: '1rem 1.25rem',
-                borderColor: 'hsl(var(--warning) / 0.5)',
-                background: 'hsl(var(--warning) / 0.07)',
-                fontSize: '0.9rem',
-                color: 'hsl(var(--muted-foreground))',
-              }}
-              role="status"
-              aria-live="polite"
-            >
-              <span style={{ fontWeight: 600, color: 'hsl(var(--warning))' }}>
-                Aguardando atribuição de curso
-              </span>
-              <br />
-              Quando um administrador atribuir o curso a você, o acesso de coordenador
-              ficará disponível automaticamente.
+
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '1.25rem' }}>
+              <NomeField value={nome} onChange={setNome} />
+
+              <div
+                className="ubm-machined"
+                style={{
+                  padding: '1rem 1.25rem',
+                  borderColor: 'hsl(var(--warning) / 0.5)',
+                  background: 'hsl(var(--warning) / 0.07)',
+                  fontSize: '0.9rem',
+                  color: 'hsl(var(--muted-foreground))',
+                }}
+                role="status"
+                aria-live="polite"
+              >
+                <span style={{ fontWeight: 600, color: 'hsl(var(--warning))' }}>
+                  Aguardando atribuição de curso
+                </span>
+                <br />
+                Quando um administrador atribuir o curso a você, o acesso de coordenador
+                ficará disponível automaticamente.
+              </div>
             </div>
           </>
         )}
@@ -490,7 +558,9 @@ function OnboardingContent() {
             className="ubm-btn ubm-btn-primary"
             disabled={
               loading ||
-              (selected === 'representante' && !podeConcluirRepresentante)
+              (selected === 'representante' && !podeConcluirRepresentante) ||
+              (selected === 'aluno' && !podeConcluirAluno) ||
+              (selected === 'coordenador' && !podeConcluirCoordenador)
             }
             onClick={handleConcluir}
           >
@@ -512,6 +582,7 @@ function OnboardingContent() {
 /**
  * T3 — /app/onboarding: onboarding coeso (tipo + infos por tipo).
  * RN21-24 / CA24/CA25/CA29.
+ * Fix identidade: captura Nome obrigatório (≥2 chars) para todos os papéis.
  * Suspense necessário para useSearchParams() no build estático do Next.
  */
 export default function OnboardingPage() {

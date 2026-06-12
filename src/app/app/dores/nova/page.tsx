@@ -36,7 +36,7 @@ export default async function NovaDorPage() {
     .from('membro_empresa')
     .select('empresa_id, empresa:empresa(id, nome_canonico)')
     .eq('user_id', user.id)
-    .eq('tipo', 'representante')
+    .eq('papel', 'representante')
 
   // Verifica se conta está verificada
   const { data: perfil } = await supabase

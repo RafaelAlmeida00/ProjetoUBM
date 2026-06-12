@@ -22,6 +22,9 @@ import { DoresPage } from '@/components/dores/DoresPage'
 
 describe('DoresPage — estado humanizado para usuário sem papel (task #3)', () => {
   it('usuário autenticado SEM papel vê CTA "Complete seu cadastro" apontando para /app/onboarding', () => {
+    // Fix identidade: temPapel=false é obrigatório para o CTA aparecer.
+    // Antes o gate era !isRepresentante (bugado: nagueava aluno/coord onboardados).
+    // Agora o gate correto é isAutenticado && !temPapel.
     render(
       <DoresPage
         doresPublicadas={[]}
@@ -29,6 +32,7 @@ describe('DoresPage — estado humanizado para usuário sem papel (task #3)', ()
         isRepresentante={false}
         isVerificado={false}
         isAutenticado={true}
+        temPapel={false}
       />,
     )
     // Deve haver ao menos um link para /app/onboarding (pode ser o botão header + inline)
@@ -79,6 +83,7 @@ describe('DoresPage — estado humanizado para usuário sem papel (task #3)', ()
   })
 
   it('vitrine vazia + autenticado-sem-papel: mensagem humanizada com direção ao onboarding', () => {
+    // Fix identidade: temPapel=false para garantir que o CTA aparece (gate correto).
     render(
       <DoresPage
         doresPublicadas={[]}
@@ -86,6 +91,7 @@ describe('DoresPage — estado humanizado para usuário sem papel (task #3)', ()
         isRepresentante={false}
         isVerificado={false}
         isAutenticado={true}
+        temPapel={false}
       />,
     )
     // Estado vazio com texto humanizado

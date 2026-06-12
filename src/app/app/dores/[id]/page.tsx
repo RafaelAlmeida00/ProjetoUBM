@@ -2,7 +2,9 @@ import { createSupabaseServerClient } from '@/lib/supabase/server'
 import { DorDetalhe } from '@/components/dores/DorDetalhe'
 import type { DorData, AnexoComUrl } from '@/components/dores/DorDetalhe'
 import { obterEquipePublica, obterTimelinePublica } from '@/lib/data/projetos'
+import { obterTimelineDor } from '@/lib/data/dores'
 import type { MembroPublico, EventoTimeline } from '@/lib/data/projetos'
+import type { EventoTimelineDor } from '@/lib/data/dores'
 
 interface Props {
   params: Promise<{ id: string }>
@@ -103,9 +105,26 @@ export default async function DorDetalhePage({ params }: Props) {
     })
   )
 
-  // isAutorEditavel: autor + dor em rascunho ou rejeitada (Delta 3)
+  // isAutorEditavel (Delta-edição / 0051 + ruling cyber): o autor dono e VERIFICADO
+  // pode editar a dor em qualquer status editável — rascunho, rejeitada, em_moderacao
+  // e PUBLICADA (editar publicada/em_moderacao re-entra em moderação; a vitrine esconde
+  // até reaprovar). editar_dor enforce o mesmo gate no banco (RS-ED1/RS-ED5).
   const isAutor = !!user && user.id === dor.autor_id
-  const isAutorEditavel = isAutor && (dor.status_dor === 'rascunho' || dor.status_dor === 'rejeitada')
+  let autorVerificado = false
+  if (isAutor) {
+    const { data: perfilAutor } = await supabase
+      .from('perfil')
+      .select('verificado_em')
+      .eq('user_id', user!.id)
+      .maybeSingle()
+    autorVerificado = !!perfilAutor?.verificado_em
+  }
+  const STATUS_EDITAVEIS = ['rascunho', 'rejeitada', 'em_moderacao', 'publicada']
+  const isAutorEditavel = isAutor && autorVerificado && STATUS_EDITAVEIS.includes(dor.status_dor)
+
+  // Linha do tempo append-only da própria dor (0051 ler_timeline_dor) — antes não era
+  // buscada nem passada, então a aba "Linha do tempo da dor" ficava sempre vazia.
+  const timelineDor: EventoTimelineDor[] = await obterTimelineDor(id)
 
   // P1.1 (005): equipe e timeline pública via projeto vinculado à dor
   let equipe: MembroPublico[] = []
@@ -145,6 +164,7 @@ export default async function DorDetalhePage({ params }: Props) {
       isAutorEditavel={isAutorEditavel}
       equipe={equipe}
       timeline={timeline}
+      timelineDor={timelineDor}
     />
   )
 }

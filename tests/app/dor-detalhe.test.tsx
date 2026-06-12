@@ -147,7 +147,9 @@ describe('DorDetalhe — T8 (visão da dor parcial)', () => {
     )
     // P1.1 (005): o placeholder "EM BREVE (005)" foi substituído por UbmTabs.
     expect(screen.getByText(/linha do tempo e equipe/i)).toBeInTheDocument()
-    expect(screen.getByRole('tab', { name: /linha do tempo/i })).toBeInTheDocument()
+    // Delta-edição: aba da dor + aba do projeto (renomeada p/ desambiguar) + equipe
+    expect(screen.getByRole('tab', { name: 'Linha do tempo da dor' })).toBeInTheDocument()
+    expect(screen.getByRole('tab', { name: 'Linha do tempo do projeto' })).toBeInTheDocument()
     expect(screen.getByRole('tab', { name: /equipe/i })).toBeInTheDocument()
     expect(screen.queryByText(/em breve/i)).toBeNull()
   })

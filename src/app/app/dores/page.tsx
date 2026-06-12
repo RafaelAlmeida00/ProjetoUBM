@@ -29,6 +29,9 @@ export default async function DoresRoutePage() {
   let minhasDores: DorCard[] = []
   let isRepresentante = false
   let isVerificado = false
+  // temPapel: true quando usuário tem ao menos um papel (aluno/coord/rep).
+  // false só quando autenticado sem nenhum papel → exibe CTA de onboarding.
+  let temPapel = false
 
   if (user) {
     const { data: perfil } = await supabase
@@ -45,6 +48,7 @@ export default async function DoresRoutePage() {
       .eq('user_id', user.id)
 
     isRepresentante = papeis?.some((p) => p.role === 'representante') ?? false
+    temPapel = (papeis?.length ?? 0) > 0
 
     if (isRepresentante) {
       const { data: minhas } = await supabase
@@ -139,6 +143,7 @@ export default async function DoresRoutePage() {
       isRepresentante={isRepresentante}
       isVerificado={isVerificado}
       isAutenticado={!!user}
+      temPapel={temPapel}
     />
   )
 }

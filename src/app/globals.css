@@ -661,6 +661,31 @@
   .ubm-combobox-input:focus { outline: none; border-color: hsl(var(--primary)); box-shadow: 0 0 0 3px hsl(var(--primary) / 0.16); }
   .ubm-combobox-input:disabled { opacity: 0.5; cursor: not-allowed; }
   .ubm-combobox-input[aria-expanded="true"] { border-color: hsl(var(--primary)); }
+  /* erro de validação inline (reusado pelo campo Nome em /app/conta e no onboarding) */
+  .ubm-combobox-input[aria-invalid="true"] { border-color: hsl(var(--destructive)); }
+  .ubm-combobox-input[aria-invalid="true"]:focus { box-shadow: 0 0 0 3px hsl(var(--destructive) / 0.16); }
+
+  /* ───────────── CAMPO DE FORMULÁRIO (label/helper/erro/sucesso) ─────────────
+     Primitivas de campo para edição de perfil (/app/conta) e onboarding.
+     Substituem os estilos inline repetidos; zero hex, tudo via token. */
+  .ubm-field { display: flex; flex-direction: column; }
+  .ubm-field-label { display: block; font-weight: 600; font-size: 0.9rem; margin-bottom: 0.35rem; color: hsl(var(--foreground)); }
+  .ubm-field-label .ubm-req { color: hsl(var(--accent)); margin-left: 0.15rem; }
+  .ubm-field-help { font-size: 0.8rem; line-height: 1.45; color: hsl(var(--muted-foreground)); margin-top: 0.3rem; }
+  .ubm-field-error { display: flex; align-items: center; gap: 0.4rem; font-size: 0.8rem; color: hsl(var(--destructive)); margin-top: 0.3rem; animation: ubm-fade 0.18s ease-out; }
+  .ubm-field-error > svg { width: 0.95rem; height: 0.95rem; flex: none; }
+  /* bloco de feedback de salvamento — sucesso (verde-token) e falha (destructive) */
+  .ubm-save-feedback {
+    display: flex; align-items: center; gap: 0.55rem; margin-top: 0.9rem; padding: 0.65rem 0.85rem;
+    font-size: 0.9rem; line-height: 1.4; border-radius: var(--radius);
+    animation: ubm-fade 0.22s ease-out;
+  }
+  .ubm-save-feedback > svg { width: 1.1rem; height: 1.1rem; flex: none; }
+  .ubm-save-feedback--ok   { color: hsl(var(--success));     background-color: hsl(var(--success) / 0.1);     border: 1px solid hsl(var(--success) / 0.35); }
+  .ubm-save-feedback--err  { color: hsl(var(--destructive)); background-color: hsl(var(--destructive) / 0.1); border: 1px solid hsl(var(--destructive) / 0.35); }
+  @media (prefers-reduced-motion: reduce) {
+    .ubm-field-error, .ubm-save-feedback { animation: none; }
+  }
   /* spinner inline na busca */
   .ubm-combobox-busy { position: absolute; right: 0.85rem; width: 1.15rem; height: 1.15rem; color: hsl(var(--primary)); animation: ubm-rotate 1.2s linear infinite; pointer-events: none; }
   /* popover (peça usinada) */

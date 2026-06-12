@@ -185,7 +185,10 @@ describe('DorDetalhe — abas EQUIPE/TIMELINE (P1.1)', () => {
       />,
     )
     expect(screen.getByRole('tablist')).toBeInTheDocument()
-    expect(screen.getByRole('tab', { name: /linha do tempo/i })).toBeInTheDocument()
+    // Delta-edição adicionou a aba "Linha do tempo da dor"; a do projeto (005) foi
+    // renomeada para "Linha do tempo do projeto" para desambiguar.
+    expect(screen.getByRole('tab', { name: 'Linha do tempo da dor' })).toBeInTheDocument()
+    expect(screen.getByRole('tab', { name: 'Linha do tempo do projeto' })).toBeInTheDocument()
     expect(screen.getByRole('tab', { name: /equipe/i })).toBeInTheDocument()
   })
 
@@ -202,7 +205,7 @@ describe('DorDetalhe — abas EQUIPE/TIMELINE (P1.1)', () => {
     expect(screen.queryByText(/EM BREVE/i)).toBeNull()
   })
 
-  it('aba timeline mostra .ubm-timeline', () => {
+  it('aba timeline do projeto mostra .ubm-timeline', () => {
     render(
       <DorDetalhe
         dor={DOR_PUBLICADA}
@@ -212,6 +215,8 @@ describe('DorDetalhe — abas EQUIPE/TIMELINE (P1.1)', () => {
         timeline={EVENTOS}
       />,
     )
+    // A aba default agora é "Linha do tempo da dor"; a do projeto (005) é a 2ª.
+    fireEvent.click(screen.getByRole('tab', { name: 'Linha do tempo do projeto' }))
     expect(document.querySelector('.ubm-timeline')).toBeInTheDocument()
   })
 

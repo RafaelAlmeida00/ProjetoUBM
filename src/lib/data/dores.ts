@@ -4,6 +4,14 @@ import { createSupabaseServerClient } from '@/lib/supabase/server'
 // Tipos públicos exportados
 // ---------------------------------------------------------------------------
 
+/** Evento da linha do tempo de uma dor (retornado por ler_timeline_dor). */
+export interface EventoTimelineDor {
+  tipo: string
+  ocorreu_em: string
+  ator_papel: string
+  rotulo: string
+}
+
 /** Anexo de dor com signed URL para download (bucket privado — createSignedUrl). */
 export interface AnexoPublico {
   id: string
@@ -155,5 +163,25 @@ export async function obterDorPublica(id: string): Promise<DorPublica | null> {
     }
   } catch {
     return null
+  }
+}
+
+// ---------------------------------------------------------------------------
+// obterTimelineDor — RSC /app/dores/[id] (Delta-edição)
+// ---------------------------------------------------------------------------
+
+/**
+ * Retorna a linha do tempo append-only de uma dor via RPC ler_timeline_dor.
+ * Visibilidade controlada por RLS no banco (publicada→todos; não-publicada→autor+admin).
+ * Retorna [] em caso de erro para não quebrar a página.
+ */
+export async function obterTimelineDor(dorId: string): Promise<EventoTimelineDor[]> {
+  try {
+    const supabase = await createSupabaseServerClient()
+    const { data, error } = await supabase.rpc('ler_timeline_dor', { p_dor_id: dorId })
+    if (error || !data) return []
+    return (data as EventoTimelineDor[])
+  } catch {
+    return []
   }
 }

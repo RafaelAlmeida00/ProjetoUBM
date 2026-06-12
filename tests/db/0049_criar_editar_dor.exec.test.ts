@@ -311,36 +311,45 @@ describe('0049 editar_dor — guardas de segurança', () => {
     await db.close()
   })
 
-  it('dor publicada nao e editavel (RN5)', async () => {
+  it('dor publicada: autor pode editar (RN5 emendado por RN27/RS-ED1 — 0051 expande editar_dor)', async () => {
+    // EMENDA RN5 (ruling RS-ED1, 0051): autor pode editar dor publicada; a edição
+    // re-entra em moderação (publicada → em_moderacao). O teste original "não editável"
+    // foi atualizado para refletir o novo comportamento aprovado.
     const db = await novoBanco()
     await seedBase(db)
     const dorId = await criarDorRep(db, 'Rascunho para publicar')
 
-    // Caminho correto: rascunho → em_moderacao → publicada (A1: admin aprova + autor verificado)
-    // REP já está verificado (seedBase); admin aprova → dor_publicavel = true → publica
     await comoUsuario(db, { uid: REP, email: 'rep@empresa.com' })
     await db.query(`select public.submeter_dor($1)`, [dorId])
 
     await comoUsuario(db, { uid: ADM, email: 'adm@empresa.com', appMeta: { is_admin: true } })
     await db.query(`select public.moderar_dor($1, 'aprovar', null)`, [dorId])
 
-    // Confirma que está publicada
     await comoServiceRole(db)
     const { status_dor } = (await db.query<{ status_dor: string }>(
       `select status_dor from public.dor where id = $1`, [dorId]
     )).rows[0]!
-    expect(status_dor, 'dor deve estar publicada antes do teste de edição').toBe('publicada')
+    expect(status_dor, 'dor deve estar publicada antes da edição').toBe('publicada')
 
-    // Tenta editar como autor — deve ser negado
+    // Autor edita dor publicada — agora PERMITIDO (re-entra em moderação)
     await comoUsuario(db, { uid: REP, email: 'rep@empresa.com' })
     const err = await negado(
-      db.query(`select public.editar_dor($1, $2)`, [dorId, 'Tentativa ilegal'])
+      db.query(`select public.editar_dor($1, $2)`, [dorId, 'Conteudo editado'])
     )
-    expect(err, 'dor publicada nao pode ser editada').toBe(true)
+    expect(err, 'dor publicada PODE ser editada pelo autor (RN27/RS-ED1)').toBe(false)
+
+    // Confirma re-moderação
+    await comoServiceRole(db)
+    const { rows } = await db.query<{ status_dor: string }>(
+      `select status_dor from public.dor where id = $1`, [dorId]
+    )
+    expect(rows[0]!.status_dor, 'editar dor publicada deve re-entrar em moderação').toBe('em_moderacao')
     await db.close()
   })
 
-  it('dor em_moderacao nao e editavel (RN5: somente rascunho/rejeitada)', async () => {
+  it('dor em_moderacao: autor pode editar (RN5 emendado por RN27/RS-ED1 — 0051 expande editar_dor)', async () => {
+    // EMENDA RN5 (ruling RS-ED1, 0051): autor pode editar dor em_moderacao (re-enfileira).
+    // O teste original "não editável" foi atualizado para refletir o novo comportamento aprovado.
     const db = await novoBanco()
     await seedBase(db)
     const dorId = await criarDorRep(db, 'Rascunho para moderar')
@@ -354,7 +363,7 @@ describe('0049 editar_dor — guardas de segurança', () => {
     const err = await negado(
       db.query(`select public.editar_dor($1, $2)`, [dorId, 'Edicao em moderacao'])
     )
-    expect(err, 'dor em_moderacao nao pode ser editada').toBe(true)
+    expect(err, 'dor em_moderacao PODE ser editada pelo autor (RN27/RS-ED1)').toBe(false)
     await db.close()
   })
 

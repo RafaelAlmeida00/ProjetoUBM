@@ -64,6 +64,7 @@ describe('0042 grants — anon NÃO tem execute em nenhuma outra DEFINER (matriz
       'resolver_paleta',
       'is_project_host', 'is_project_coordinator', 'is_team_member', 'is_dor_course_coordinator',
       'equipe_publica', 'timeline_publica',
+      'ler_timeline_dor',       // 004 delta-edição — RS-ED7b: timeline de dor publicada visível a anon
     ]
     const rows = (await db.query<{ proname: string }>(
       `select p.proname

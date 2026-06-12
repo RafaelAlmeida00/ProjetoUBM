@@ -1,7 +1,7 @@
 'use client'
 import { useState } from 'react'
 import Link from 'next/link'
-import { Lock, CornerUpLeft, AlertCircle, CheckCircle2, Clock, Download, Trash2 } from 'lucide-react'
+import { Lock, CornerUpLeft, AlertCircle, CheckCircle2, Clock, Download, Trash2, Info } from 'lucide-react'
 import { StatusDor } from './StatusDor'
 import { submeterDor, editarDor } from '@/lib/actions/dor'
 import { removerAnexo } from '@/lib/actions/anexo'
@@ -14,6 +14,7 @@ import { UbmTeam } from '@/components/ubm-team'
 import type { AnexoMeta } from '@/lib/actions/anexo'
 import type { CursoUbm } from '@/lib/courses'
 import type { MembroPublico, EventoTimeline } from '@/lib/data/projetos'
+import type { EventoTimelineDor } from '@/lib/data/dores'
 
 export interface DorData {
   id: string
@@ -39,16 +40,74 @@ interface DorDetalheProps {
   isAdmin: boolean
   /** Anexos da dor (com signed URLs) — passados pelo RSC */
   anexos?: AnexoComUrl[]
-  /** true quando o usuário logado é o autor E a dor está em rascunho ou rejeitada */
+  /** true quando o usuário logado é o autor E a dor está em {rascunho, rejeitada, em_moderacao, publicada} */
   isAutorEditavel?: boolean
   /** P1.1 (005): equipe pública do projeto vinculado a esta dor */
   equipe?: MembroPublico[]
   /** P1.1 (005): timeline pública do projeto vinculado a esta dor */
   timeline?: EventoTimeline[]
+  /** Delta-edição: linha do tempo append-only da própria dor (ler_timeline_dor) */
+  timelineDor?: EventoTimelineDor[]
 }
 
 function labelCurso(value: string): string {
   return CURSOS_UBM.find((c) => c.value === value)?.label ?? value
+}
+
+/** Formata data ISO em pt-BR curto: "01 jun. 2026" */
+function formatarDataPtBR(iso: string): string {
+  try {
+    return new Intl.DateTimeFormat('pt-BR', {
+      day: '2-digit',
+      month: 'short',
+      year: 'numeric',
+    }).format(new Date(iso))
+  } catch {
+    return iso
+  }
+}
+
+/** Rótulos de papel do ator para exibição */
+const PAPEL_LABELS: Record<string, string> = {
+  representante: 'Representante',
+  admin: 'Admin UBM',
+  sistema: 'Sistema',
+}
+
+/**
+ * DorTimeline — linha do tempo append-only da própria dor.
+ * Renderiza eventos retornados por ler_timeline_dor: rotulo + ator_papel + data.
+ * Semântica ol/li; nunca só cor; a11y WCAG AA.
+ */
+function DorTimeline({ eventos }: { eventos: EventoTimelineDor[] }) {
+  return (
+    <div className="ubm-dor-timeline">
+      <ol className="ubm-dor-timeline-list" aria-label="Histórico de eventos da dor">
+        {eventos.map((evt, i) => (
+          <li key={`${evt.tipo}-${i}`} className="ubm-dor-timeline-item">
+            <span className="ubm-dor-timeline-pin" aria-hidden="true" />
+            <div className="ubm-dor-timeline-body ubm-machined">
+              <span className="ubm-cota ubm-dor-timeline-rotulo">{evt.rotulo}</span>
+              <span className="ubm-cota ubm-cota--muted ubm-dor-timeline-papel">
+                {PAPEL_LABELS[evt.ator_papel] ?? evt.ator_papel}
+              </span>
+              {evt.ocorreu_em && (
+                <time
+                  className="ubm-cota ubm-cota--muted ubm-dor-timeline-data"
+                  dateTime={evt.ocorreu_em}
+                >
+                  {formatarDataPtBR(evt.ocorreu_em)}
+                </time>
+              )}
+            </div>
+          </li>
+        ))}
+      </ol>
+      <footer className="ubm-dor-timeline-footer">
+        <span className="ubm-cota ubm-cota--muted">REGISTRO IMUTÁVEL · A COSTURA NÃO SE DESFAZ</span>
+      </footer>
+    </div>
+  )
 }
 
 function formatBytes(bytes: number): string {
@@ -72,6 +131,7 @@ export function DorDetalhe({
   isAutorEditavel = false,
   equipe = [],
   timeline = [],
+  timelineDor = [],
 }: DorDetalheProps) {
   const [enviando, setEnviando] = useState(false)
   const [enviado, setEnviado] = useState(false)
@@ -259,10 +319,36 @@ export function DorDetalhe({
       {/* ── Corpo da dor ── */}
       <div className="ubm-article" style={{ maxWidth: '100%' }}>
 
-        {/* ── Seção de EDIÇÃO (Delta 3) — autor em rascunho/rejeitada ── */}
+        {/* ── Seção de EDIÇÃO (Delta-edição) — autor em qualquer status editável ── */}
         {isAutorEditavel && (
           <section className="ubm-section-block" aria-label="Editar dor">
             <h2 className="ubm-section-title">Editar a dor</h2>
+
+            {/* Aviso de re-moderação (cybersecurity ruling) — publicada ou em_moderacao */}
+            {(dor.status === 'publicada' || dor.status === 'em_moderacao') && (
+              <div
+                className="ubm-machined ubm-aviso-remod"
+                role="note"
+                aria-label="Aviso de re-moderação"
+                style={{
+                  padding: '0.875rem 1rem',
+                  marginBottom: '1rem',
+                  display: 'flex',
+                  gap: '0.6rem',
+                  alignItems: 'flex-start',
+                  borderColor: 'hsl(var(--warning) / 0.6)',
+                  background: 'hsl(var(--warning) / 0.07)',
+                }}
+              >
+                <Info size={16} style={{ color: 'hsl(var(--warning))', flexShrink: 0, marginTop: '0.15rem' }} aria-hidden />
+                <p style={{ fontSize: '0.9rem', lineHeight: 1.5, color: 'hsl(var(--foreground))' }}>
+                  {dor.status === 'publicada'
+                    ? 'Editar esta dor publicada vai enviá-la para nova moderação — ela sai da vitrine pública até ser reaprovada.'
+                    : 'Editar esta dor vai reenviá-la para moderação. Aguarde a aprovação antes de ser publicada.'}
+                </p>
+              </div>
+            )}
+
             <div
               className="ubm-machined"
               style={{ padding: '1.25rem', display: 'flex', flexDirection: 'column', gap: '1rem' }}
@@ -383,15 +469,29 @@ export function DorDetalhe({
           </section>
         )}
 
-        {/* ── Timeline/equipe via UbmTabs (005) ── */}
+        {/* ── Timeline da dor + equipe/projeto via UbmTabs (005 + Delta-edição) ── */}
         <section className="ubm-section-block">
           <h2 className="ubm-section-title">Linha do tempo e equipe</h2>
           <UbmTabs
             aria-label="Linha do tempo e equipe do projeto"
             tabs={[
               {
+                id: 'timeline-dor',
+                label: 'Linha do tempo da dor',
+                content: timelineDor.length > 0
+                  ? (
+                    <DorTimeline eventos={timelineDor} />
+                  )
+                  : (
+                    <div className="ubm-empty">
+                      <div className="ubm-empty-node" aria-hidden="true" />
+                      <p className="ubm-empty-msg">Nenhum evento registrado ainda.</p>
+                    </div>
+                  ),
+              },
+              {
                 id: 'timeline',
-                label: 'Linha do tempo',
+                label: 'Linha do tempo do projeto',
                 content: timeline.length > 0
                   ? <UbmTimeline eventos={timeline} />
                   : (

@@ -167,18 +167,61 @@ describe('0017 anexo_dor (metadados — arquivo no Storage)', () => {
     await db.close()
   })
 
-  it('RLS: anon não vê anexo de dor não-publicada mas vê de dor publicada (RS-A4/RS-A5)', async () => {
+  it('RLS: anon não vê anexo de dor não-publicada (RS-A4/RS-A5)', async () => {
+    // NOTA (0051): inserir anexo em dor publicada re-modera a dor (RS-ED4/trigger _anexo_dor_timeline).
+    // Para testar que anon VÊ anexo de dor publicada, é necessário que a dor tenha sido publicada
+    // COM o anexo já incluído (inserido enquanto a dor estava em rascunho/em_moderacao, ANTES da publicação).
+    // Este teste foca em: anon não vê anexo de dor não-publicada.
     const db = await novoBanco(); await seedBase(db)
     await comoServiceRole(db)
     const dorModId = await criarDor(db, 'em_moderacao')
-    const dorPubId = await criarDor(db, 'publicada')
     await inserirAnexo(db, dorModId, { seq: 1 })
+
+    await comoAnon(db)
+    const rows = (await db.query<{ dor_id: string }>(`select dor_id from public.anexo_dor`)).rows
+    expect(rows.map(r => r.dor_id)).not.toContain(dorModId)
+    await db.close()
+  })
+
+  it('RLS: anon vê anexo de dor que foi publicada com anexo existente (RS-A5)', async () => {
+    // Cenário: anexo inserido em rascunho, dor publicada depois (contém o anexo no snapshot aprovado).
+    // Após publicação, o anexo existente é público (dor.status='publicada').
+    // NÃO inserimos novos anexos após a publicação (pois isso re-moderaria — RS-ED4/0051).
+    // Fluxo: rascunho → inserir anexo → em_moderacao → set aprovado_por → publicada (A1).
+    // Requer: autor A com verificado_em setado (A1 = aprovado_por + verificado_em).
+    const db = await novoBanco(); await seedBase(db)
+    await comoServiceRole(db)
+
+    // Verifica o autor A (A1 exige verificado_em not null)
+    await db.query(`update public.perfil set verificado_em = now() where user_id = '${A}'`)
+
+    const empId = (await db.query<{ id: string }>(`select id from public.empresa limit 1`)).rows[0]!.id
+
+    // Insere dor em rascunho e o anexo (dor ainda não publicada — trigger não re-modera)
+    const { rows: dorRows } = await db.query<{ id: string }>(
+      `insert into public.dor(autor_id,empresa_id,status_dor,descricao,rep_nome,consentimento,consent_version,consent_at)
+       values ('${A}','${empId}','rascunho','dor test','Rep A',true,'v1',now()) returning id`
+    )
+    const dorPubId = dorRows[0]!.id
     await inserirAnexo(db, dorPubId, { seq: 2 })
+
+    // Publica a dor em 3 passos separados (respeita trigger de transição + dor_publicavel):
+    // 1) rascunho → em_moderacao (não valida via trigger; só requer que a transição seja válida)
+    await db.query(
+      `update public.dor set status_dor = 'em_moderacao', updated_at = now() where id = $1`, [dorPubId]
+    )
+    // 2) set aprovado_por (A1a — admin aprovou)
+    await db.query(
+      `update public.dor set aprovado_por = '${ADM}', aprovado_em = now(), updated_at = now() where id = $1`, [dorPubId]
+    )
+    // 3) em_moderacao → publicada (dor_publicavel: aprovado_por not null + verificado_em not null → OK)
+    await db.query(
+      `update public.dor set status_dor = 'publicada', publicada_em = now(), updated_at = now() where id = $1`, [dorPubId]
+    )
 
     await comoAnon(db)
     const rows = (await db.query<{ dor_id: string }>(`select dor_id from public.anexo_dor`)).rows
     expect(rows.map(r => r.dor_id)).toContain(dorPubId)
-    expect(rows.map(r => r.dor_id)).not.toContain(dorModId)
     await db.close()
   })
 
