@@ -1,22 +1,21 @@
 /**
  * T-B-guard — Server Action: revogarAdmin
- * TDD RED: bloquear self-revoke (alvo == auth.uid()) com mensagem PT-BR.
- * Admin pode revogar OUTRO admin, mas não a si mesmo.
+ * Guard de self-revoke: alvo == auth.uid() → bloqueado antes de ir ao banco.
+ * Admin pode revogar OUTRO admin via RPC revogar_admin (0055).
+ * Migrado: action não faz mais delete direto — usa rpc('revogar_admin').
  */
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 
-const { mockGetUser, mockFrom, mockDelete, mockEq } = vi.hoisted(() => {
-  const mockEq     = vi.fn()
-  const mockDelete = vi.fn(() => ({ eq: mockEq }))
-  const mockFrom   = vi.fn(() => ({ delete: mockDelete }))
+const { mockGetUser, mockRpc } = vi.hoisted(() => {
+  const mockRpc     = vi.fn().mockResolvedValue({ error: null })
   const mockGetUser = vi.fn()
-  return { mockGetUser, mockFrom, mockDelete, mockEq }
+  return { mockGetUser, mockRpc }
 })
 
 vi.mock('@/lib/supabase/server', () => ({
   createSupabaseServerClient: vi.fn().mockResolvedValue({
     auth: { getUser: mockGetUser },
-    from: mockFrom,
+    rpc: mockRpc,
   }),
 }))
 
@@ -25,7 +24,7 @@ import { revogarAdmin } from '@/lib/actions/admin-usuarios'
 describe('revogarAdmin — B-guard: bloquear self-revoke', () => {
   beforeEach(() => {
     vi.clearAllMocks()
-    mockEq.mockResolvedValue({ error: null })
+    mockRpc.mockResolvedValue({ error: null })
   })
 
   it('B1: retorna ok:false quando userId == sessão atual (self-revoke bloqueado)', async () => {
@@ -43,17 +42,18 @@ describe('revogarAdmin — B-guard: bloquear self-revoke', () => {
     }
   })
 
-  it('B3: NÃO chama DELETE quando é self-revoke', async () => {
+  it('B3: NÃO chama RPC quando é self-revoke (pre-check UX)', async () => {
     mockGetUser.mockResolvedValue({ data: { user: { id: 'admin-self-uuid' } }, error: null })
     await revogarAdmin('admin-self-uuid')
-    expect(mockDelete).not.toHaveBeenCalled()
+    // A action retorna cedo sem chamar a RPC para self-revoke
+    expect(mockRpc).not.toHaveBeenCalledWith('revogar_admin', expect.anything())
   })
 
-  it('B4: permite revogar OUTRO admin (ok:true)', async () => {
+  it('B4: permite revogar OUTRO admin chamando rpc revogar_admin (ok:true)', async () => {
     mockGetUser.mockResolvedValue({ data: { user: { id: 'admin-self-uuid' } }, error: null })
     const result = await revogarAdmin('outro-admin-uuid')
     expect(result.ok).toBe(true)
-    expect(mockDelete).toHaveBeenCalled()
+    expect(mockRpc).toHaveBeenCalledWith('revogar_admin', { p_user_id: 'outro-admin-uuid' })
   })
 
   it('B5: sem sessão retorna ok:false', async () => {

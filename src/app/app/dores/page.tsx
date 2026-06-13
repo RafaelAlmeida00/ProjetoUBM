@@ -1,6 +1,7 @@
 import { createSupabaseServerClient } from '@/lib/supabase/server'
 import { DoresPage } from '@/components/dores/DoresPage'
 import type { DorCard } from '@/components/dores/DoresPage'
+import { obterMeusVinculosProjeto } from '@/lib/data/projetos'
 
 /**
  * T7 — /app/dores (RSC): vitrine de dores publicadas + minhas dores.
@@ -32,6 +33,8 @@ export default async function DoresRoutePage() {
   // temPapel: true quando usuário tem ao menos um papel (aluno/coord/rep).
   // false só quando autenticado sem nenhum papel → exibe CTA de onboarding.
   let temPapel = false
+  let papelUsuario: 'aluno' | 'coordenador' | 'representante' | undefined
+  let vinculosUsuario: Awaited<ReturnType<typeof obterMeusVinculosProjeto>> | undefined
 
   if (user) {
     const { data: perfil } = await supabase
@@ -49,6 +52,20 @@ export default async function DoresRoutePage() {
 
     isRepresentante = papeis?.some((p) => p.role === 'representante') ?? false
     temPapel = (papeis?.length ?? 0) > 0
+
+    // Papel base para o slot "Me indicar" (Onda 2 B6): precedência representante > coordenador > aluno
+    if (isRepresentante) {
+      papelUsuario = 'representante'
+    } else if (papeis?.some((p) => p.role === 'coordenador')) {
+      papelUsuario = 'coordenador'
+    } else if (papeis?.some((p) => p.role === 'aluno')) {
+      papelUsuario = 'aluno'
+    }
+
+    // Vínculos do usuário (indicações ativas + membros de equipe) — para derivar estado do slot
+    if (papelUsuario === 'aluno' || papelUsuario === 'coordenador') {
+      vinculosUsuario = await obterMeusVinculosProjeto()
+    }
 
     if (isRepresentante) {
       const { data: minhas } = await supabase
@@ -144,6 +161,8 @@ export default async function DoresRoutePage() {
       isVerificado={isVerificado}
       isAutenticado={!!user}
       temPapel={temPapel}
+      papelUsuario={papelUsuario}
+      vinculosUsuario={vinculosUsuario}
     />
   )
 }

@@ -57,6 +57,49 @@ export interface FuncaoTarefa {
 }
 
 // ---------------------------------------------------------------------------
+// Onda 2 — B5: enriquecimento de projetos com dados da dor (empresa, descrição, cursos)
+// ---------------------------------------------------------------------------
+
+export interface ProjetoEnriquecido {
+  projetoId: string
+  dorId: string
+  empresa_nome: string
+  descricao: string
+  cursos: string[]
+  status: string
+}
+
+interface DorResumida {
+  id: string
+  empresa_nome: string
+  descricao: string
+  cursos: string[]
+}
+
+/**
+ * Combina uma lista de projetos com os dados das dores correspondentes.
+ * Função pura — sem I/O. Usada pelo RSC /app/indicacoes após buscar dores separadamente.
+ * Projetos sem dor correspondente retornam com strings vazias (não quebram o render).
+ */
+export function enriquecerProjetosComDor(
+  projetos: Array<{ id: string; dor_id: string; status: string }>,
+  dores: DorResumida[],
+): ProjetoEnriquecido[] {
+  const dorMap = new Map(dores.map((d) => [d.id, d]))
+  return projetos.map((p) => {
+    const dor = dorMap.get(p.dor_id)
+    return {
+      projetoId: p.id,
+      dorId: p.dor_id,
+      empresa_nome: dor?.empresa_nome ?? '',
+      descricao: dor?.descricao ?? '',
+      cursos: dor?.cursos ?? [],
+      status: p.status,
+    }
+  })
+}
+
+// ---------------------------------------------------------------------------
 // T-O2.5 — Queries de leitura RSC
 // ---------------------------------------------------------------------------
 
@@ -132,6 +175,38 @@ export async function listarIndicacoes(projetoId: string): Promise<Indicacao[]> 
     return data as Indicacao[]
   } catch {
     return []
+  }
+}
+
+/**
+ * Retorna os IDs de projetos onde o usuário logado já está indicado (indicacao ativa)
+ * ou já é membro da equipe (membro_equipe ativo). Usado pelo FE para esconder o botão
+ * "se indicar" nos cards de projeto (Onda 2).
+ * Lê sob RLS própria (indicacao_select_propria + membro_equipe select do próprio).
+ */
+export interface MeusVinculosProjeto {
+  indicadoProjetoIds: string[]
+  membroProjetoIds: string[]
+}
+
+export async function obterMeusVinculosProjeto(): Promise<MeusVinculosProjeto> {
+  try {
+    const supabase = await createSupabaseServerClient()
+    const [indicacoesRes, membrosRes] = await Promise.all([
+      supabase
+        .from('indicacao')
+        .select('projeto_id')
+        .is('deleted_at', null),
+      supabase
+        .from('membro_equipe')
+        .select('projeto_id')
+        .is('deleted_at', null),
+    ])
+    const indicadoProjetoIds = (indicacoesRes.data ?? []).map((r) => r.projeto_id as string)
+    const membroProjetoIds = (membrosRes.data ?? []).map((r) => r.projeto_id as string)
+    return { indicadoProjetoIds, membroProjetoIds }
+  } catch {
+    return { indicadoProjetoIds: [], membroProjetoIds: [] }
   }
 }
 

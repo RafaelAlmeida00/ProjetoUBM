@@ -3,14 +3,15 @@ import { Suspense, useState } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
 import { Loader2, AlertCircle } from 'lucide-react'
 import { assumirPapel, type Papel } from '@/lib/actions/assumir-papel'
-import { onboardingRepresentante, onboardingAluno } from '@/lib/actions/onboarding'
+import { onboardingRepresentante, onboardingAluno, onboardingCoordenador } from '@/lib/actions/onboarding'
 import { atualizarPerfil } from '@/lib/actions/perfil'
+import { CourseSingleSelect } from '@/components/course/CourseSingleSelect'
+import { CURSOS_UBM, type CursoUbm } from '@/lib/courses'
 import { EmpresaCombobox } from '@/components/empresa/EmpresaCombobox'
 import { CourseMultiSelect } from '@/components/course/CourseMultiSelect'
 import { Node } from '@/components/brand/Node'
 import { CacheSkipGate } from '@/components/onboarding/CacheSkipGate'
 import type { EmpresaResult } from '@/lib/actions/empresa'
-import type { CursoUbm } from '@/lib/courses'
 import { validarEmailCorporativo, isEmailCorporativo } from '@/lib/validation/email-corporativo'
 
 const PAPEIS: { id: Papel; label: string; desc: string }[] = [
@@ -102,6 +103,12 @@ function OnboardingContent() {
   // Infos por tipo — aluno
   const [cursos, setCursos] = useState<CursoUbm[]>([])
 
+  // Infos por tipo — coordenador
+  const [cursoCoord, setCursoCoord] = useState<CursoUbm | null>(null)
+  const [cursoCoordErro, setCursoCoordErro] = useState<string | null>(null)
+  // estado da máquina de estados do ramo coordenador
+  const [coordEstado, setCoordEstado] = useState<'editando' | 'enviando' | 'enviado' | 'erro'>('editando')
+
   const handleAvancar = () => {
     if (!selected) return
     setEtapa('infos')
@@ -115,8 +122,8 @@ function OnboardingContent() {
   // Aluno: nome obrigatório (cursos opcionais)
   const podeConcluirAluno = nomeValido
 
-  // Coordenador: nome obrigatório
-  const podeConcluirCoordenador = nomeValido
+  // Coordenador: nome obrigatório + curso selecionado
+  const podeConcluirCoordenador = nomeValido && !!cursoCoord
 
   const handleConcluir = async () => {
     if (!selected) return
@@ -150,19 +157,22 @@ function OnboardingContent() {
           return
         }
       } else if (selected === 'coordenador') {
-        // Coordenador: assume papel + grava nome via atualizarPerfil (assumir_papel não toca perfil)
-        const papelResult = await assumirPapel('coordenador')
-        if (!papelResult.ok) {
-          setError('Não conseguimos definir seu papel. Tente novamente.')
+        if (!cursoCoord) {
+          setCursoCoordErro('Selecione o curso que você coordena.')
           setLoading(false)
           return
         }
-        const perfilResult = await atualizarPerfil({ nomePublico: nome.trim() })
-        if (!perfilResult.ok) {
-          setError('Papel definido, mas não conseguimos salvar seu nome. Tente novamente.')
+        setCoordEstado('enviando')
+        const result = await onboardingCoordenador({ cursoId: cursoCoord, nome: nome.trim() })
+        if (!result.ok) {
+          setCoordEstado('erro')
+          setError((result as { ok: false; error: string }).error ?? 'Não foi possível enviar seu cadastro. Tente novamente.')
           setLoading(false)
           return
         }
+        setCoordEstado('enviado')
+        setLoading(false)
+        return
       }
     } catch {
       setError('Erro inesperado. Tente novamente.')
@@ -476,8 +486,8 @@ function OnboardingContent() {
           </>
         )}
 
-        {/* ── Coordenador — estado passivo (CA29/RN24) ─────── */}
-        {selected === 'coordenador' && (
+        {/* ── Coordenador — estado ativo (Onda 2 / CA29/RN24) ── */}
+        {selected === 'coordenador' && coordEstado !== 'enviado' && (
           <>
             <h1
               className="font-display"
@@ -487,7 +497,7 @@ function OnboardingContent() {
                 marginBottom: '0.5rem',
               }}
             >
-              Seu nome e aguardando atribuição
+              Qual curso você coordena?
             </h1>
             <p
               style={{
@@ -496,33 +506,51 @@ function OnboardingContent() {
                 fontSize: '0.95rem',
               }}
             >
-              Informe seu nome. O curso que você coordena será atribuído pelo administrador da UBM.
+              Informe seu nome e o curso que você coordena na UBM. Seu acesso de coordenador
+              é liberado após a aprovação de um administrador.
             </p>
 
             <div style={{ display: 'flex', flexDirection: 'column', gap: '1.25rem' }}>
               <NomeField value={nome} onChange={setNome} />
-
-              <div
-                className="ubm-machined"
-                style={{
-                  padding: '1rem 1.25rem',
-                  borderColor: 'hsl(var(--warning) / 0.5)',
-                  background: 'hsl(var(--warning) / 0.07)',
-                  fontSize: '0.9rem',
-                  color: 'hsl(var(--muted-foreground))',
-                }}
-                role="status"
-                aria-live="polite"
-              >
-                <span style={{ fontWeight: 600, color: 'hsl(var(--warning))' }}>
-                  Aguardando atribuição de curso
-                </span>
-                <br />
-                Quando um administrador atribuir o curso a você, o acesso de coordenador
-                ficará disponível automaticamente.
-              </div>
+              <CourseSingleSelect
+                value={cursoCoord}
+                onChange={(v) => { setCursoCoord(v); setCursoCoordErro(null) }}
+                error={cursoCoordErro}
+              />
             </div>
           </>
+        )}
+
+        {/* ── Coordenador — painel pós-envio (EM ANÁLISE) ─────── */}
+        {selected === 'coordenador' && coordEstado === 'enviado' && (
+          <div
+            className="ubm-machined"
+            style={{
+              borderColor: 'hsl(var(--warning) / 0.5)',
+              background: 'hsl(var(--warning) / 0.07)',
+              padding: '1.25rem 1.5rem',
+            }}
+            role="status"
+            aria-live="polite"
+          >
+            <span className="ubm-cota" style={{ color: 'hsl(var(--warning))' }}>
+              EM ANÁLISE
+            </span>
+            <p className="ubm-confirm-title">Cadastro enviado — aguardando aprovação</p>
+            <p className="ubm-confirm-msg" style={{ color: 'hsl(var(--muted-foreground))' }}>
+              Recebemos seu cadastro de coordenador de{' '}
+              <strong>
+                {CURSOS_UBM.find((c) => c.value === cursoCoord)?.label ?? cursoCoord}
+              </strong>
+              . Um administrador da UBM vai revisar e aprovar seu acesso. Você pode usar
+              a plataforma normalmente enquanto isso.
+            </p>
+            <div className="ubm-confirm-actions">
+              <a href="/app" className="ubm-btn ubm-btn-primary">
+                Ir para a plataforma
+              </a>
+            </div>
+          </div>
         )}
 
         {error && (
@@ -538,42 +566,45 @@ function OnboardingContent() {
           </p>
         )}
 
-        <div
-          style={{
-            marginTop: '1.75rem',
-            display: 'flex',
-            justifyContent: 'space-between',
-            alignItems: 'center',
-          }}
-        >
-          <button
-            type="button"
-            className="ubm-btn ubm-btn-ghost"
-            onClick={() => setEtapa('tipo')}
+        {/* Barra de ações — oculta no painel pós-envio do coordenador */}
+        {!(selected === 'coordenador' && coordEstado === 'enviado') && (
+          <div
+            style={{
+              marginTop: '1.75rem',
+              display: 'flex',
+              justifyContent: 'space-between',
+              alignItems: 'center',
+            }}
           >
-            Voltar
-          </button>
-          <button
-            type="button"
-            className="ubm-btn ubm-btn-primary"
-            disabled={
-              loading ||
-              (selected === 'representante' && !podeConcluirRepresentante) ||
-              (selected === 'aluno' && !podeConcluirAluno) ||
-              (selected === 'coordenador' && !podeConcluirCoordenador)
-            }
-            onClick={handleConcluir}
-          >
-            {loading ? (
-              <>
-                <Loader2 size={16} className="animate-spin" aria-hidden />
-                Finalizando…
-              </>
-            ) : (
-              'Concluir'
-            )}
-          </button>
-        </div>
+            <button
+              type="button"
+              className="ubm-btn ubm-btn-ghost"
+              onClick={() => setEtapa('tipo')}
+            >
+              Voltar
+            </button>
+            <button
+              type="button"
+              className="ubm-btn ubm-btn-primary"
+              disabled={
+                loading ||
+                (selected === 'representante' && !podeConcluirRepresentante) ||
+                (selected === 'aluno' && !podeConcluirAluno) ||
+                (selected === 'coordenador' && !podeConcluirCoordenador)
+              }
+              onClick={handleConcluir}
+            >
+              {loading ? (
+                <>
+                  <Loader2 size={16} className="animate-spin" aria-hidden />
+                  {selected === 'coordenador' ? 'Enviando cadastro…' : 'Finalizando…'}
+                </>
+              ) : (
+                'Concluir'
+              )}
+            </button>
+          </div>
+        )}
       </div>
     </div>
   )

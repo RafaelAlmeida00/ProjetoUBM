@@ -40,6 +40,7 @@ vi.mock('@/lib/actions/assumir-papel', () => ({
 vi.mock('@/lib/actions/onboarding', () => ({
   onboardingAluno: (...args: unknown[]) => onboardingAlunoMock(...args),
   onboardingRepresentante: (...args: unknown[]) => onboardingRepresentanteMock(...args),
+  onboardingCoordenador: (..._args: unknown[]) => Promise.resolve({ ok: true }),
 }))
 vi.mock('@/lib/actions/perfil', () => ({
   getPerfilAction: (...args: unknown[]) => getPerfilActionMock(...args),
@@ -123,19 +124,23 @@ describe('Defeito A — Onboarding: campo Nome obrigatório', () => {
     expect(screen.getByRole('button', { name: /concluir/i })).toBeDisabled()
   })
 
-  it('A7 — coordenador: ao concluir com nome, chama assumirPapel + atualizarPerfil com nome', async () => {
+  it('A7 — coordenador (onda2): ao concluir com nome+curso, chama onboardingCoordenador e exibe EM ANÁLISE', async () => {
+    // Onda 2: fluxo ativo — nome + curso obrigatórios → onboardingCoordenador → painel EM ANÁLISE
     const user = userEvent.setup()
     render(<OnboardingPage />)
     fireEvent.click(screen.getByRole('radio', { name: /coordenador/i }))
     fireEvent.click(screen.getByRole('button', { name: /continuar/i }))
     await waitFor(() => expect(screen.getByLabelText(/nome/i)).toBeInTheDocument())
     await user.type(screen.getByLabelText(/nome/i), 'Prof. Braga')
+    // Seleciona o primeiro radio de curso (curso-coord) — obrigatório no onda2
+    const cursosRadios = screen.getAllByRole('radio').filter(
+      (r) => r.getAttribute('name') === 'curso-coord'
+    )
+    fireEvent.click(cursosRadios[0])
     fireEvent.click(screen.getByRole('button', { name: /concluir/i }))
-    await waitFor(() => expect(assumirPapelMock).toHaveBeenCalledWith('coordenador'))
-    await waitFor(() => expect(atualizarPerfilMock).toHaveBeenCalledWith(
-      expect.objectContaining({ nomePublico: 'Prof. Braga' }),
-    ))
-    await waitFor(() => expect(pushMock).toHaveBeenCalled())
+    // Não redireciona — exibe painel EM ANÁLISE
+    await waitFor(() => expect(pushMock).not.toHaveBeenCalled())
+    await waitFor(() => expect(screen.getAllByText(/em análise/i).length).toBeGreaterThan(0))
   })
 
   it('A8 — representante: etapa infos exibe campo Nome', async () => {

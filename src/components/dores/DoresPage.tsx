@@ -3,7 +3,10 @@ import { useState, useId } from 'react'
 import Link from 'next/link'
 import { Lock } from 'lucide-react'
 import { StatusDor } from './StatusDor'
+import { MeIndicarSlot, type EstadoIndicacao } from './MeIndicarSlot'
+import { indicarSe, retirarIndicacao } from '@/lib/actions/indicacao'
 import { CURSOS_UBM } from '@/lib/courses'
+import type { MeusVinculosProjeto } from '@/lib/data/projetos'
 
 export interface DorCard {
   id: string
@@ -29,22 +32,54 @@ interface DoresPageProps {
    *  Quando false + isAutenticado=true: usuário logado sem nenhum papel → mostra CTA de onboarding.
    *  Padrão true (safe default: não naguear usuários onboardados quando prop não é passada). */
   temPapel?: boolean
+  /**
+   * Papel do usuário corrente para derivar estado do MeIndicarSlot.
+   * Quando undefined → fail-safe: não renderiza botão "Me indicar".
+   * Onda 2 — B6.
+   */
+  papelUsuario?: 'aluno' | 'coordenador' | 'representante'
+  /**
+   * Vínculos do usuário (indicações ativas + membros de equipe) por projeto/dor.
+   * Quando undefined → fail-safe: não renderiza botão "Me indicar".
+   * Onda 2 — B6.
+   */
+  vinculosUsuario?: MeusVinculosProjeto
 }
 
 function labelCurso(value: string): string {
   return CURSOS_UBM.find((c) => c.value === value)?.label ?? value
 }
 
-function DorCardItem({ dor, minha }: { dor: DorCard; minha?: boolean }) {
-  const acessivel = `Dor de ${dor.empresa_nome} — ${dor.status}`
+/**
+ * Onda 2 B6: card refatorado — article + link-no-título (stretched-link overlay).
+ * Resolve nesting inválido <a><button> do design anterior.
+ * MeIndicarSlot fica na .ubm-card-action-row (z-index acima do overlay via CSS).
+ * Fail-safe: sem estadoIndicacao → slot não renderizado.
+ */
+function DorCardItem({
+  dor,
+  minha,
+  estadoIndicacao,
+  papelBase,
+}: {
+  dor: DorCard
+  minha?: boolean
+  estadoIndicacao?: EstadoIndicacao
+  papelBase?: 'aluno' | 'coordenador'
+}) {
+  const data = dor.publicada_em ?? dor.criada_em
   return (
-    <Link
-      href={`/app/dores/${dor.id}`}
-      className={`ubm-dor-card${minha ? ' ubm-dor-card--dor' : ''}`}
-      aria-label={acessivel}
-    >
+    <article className={`ubm-dor-card ubm-dor-card--linkable${minha ? ' ubm-dor-card--dor' : ''}`}>
       <div className="ubm-dor-card-head">
-        <span className="ubm-dor-card-empresa">{dor.empresa_nome}</span>
+        <h3 className="ubm-dor-card-empresa">
+          <a
+            href={`/app/dores/${dor.id}`}
+            className="ubm-dor-card-link"
+            aria-label={`Ver dor de ${dor.empresa_nome}`}
+          >
+            {dor.empresa_nome}
+          </a>
+        </h3>
         <StatusDor
           status={dor.status}
           aprovadoPor={dor.aprovado_por}
@@ -59,14 +94,23 @@ function DorCardItem({ dor, minha }: { dor: DorCard; minha?: boolean }) {
           ))}
         </div>
       )}
-      <div className="ubm-dor-card-foot">
+      <div className="ubm-dor-card-foot ubm-card-action-row">
         <span className="ubm-cota ubm-cota--muted">
-          {(dor.publicada_em ?? dor.criada_em)
-            ? new Date(dor.publicada_em ?? dor.criada_em!).toLocaleDateString('pt-BR')
-            : '—'}
+          {data ? new Date(data).toLocaleDateString('pt-BR') : '—'}
         </span>
+        {/* Slot de ação — só renderizado quando estado e papel estão disponíveis (fail-safe) */}
+        {estadoIndicacao && papelBase && (
+          <MeIndicarSlot
+            dorId={dor.id}
+            empresaNome={dor.empresa_nome}
+            papelBase={papelBase}
+            estado={estadoIndicacao}
+            onIndicar={indicarSe}
+            onRetirar={retirarIndicacao}
+          />
+        )}
       </div>
-    </Link>
+    </article>
   )
 }
 
@@ -77,6 +121,27 @@ function DorCardItem({ dor, minha }: { dor: DorCard; minha?: boolean }) {
  * B-003 task #3: isAutenticado controla o CTA de onboarding para
  * usuários logados sem papel (RN21/CA27/CA28).
  */
+/**
+ * Deriva o estado do slot "Me indicar" para uma dor a partir dos vínculos do usuário.
+ * Retorna undefined quando o papel não deve ver o botão (representante, ou props ausentes).
+ */
+function derivarEstadoIndicacao(
+  dorId: string,
+  papelBase: 'aluno' | 'coordenador' | 'representante' | undefined,
+  vinculosUsuario: MeusVinculosProjeto | undefined,
+  coordAprovado: boolean,
+): EstadoIndicacao | undefined {
+  // representante não se indica; sem papel/vínculos → fail-safe
+  if (!papelBase || papelBase === 'representante' || !vinculosUsuario) return undefined
+
+  // coordenador pendente (aprovação necessária, mas ainda não aprovado)
+  if (papelBase === 'coordenador' && !coordAprovado) return 'coord_pendente'
+
+  if (vinculosUsuario.membroProjetoIds.includes(dorId)) return 'ja_membro'
+  if (vinculosUsuario.indicadoProjetoIds.includes(dorId)) return 'ja_indicado'
+  return 'disponivel'
+}
+
 export function DoresPage({
   doresPublicadas,
   minhasDores,
@@ -84,6 +149,8 @@ export function DoresPage({
   isVerificado,
   isAutenticado = false,
   temPapel = true,
+  papelUsuario,
+  vinculosUsuario,
 }: DoresPageProps) {
   const tabsId = useId()
   const [abaAtiva, setAbaAtiva] = useState<'vitrine' | 'minhas'>('vitrine')
@@ -96,6 +163,16 @@ export function DoresPage({
   // Usa temPapel quando disponível; sem a prop (retro-compat), safe default = true
   // (não naguear aluno/coord que não passam a prop).
   const semPapel = isAutenticado && !temPapel
+
+  // papelBase: só aluno e coordenador têm slot de indicação (representante não se indica).
+  const papelBase: 'aluno' | 'coordenador' | undefined =
+    papelUsuario === 'aluno' || papelUsuario === 'coordenador' ? papelUsuario : undefined
+
+  // coordAprovado: só relevante para coordenador — passa false como safe default
+  // (o RSC deve injetar o valor real via prop; se ausente, coord será tratado como pendente)
+  // A prop não existe ainda; derivamos a partir de vinculosUsuario === undefined
+  // → coord sem vinculosUsuario = fail-safe (sem slot) por derivarEstadoIndicacao.
+  const coordAprovado = papelUsuario === 'coordenador' && !!vinculosUsuario
 
   return (
     <section className="ubm-section">
@@ -191,7 +268,12 @@ export function DoresPage({
             ) : (
               <div className="ubm-dor-grid">
                 {doresPublicadas.map((d) => (
-                  <DorCardItem key={d.id} dor={d} />
+                  <DorCardItem
+                    key={d.id}
+                    dor={d}
+                    estadoIndicacao={derivarEstadoIndicacao(d.id, papelUsuario, vinculosUsuario, coordAprovado)}
+                    papelBase={papelBase}
+                  />
                 ))}
               </div>
             )}

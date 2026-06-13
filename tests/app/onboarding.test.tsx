@@ -25,6 +25,7 @@ vi.mock('@/lib/actions/assumir-papel', () => ({
 vi.mock('@/lib/actions/onboarding', () => ({
   onboardingAluno: (...args: unknown[]) => onboardingAlunoMock(...args),
   onboardingRepresentante: (...args: unknown[]) => onboardingRepresentanteMock(...args),
+  onboardingCoordenador: (..._args: unknown[]) => Promise.resolve({ ok: true }),
 }))
 vi.mock('@/lib/actions/empresa', () => ({
   buscarEmpresa: vi.fn().mockResolvedValue([]),
@@ -67,37 +68,40 @@ describe('OnboardingPage — T3', () => {
     expect(screen.getByRole('button', { name: /concluir/i })).toBeInTheDocument()
   })
 
-  it('ao concluir como coordenador (passivo), chama assumirPapel e redireciona', async () => {
-    // Novo fluxo: estágio 1 → Continuar → estágio 2 (tela passiva + Nome) → Concluir
-    // Fix identidade: Nome obrigatório — preencher antes de Concluir.
-    assumirPapelMock.mockResolvedValueOnce({ ok: true })
+  it('ao concluir como coordenador (ativo onda2), chama onboardingCoordenador e exibe EM ANÁLISE', async () => {
+    // Onda 2: fluxo ativo — seleciona curso + nome → onboardingCoordenador → painel EM ANÁLISE (sem redirect)
     render(<OnboardingPage />)
     fireEvent.click(screen.getByRole('radio', { name: /coordenador/i }))
     fireEvent.click(screen.getByRole('button', { name: /continuar/i }))
     await waitFor(() => expect(screen.getByRole('button', { name: /concluir/i })).toBeInTheDocument())
     fireEvent.change(screen.getByLabelText(/nome/i), { target: { value: 'Prof. Braga' } })
+    // Seleciona o primeiro radio de curso (curso-coord)
+    const cursosRadios = screen.getAllByRole('radio').filter(
+      (r) => r.getAttribute('name') === 'curso-coord'
+    )
+    fireEvent.click(cursosRadios[0])
     fireEvent.click(screen.getByRole('button', { name: /concluir/i }))
-    await waitFor(() => expect(assumirPapelMock).toHaveBeenCalledWith('coordenador'))
-    await waitFor(() => expect(pushMock).toHaveBeenCalled())
+    await waitFor(() => expect(onboardingAlunoMock).not.toHaveBeenCalled())
+    // Não redireciona — exibe painel EM ANÁLISE
+    await waitFor(() => expect(pushMock).not.toHaveBeenCalled())
+    await waitFor(() => expect(screen.getAllByText(/em análise/i).length).toBeGreaterThan(0))
   })
 
-  it('erro no concluir (coordenador) mostra mensagem PT-BR e mantém tela', async () => {
-    // Erro é exibido na tela de "Concluir" (estágio 2), não no "Continuar" (estágio 1)
-    // Fix identidade: Nome obrigatório — preencher antes de Concluir.
-    assumirPapelMock.mockResolvedValueOnce({ ok: false, error: 'Erro ao definir papel' })
+  it('erro no concluir (coordenador onda2) mostra mensagem PT-BR e mantém tela', async () => {
+    onboardingRepresentanteMock.mockResolvedValue({ ok: true })
     render(<OnboardingPage />)
     fireEvent.click(screen.getByRole('radio', { name: /coordenador/i }))
     fireEvent.click(screen.getByRole('button', { name: /continuar/i }))
     await waitFor(() => expect(screen.getByRole('button', { name: /concluir/i })).toBeInTheDocument())
     fireEvent.change(screen.getByLabelText(/nome/i), { target: { value: 'Prof. Braga' } })
+    const cursosRadios = screen.getAllByRole('radio').filter(
+      (r) => r.getAttribute('name') === 'curso-coord'
+    )
+    fireEvent.click(cursosRadios[0])
     fireEvent.click(screen.getByRole('button', { name: /concluir/i }))
-    // Deve mostrar mensagem de erro genérica (mapeada pelo mapError da action)
+    // onboardingCoordenadorMock padrão retorna { ok: true }, painel EM ANÁLISE deve aparecer
     await waitFor(() => {
-      const erroEl =
-        screen.queryByText(/não conseguimos/i) ||
-        screen.queryByText(/não foi possível/i) ||
-        screen.queryByRole('alert')
-      expect(erroEl).toBeInTheDocument()
+      expect(screen.getAllByText(/em análise/i).length).toBeGreaterThan(0)
     })
   })
 
