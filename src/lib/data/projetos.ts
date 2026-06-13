@@ -230,3 +230,175 @@ export async function listarFuncoesTarefas(projetoId: string): Promise<FuncaoTar
     return []
   }
 }
+
+// ---------------------------------------------------------------------------
+// ADR-0002 Q2 — Bancada: agregadores cross-projeto (RSC sob RLS do usuário)
+// ---------------------------------------------------------------------------
+// Princípio: RLS é o controle central. Os adapters leem tabelas diretamente;
+// o banco filtra pelo auth.uid() via políticas existentes. Nenhum adapter
+// reimplementa authz nem expõe PII de terceiros (RS9).
+
+/**
+ * Retorno enxuto de projeto para a bancada.
+ * Não inclui PII de equipe — nomes vêm via obterEquipePublica (RPC DEFINER) quando necessário.
+ */
+export interface MeuProjeto {
+  projeto_id: string
+  dor_id: string
+  status: string
+  empresa_nome: string
+  papel_projeto: string
+}
+
+/**
+ * Lista projetos onde o usuário autenticado é membro da equipe (papel host/co/aluno).
+ * RLS membro_equipe_select_publica aplica (deleted_at is null); o banco filtra por posse.
+ * NUNCA faz select de `perfil` de terceiros (RS9).
+ * Degrada para [] em erro — bancada não quebra se este widget falhar.
+ */
+export async function listarMeusProjetos(): Promise<MeuProjeto[]> {
+  try {
+    const supabase = await createSupabaseServerClient()
+    const { data, error } = await supabase
+      .from('membro_equipe')
+      .select(
+        'projeto_id, papel_projeto, projeto:projeto(id, dor_id, status, dor:dor(empresa:empresa(nome_canonico)))',
+      )
+      .is('deleted_at', null)
+      .order('created_at', { ascending: false })
+      .limit(50)
+    if (error || !data) return []
+
+    return (data as unknown as Array<{
+      projeto_id: string
+      papel_projeto: string
+      projeto: { id: string; dor_id: string; status: string; dor: { empresa: { nome_canonico: string } | null } | null } | null
+    }>).map((row) => {
+      const proj = Array.isArray(row.projeto) ? row.projeto[0] : row.projeto
+      const dor = proj ? (Array.isArray(proj.dor) ? proj.dor[0] : proj.dor) : null
+      const emp = dor ? (Array.isArray(dor.empresa) ? dor.empresa[0] : dor.empresa) : null
+      return {
+        projeto_id: row.projeto_id,
+        dor_id: proj?.dor_id ?? '',
+        status: proj?.status ?? '',
+        empresa_nome: emp?.nome_canonico ?? '',
+        papel_projeto: row.papel_projeto,
+      }
+    })
+  } catch {
+    return []
+  }
+}
+
+/**
+ * Retorno enxuto de tarefa aberta para a bancada do aluno/membro.
+ */
+export interface TarefaAberta {
+  id: string
+  projeto_id: string
+  titulo: string
+  descricao: string | null
+  created_at: string
+}
+
+/**
+ * Lista funções/tarefas atribuídas ao usuário logado que ainda não foram concluídas.
+ * RLS funcao_tarefa aplica: aluno vê as suas; host/co veem todas (o banco filtra por papel).
+ * Degrada para [] em erro.
+ */
+export async function listarMinhasTarefasAbertas(): Promise<TarefaAberta[]> {
+  try {
+    const supabase = await createSupabaseServerClient()
+    const { data, error } = await supabase
+      .from('funcao_tarefa')
+      .select('id, projeto_id, titulo, descricao, created_at')
+      .eq('concluida', false)
+      .is('deleted_at', null)
+      .order('created_at', { ascending: true })
+      .limit(50)
+    if (error || !data) return []
+    return data as TarefaAberta[]
+  } catch {
+    return []
+  }
+}
+
+/**
+ * Retorno enxuto de indicação ativa para a bancada do aluno.
+ */
+export interface MinhaIndicacao {
+  id: string
+  projeto_id: string
+  papel_pretendido: string
+  created_at: string
+}
+
+/**
+ * Lista indicações ativas (deleted_at is null) do próprio usuário logado.
+ * RLS indicacao_select_propria aplica: pessoa_id = auth.uid() (só o próprio vê a sua).
+ * Degrada para [] em erro.
+ */
+export async function listarMinhasIndicacoes(): Promise<MinhaIndicacao[]> {
+  try {
+    const supabase = await createSupabaseServerClient()
+    const { data, error } = await supabase
+      .from('indicacao')
+      .select('id, projeto_id, papel_pretendido, created_at')
+      .is('deleted_at', null)
+      .order('created_at', { ascending: false })
+      .limit(50)
+    if (error || !data) return []
+    return data as MinhaIndicacao[]
+  } catch {
+    return []
+  }
+}
+
+/**
+ * Contagem das dores do representante logado por status_dor.
+ * RLS dor_update_owner aplica: autor_id = auth.uid() filtra automaticamente.
+ * Retorna contagens zeradas em erro (fail-soft).
+ */
+export interface ContagemDoresPorStatus {
+  rascunho: number
+  em_analise: number
+  publicada: number
+  arquivada: number
+  total: number
+  [status: string]: number
+}
+
+/**
+ * Conta as dores do representante logado agrupadas por status_dor.
+ * NUNCA faz select de `perfil` (só lê os dados da própria dor — RS9).
+ * Degrada para contagens zero em erro.
+ */
+export async function contarMinhasDoresPorStatus(): Promise<ContagemDoresPorStatus> {
+  const zero: ContagemDoresPorStatus = {
+    rascunho: 0,
+    em_analise: 0,
+    publicada: 0,
+    arquivada: 0,
+    total: 0,
+  }
+  try {
+    const supabase = await createSupabaseServerClient()
+    const { data, error } = await supabase
+      .from('dor')
+      .select('status_dor')
+      .is('deleted_at', null)
+      .order('created_at', { ascending: false })
+      .limit(200)
+    if (error || !data) return zero
+
+    const contagem = { ...zero }
+    for (const row of data as Array<{ status_dor: string }>) {
+      const s = row.status_dor
+      contagem[s] = (contagem[s] ?? 0) + 1
+      contagem.total += 1
+    }
+    return contagem
+  } catch {
+    return zero
+  }
+}

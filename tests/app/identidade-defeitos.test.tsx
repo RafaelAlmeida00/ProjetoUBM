@@ -124,19 +124,19 @@ describe('Defeito A — Onboarding: campo Nome obrigatório', () => {
     expect(screen.getByRole('button', { name: /concluir/i })).toBeDisabled()
   })
 
-  it('A7 — coordenador (onda2): ao concluir com nome+curso, chama onboardingCoordenador e exibe EM ANÁLISE', async () => {
-    // Onda 2: fluxo ativo — nome + curso obrigatórios → onboardingCoordenador → painel EM ANÁLISE
+  it('A7 — coordenador (onda2/0057): ao concluir com nome+cursos, chama onboardingCoordenador e exibe EM ANÁLISE', async () => {
+    // 0057: fluxo ativo — nome + N cursos (checkbox) obrigatórios → onboardingCoordenador → painel EM ANÁLISE
     const user = userEvent.setup()
     render(<OnboardingPage />)
     fireEvent.click(screen.getByRole('radio', { name: /coordenador/i }))
     fireEvent.click(screen.getByRole('button', { name: /continuar/i }))
     await waitFor(() => expect(screen.getByLabelText(/nome/i)).toBeInTheDocument())
     await user.type(screen.getByLabelText(/nome/i), 'Prof. Braga')
-    // Seleciona o primeiro radio de curso (curso-coord) — obrigatório no onda2
-    const cursosRadios = screen.getAllByRole('radio').filter(
-      (r) => r.getAttribute('name') === 'curso-coord'
+    // 0057: CourseMultiSelect usa checkboxes (não radios com name="curso-coord")
+    const cursosCheckboxes = screen.getAllByRole('checkbox').filter(
+      (el) => !el.closest('[role="dialog"]')
     )
-    fireEvent.click(cursosRadios[0])
+    fireEvent.click(cursosCheckboxes[0])
     fireEvent.click(screen.getByRole('button', { name: /concluir/i }))
     // Não redireciona — exibe painel EM ANÁLISE
     await waitFor(() => expect(pushMock).not.toHaveBeenCalled())

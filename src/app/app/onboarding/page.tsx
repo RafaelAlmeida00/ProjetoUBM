@@ -5,7 +5,6 @@ import { Loader2, AlertCircle } from 'lucide-react'
 import { assumirPapel, type Papel } from '@/lib/actions/assumir-papel'
 import { onboardingRepresentante, onboardingAluno, onboardingCoordenador } from '@/lib/actions/onboarding'
 import { atualizarPerfil } from '@/lib/actions/perfil'
-import { CourseSingleSelect } from '@/components/course/CourseSingleSelect'
 import { CURSOS_UBM, type CursoUbm } from '@/lib/courses'
 import { EmpresaCombobox } from '@/components/empresa/EmpresaCombobox'
 import { CourseMultiSelect } from '@/components/course/CourseMultiSelect'
@@ -103,8 +102,8 @@ function OnboardingContent() {
   // Infos por tipo — aluno
   const [cursos, setCursos] = useState<CursoUbm[]>([])
 
-  // Infos por tipo — coordenador
-  const [cursoCoord, setCursoCoord] = useState<CursoUbm | null>(null)
+  // Infos por tipo — coordenador (0057: N cursos via slugs)
+  const [cursosCoord, setCursosCoord] = useState<CursoUbm[]>([])
   const [cursoCoordErro, setCursoCoordErro] = useState<string | null>(null)
   // estado da máquina de estados do ramo coordenador
   const [coordEstado, setCoordEstado] = useState<'editando' | 'enviando' | 'enviado' | 'erro'>('editando')
@@ -122,8 +121,8 @@ function OnboardingContent() {
   // Aluno: nome obrigatório (cursos opcionais)
   const podeConcluirAluno = nomeValido
 
-  // Coordenador: nome obrigatório + curso selecionado
-  const podeConcluirCoordenador = nomeValido && !!cursoCoord
+  // Coordenador: nome obrigatório + ao menos 1 curso selecionado (0057: N cursos)
+  const podeConcluirCoordenador = nomeValido && cursosCoord.length > 0
 
   const handleConcluir = async () => {
     if (!selected) return
@@ -157,13 +156,13 @@ function OnboardingContent() {
           return
         }
       } else if (selected === 'coordenador') {
-        if (!cursoCoord) {
-          setCursoCoordErro('Selecione o curso que você coordena.')
+        if (cursosCoord.length === 0) {
+          setCursoCoordErro('Selecione ao menos um curso que você coordena.')
           setLoading(false)
           return
         }
         setCoordEstado('enviando')
-        const result = await onboardingCoordenador({ cursoId: cursoCoord, nome: nome.trim() })
+        const result = await onboardingCoordenador({ cursoSlugs: cursosCoord as string[], nome: nome.trim() })
         if (!result.ok) {
           setCoordEstado('erro')
           setError((result as { ok: false; error: string }).error ?? 'Não foi possível enviar seu cadastro. Tente novamente.')
@@ -486,7 +485,7 @@ function OnboardingContent() {
           </>
         )}
 
-        {/* ── Coordenador — estado ativo (Onda 2 / CA29/RN24) ── */}
+        {/* ── Coordenador — estado ativo (Onda 2 / CA29/RN24 / 0057: N cursos) ── */}
         {selected === 'coordenador' && coordEstado !== 'enviado' && (
           <>
             <h1
@@ -497,7 +496,7 @@ function OnboardingContent() {
                 marginBottom: '0.5rem',
               }}
             >
-              Qual curso você coordena?
+              Quais cursos você coordena?
             </h1>
             <p
               style={{
@@ -506,17 +505,21 @@ function OnboardingContent() {
                 fontSize: '0.95rem',
               }}
             >
-              Informe seu nome e o curso que você coordena na UBM. Seu acesso de coordenador
+              Informe seu nome e os cursos que você coordena na UBM. Seu acesso de coordenador
               é liberado após a aprovação de um administrador.
             </p>
 
             <div style={{ display: 'flex', flexDirection: 'column', gap: '1.25rem' }}>
               <NomeField value={nome} onChange={setNome} />
-              <CourseSingleSelect
-                value={cursoCoord}
-                onChange={(v) => { setCursoCoord(v); setCursoCoordErro(null) }}
-                error={cursoCoordErro}
+              <CourseMultiSelect
+                value={cursosCoord}
+                onChange={(v) => { setCursosCoord(v); setCursoCoordErro(null) }}
               />
+              {cursoCoordErro && (
+                <p role="alert" className="ubm-field-error" style={{ marginTop: '-0.5rem' }}>
+                  {cursoCoordErro}
+                </p>
+              )}
             </div>
           </>
         )}
@@ -538,9 +541,11 @@ function OnboardingContent() {
             </span>
             <p className="ubm-confirm-title">Cadastro enviado — aguardando aprovação</p>
             <p className="ubm-confirm-msg" style={{ color: 'hsl(var(--muted-foreground))' }}>
-              Recebemos seu cadastro de coordenador de{' '}
+              Recebemos seu cadastro de coordenador dos cursos{' '}
               <strong>
-                {CURSOS_UBM.find((c) => c.value === cursoCoord)?.label ?? cursoCoord}
+                {cursosCoord
+                  .map((s) => CURSOS_UBM.find((c) => c.value === s)?.label ?? s)
+                  .join(', ')}
               </strong>
               . Um administrador da UBM vai revisar e aprovar seu acesso. Você pode usar
               a plataforma normalmente enquanto isso.

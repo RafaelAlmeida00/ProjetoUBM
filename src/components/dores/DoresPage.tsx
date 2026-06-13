@@ -3,6 +3,7 @@ import { useState, useId } from 'react'
 import Link from 'next/link'
 import { Lock } from 'lucide-react'
 import { StatusDor } from './StatusDor'
+import { EstagioSelo, derivarEstagioSelo } from './EstagioSelo'
 import { MeIndicarSlot, type EstadoIndicacao } from './MeIndicarSlot'
 import { indicarSe, retirarIndicacao } from '@/lib/actions/indicacao'
 import { CURSOS_UBM } from '@/lib/courses'
@@ -17,6 +18,11 @@ export interface DorCard {
   publicada_em?: string | null
   criada_em?: string | null
   aprovado_por?: string | null
+  /** Status do projeto associado via uq_projeto_dor (ADR-0002 — selo de estágio).
+   *  undefined = dor publicada sem projeto ainda (sem selo).
+   *  "finalizado" = projeto encerrado (selo marsala).
+   *  qualquer outro = projeto ativo (selo azul "VIROU CASO"). */
+  projeto_status?: string
 }
 
 interface DoresPageProps {
@@ -98,17 +104,23 @@ function DorCardItem({
         <span className="ubm-cota ubm-cota--muted">
           {data ? new Date(data).toLocaleDateString('pt-BR') : '—'}
         </span>
-        {/* Slot de ação — só renderizado quando estado e papel estão disponíveis (fail-safe) */}
-        {estadoIndicacao && papelBase && (
-          <MeIndicarSlot
-            dorId={dor.id}
-            empresaNome={dor.empresa_nome}
-            papelBase={papelBase}
-            estado={estadoIndicacao}
-            onIndicar={indicarSe}
-            onRetirar={retirarIndicacao}
-          />
-        )}
+        <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', position: 'relative', zIndex: 1 }}>
+          {/* Selo de estágio (ADR-0002 Q1) — só para dores publicadas */}
+          {dor.status === 'publicada' && (
+            <EstagioSelo estagio={derivarEstagioSelo(dor.projeto_status)} />
+          )}
+          {/* Slot de ação — só renderizado quando estado e papel estão disponíveis (fail-safe) */}
+          {estadoIndicacao && papelBase && (
+            <MeIndicarSlot
+              dorId={dor.id}
+              empresaNome={dor.empresa_nome}
+              papelBase={papelBase}
+              estado={estadoIndicacao}
+              onIndicar={indicarSe}
+              onRetirar={retirarIndicacao}
+            />
+          )}
+        </div>
       </div>
     </article>
   )

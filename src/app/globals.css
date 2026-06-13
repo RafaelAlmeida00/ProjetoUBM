@@ -457,8 +457,56 @@
   .ubm-status--aprovada   { --status: var(--info); }      /* em_moderacao + aprovado_por (A1 meia-satisfeita) */
   .ubm-status--publicada  { --status: var(--success); }
   .ubm-status--rejeitada  { --status: var(--destructive); }
+  /* ADR-0002 — selos de estágio do ciclo dor→caso */
+  .ubm-status--caso       { --status: var(--primary); }   /* "Virou caso" — azul primário */
+  .ubm-status--finalizado { --status: var(--accent); }    /* "Finalizado" — marsala (acento, parcimonioso) */
+  /* badge de pendência crítica (coordenador/admin) — marsala, único uso legítimo fora do selo Finalizado */
+  .ubm-status--fila       { --status: var(--accent); }
   /* pulso na costura: "aguardando o outro lado" (dor em moderação) */
   .ubm-status--moderacao.ubm-status--pulso::before { animation: ubm-pulse 2s ease-in-out infinite; }
+
+  /* ───────────── CARTÃO GENÉRICO DA BANCADA (.ubm-card) ─────────────
+     Superfície neutra com profundidade por sombra (light) / luminosidade (dark).
+     Primitiva para atalhos e bloco dominante da Bancada (ADR-0002).
+     Zero hex — deriva de tokens; light+dark via --card/--shadow-*. */
+  .ubm-card {
+    position: relative; display: flex; flex-direction: column; gap: 0.6rem;
+    padding: 1.1rem 1.2rem; background-color: hsl(var(--card)); color: hsl(var(--card-foreground));
+    border: 1px solid hsl(var(--border)); border-radius: var(--radius); box-shadow: var(--shadow-sm);
+    transition: transform 0.14s ease, box-shadow 0.14s ease, border-color 0.14s ease;
+  }
+  .ubm-card--interactive { cursor: pointer; text-decoration: none; }
+  .ubm-card--interactive:hover,
+  .ubm-card--interactive:focus-within { transform: translateY(-2px); box-shadow: var(--shadow-md); border-color: hsl(var(--primary) / 0.4); }
+  .ubm-card--dominant { box-shadow: var(--shadow-md); padding: clamp(1.25rem, 4vw, 1.75rem); }
+  .ubm-card:focus-visible { outline: 2px solid hsl(var(--ring)); outline-offset: 2px; }
+  @media (prefers-reduced-motion: reduce) {
+    .ubm-card { transition: none; }
+    .ubm-card--interactive:hover { transform: none; }
+  }
+
+  /* ───────────── LAYOUT BANCADA POR PAPEL (ADR-0002) ─────────────
+     Anatomia fixa: saudação → métrica → bloco dominante → ≤3 atalhos.
+     Usa composição assimétrica: 1 bloco grande (.ubm-card--dominant) + trinca de atalhos.
+     Zero hex — tudo via tokens. */
+  .ubm-bancada { display: flex; flex-direction: column; gap: 1.5rem; }
+  .ubm-bancada-header { display: flex; flex-direction: column; gap: 0.25rem; }
+  .ubm-bancada-titulo { font-size: clamp(1.5rem, 3.5vw, 2.1rem); font-weight: 600; line-height: 1.2; margin: 0; }
+  .ubm-bancada-metrica { font-size: 0.95rem; }
+  .ubm-bancada-bloco { display: flex; flex-direction: column; gap: 0.75rem; }
+  .ubm-bancada-bloco-titulo { font-family: var(--font-display), Georgia, serif; font-size: 1.15rem; font-weight: 600; margin: 0; display: flex; align-items: center; gap: 0.5rem; }
+  .ubm-bancada-bloco-actions { margin-top: 0.5rem; }
+  .ubm-bancada-lista { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 0.5rem; }
+  .ubm-bancada-lista-item { display: flex; align-items: center; justify-content: space-between; gap: 0.75rem; padding: 0.5rem 0; border-bottom: 1px solid hsl(var(--border) / 0.5); }
+  .ubm-bancada-lista-item:last-child { border-bottom: none; }
+  .ubm-bancada-lista-label { font-size: 0.95rem; color: hsl(var(--foreground)); }
+  .ubm-bancada-lista-link { font-size: 0.95rem; color: hsl(var(--foreground)); text-decoration: none; }
+  .ubm-bancada-lista-link:hover { color: hsl(var(--primary)); text-decoration: underline; }
+  .ubm-bancada-resumo { font-size: 0.95rem; line-height: 1.55; color: hsl(var(--foreground)); }
+  .ubm-bancada-atalhos { display: flex; flex-direction: column; gap: 0.5rem; }
+  .ubm-bancada-atalhos-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(160px, 1fr)); gap: 0.75rem; }
+  .ubm-bancada-atalho { min-height: 4rem; justify-content: center; }
+  .ubm-bancada-atalho-label { font-family: var(--font-display), Georgia, serif; font-weight: 600; font-size: 0.92rem; display: flex; align-items: center; gap: 0.4rem; flex-wrap: wrap; }
 
   /* ───────────── APP-SHELL "BANCADA" (T1) ─────────────
      Trilho (território papel) ↔ junta diagonal 45° ↔ conteúdo. */

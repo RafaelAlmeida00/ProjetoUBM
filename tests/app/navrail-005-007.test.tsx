@@ -28,27 +28,8 @@ vi.mock('@/lib/auth/logout', () => ({
 import { NavRail } from '@/components/app/NavRail'
 
 describe('NavRail — itens 005/007', () => {
-  // ── Casos (/casos) ────────────────────────────────────────────────────────
-
-  it('aluno vê "Casos"', () => {
-    render(<NavRail role="aluno" isAdmin={false} />)
-    expect(screen.getByRole('link', { name: /casos/i })).toBeInTheDocument()
-  })
-
-  it('coordenador vê "Casos"', () => {
-    render(<NavRail role="coordenador" isAdmin={false} />)
-    expect(screen.getByRole('link', { name: /casos/i })).toBeInTheDocument()
-  })
-
-  it('representante vê "Casos"', () => {
-    render(<NavRail role="representante" isAdmin={false} />)
-    expect(screen.getByRole('link', { name: /casos/i })).toBeInTheDocument()
-  })
-
-  it('"Casos" aponta para /casos', () => {
-    render(<NavRail role="aluno" isAdmin={false} />)
-    expect(screen.getByRole('link', { name: /casos/i })).toHaveAttribute('href', '/casos')
-  })
+  // ADR-0002: item "Casos" foi removido do NavRail — vitrine unificada em /dores.
+  // Os testes de ausência de "Casos" estão em adr0002-vitrine-unificada.test.tsx (T7).
 
   // ── Indicações (/app/indicacoes) ─────────────────────────────────────────
 

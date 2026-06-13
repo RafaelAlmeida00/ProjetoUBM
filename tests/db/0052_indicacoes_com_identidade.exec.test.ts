@@ -25,8 +25,8 @@ async function seedBase(db: import('@electric-sql/pglite').PGlite) {
       where user_id = '${UID_COORD}';
     insert into public.curso(id, slug, nome) values
       ('52000000-0000-0000-0000-000000000001', 'direito', 'Direito');
-    insert into public.coordenador_curso(user_id, curso_id) values
-      ('${UID_COORD}', '52000000-0000-0000-0000-000000000001');
+    insert into public.coordenador_curso(user_id, curso_id, aprovado) values
+      ('${UID_COORD}', '52000000-0000-0000-0000-000000000001', true);
   `)
 }
 

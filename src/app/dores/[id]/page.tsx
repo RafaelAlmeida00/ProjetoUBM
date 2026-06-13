@@ -9,7 +9,10 @@ import React from 'react'
 import Link from 'next/link'
 import { notFound } from 'next/navigation'
 import { Paperclip } from 'lucide-react'
-import { obterDorPublica } from '@/lib/data/dores'
+import { obterDorPublica, obterProjetoDaDor } from '@/lib/data/dores'
+import { obterTimelinePublica, obterEquipePublica } from '@/lib/data/projetos'
+import { UbmTimeline } from '@/components/ubm-timeline'
+import { UbmTeam } from '@/components/ubm-team'
 import { CURSOS_UBM } from '@/lib/courses'
 
 interface Props {
@@ -44,6 +47,17 @@ export default async function DorPublicaDetalhePage({ params }: Props) {
 
   // RLS já barra não-publicadas; retorna null → 404
   if (!dor) return notFound()
+
+  // Lookup reverso: existe projeto ativo para esta dor? (ADR-0002, uq_projeto_dor)
+  const projeto = await obterProjetoDaDor(id)
+
+  // Se existe projeto, busca jornada via RPCs SECURITY DEFINER (nunca select direto de perfil — RS9)
+  const [timeline, equipe] = projeto
+    ? await Promise.all([
+        obterTimelinePublica(projeto.projeto_id),
+        obterEquipePublica(projeto.projeto_id),
+      ])
+    : [[], []]
 
   return (
     <main className="ubm-dor-publica-detalhe ubm-section">
@@ -121,6 +135,31 @@ export default async function DorPublicaDetalhePage({ params }: Props) {
           </section>
         )}
       </div>
+
+      {/* Seção: A jornada deste caso (ADR-0002) — só quando existe projeto */}
+      {projeto && (
+        <>
+          <div className="ubm-divider" aria-hidden="true">
+            <span className="ubm-cota">A jornada deste caso</span>
+          </div>
+
+          <section className="ubm-section-block ubm-jornada-caso" aria-labelledby="jornada-heading">
+            <h2 id="jornada-heading" className="ubm-section-title">A jornada deste caso</h2>
+
+            {/* Timeline via RPC SECURITY DEFINER — nunca select direto de perfil (RS9) */}
+            <div className="ubm-jornada-timeline">
+              <h3 className="ubm-jornada-sub">Linha do tempo</h3>
+              <UbmTimeline eventos={timeline} />
+            </div>
+
+            {/* Equipe via RPC SECURITY DEFINER — pseudonimização RS9 */}
+            <div className="ubm-jornada-equipe">
+              <h3 className="ubm-jornada-sub">Equipe</h3>
+              <UbmTeam membros={equipe} />
+            </div>
+          </section>
+        </>
+      )}
 
       {/* CTA de volta */}
       <div className="ubm-page-actions">

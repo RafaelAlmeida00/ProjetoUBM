@@ -143,20 +143,22 @@ export async function onboardingAluno(
 
 export interface OnboardingCoordenadorInput {
   nome: string
-  cursoId: string
+  /** 0057: N cursos — array de slugs curso_ubm[]. Obrigatório >= 1. */
+  cursoSlugs: string[]
 }
 
 /**
  * Server Action — onboarding self-service do coordenador (Onda 2 / CA29).
+ * 0057: aceita N cursos via p_curso_slugs (curso_ubm[]).
  * Chama a RPC onboarding_coordenador (SECURITY DEFINER).
- * Cria papel + nome + vínculo coordenador_curso pendente (aprovado=false).
+ * Cria papel + nome + vínculos coordenador_curso pendentes (aprovado=false).
  * Nunca concede aprovação automaticamente — admin aprova depois.
  */
 export async function onboardingCoordenador(
   input: OnboardingCoordenadorInput,
 ): Promise<OnboardingResult> {
-  if (!input.cursoId) {
-    return { ok: false, error: 'Selecione o curso que você coordena.' }
+  if (!input.cursoSlugs || input.cursoSlugs.length === 0) {
+    return { ok: false, error: 'Selecione ao menos um curso que você coordena.' }
   }
 
   try {
@@ -171,7 +173,7 @@ export async function onboardingCoordenador(
     }
 
     const { error } = await supabase.rpc('onboarding_coordenador', {
-      p_curso_id: input.cursoId,
+      p_curso_slugs: input.cursoSlugs,
       p_nome: input.nome,
     })
 

@@ -307,7 +307,7 @@ describe('0055 §4 — conceder_coordenador', () => {
     const db = await novoBanco()
     await seedBase(db)
     await asAdmin(db)
-    await db.query(`select public.conceder_coordenador($1, $2)`, [UID_USR, CURSO_ID])
+    await db.query(`select public.conceder_coordenador($1, array['direito']::public.curso_ubm[])`, [UID_USR])
     await comoServiceRole(db)
     const papel = (await db.query<{ c: number }>(
       `select count(*)::int as c from public.papel_usuario where user_id = $1 and role = 'coordenador'`, [UID_USR]
@@ -333,7 +333,7 @@ describe('0055 §4 — conceder_coordenador', () => {
       [UID_USR, CURSO_ID]
     )
     await asAdmin(db)
-    await db.query(`select public.conceder_coordenador($1, $2)`, [UID_USR, CURSO_ID])
+    await db.query(`select public.conceder_coordenador($1, array['direito']::public.curso_ubm[])`, [UID_USR])
     await comoServiceRole(db)
     const cc = (await db.query<{ aprovado: boolean; aprovado_por: string }>(
       `select aprovado, aprovado_por::text from public.coordenador_curso where user_id = $1 and curso_id = $2`,
@@ -383,18 +383,19 @@ describe('0055 §5 — conceder_papel bloqueio coordenador', () => {
     await db.close()
   })
 
-  it('conceder_papel(representante) → OK (papel normal)', async () => {
+  it('[0057] conceder_papel(representante) → raise (força caminho conceder_representante c/ empresa)', async () => {
     const db = await novoBanco()
     await seedBase(db)
     await asAdmin(db)
-    await expect(
+    expect(await negado(
       db.query(`select public.conceder_papel($1, $2::public.app_role)`, [UID_USR, 'representante'])
-    ).resolves.toBeDefined()
+    )).toBe(true)
+    // nenhum papel representante inserido pelo caminho bloqueado
     await comoServiceRole(db)
     const rows = (await db.query<{ c: number }>(
       `select count(*)::int as c from public.papel_usuario where user_id = $1 and role = 'representante'`, [UID_USR]
     )).rows
-    expect(rows[0]!.c).toBe(1)
+    expect(rows[0]!.c).toBe(0)
     await db.close()
   })
 

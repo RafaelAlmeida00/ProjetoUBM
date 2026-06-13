@@ -12,7 +12,6 @@ import {
   ShieldAlert,
   UserCircle,
   LogOut,
-  Briefcase,
   Star,
   Bell,
   Palette,
@@ -30,8 +29,7 @@ interface NavItem {
 const NAV_ITEMS: NavItem[] = [
   { href: '/app', label: 'Bancada', icon: <LayoutDashboard aria-hidden /> },
   { href: '/app/dores', label: 'Dores', icon: <FileQuestion aria-hidden /> },
-  // 005: vitrine pública de projetos — todos os logados
-  { href: '/casos', label: 'Casos', icon: <Briefcase aria-hidden /> },
+  // ADR-0002: /casos unificado em /dores — item "Casos" removido do NavRail
   // 005: auto-indicação — só aluno e coordenador (representante não se indica)
   {
     href: '/app/indicacoes',

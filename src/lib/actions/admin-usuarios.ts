@@ -139,24 +139,47 @@ export async function revogarPapel(
 }
 
 /**
- * Concede o papel de coordenador já aprovado para um curso específico.
- * USA RPC dedicada conceder_coordenador — NÃO usar concederPapel para coordenador.
- * Isso força o curso_id obrigatório e garante aprovado=true, aprovado_por=admin.
+ * Concede o papel de coordenador já aprovado para N cursos.
+ * 0057: aceita array de slugs — chama RPC conceder_coordenador(p_user_id, p_curso_slugs curso_ubm[]).
+ * USA RPC dedicada — NÃO usar concederPapel para coordenador.
+ * Garante aprovado=true, aprovado_por=admin para todos os cursos do array.
  */
 export async function concederCoordenador(
   userId: string,
-  cursoId: string,
+  cursoSlugs: string[],
 ): Promise<{ ok: boolean; error?: string }> {
   try {
     const supabase = await createSupabaseServerClient()
     const { error } = await supabase.rpc('conceder_coordenador', {
       p_user_id: userId,
-      p_curso_id: cursoId,
+      p_curso_slugs: cursoSlugs,
     })
     if (error) return { ok: false, error: 'Não foi possível conceder o papel de coordenador.' }
     return { ok: true }
   } catch {
     return { ok: false, error: 'Não foi possível conceder o papel de coordenador.' }
+  }
+}
+
+/**
+ * Concede o papel de representante já vinculado a uma empresa.
+ * 0057: chama RPC conceder_representante(p_user_id, p_empresa_id).
+ * NÃO usar concederPapel para representante — o banco bloqueia.
+ */
+export async function concederRepresentante(
+  userId: string,
+  empresaId: string,
+): Promise<{ ok: boolean; error?: string }> {
+  try {
+    const supabase = await createSupabaseServerClient()
+    const { error } = await supabase.rpc('conceder_representante', {
+      p_user_id: userId,
+      p_empresa_id: empresaId,
+    })
+    if (error) return { ok: false, error: 'Não foi possível conceder o papel de representante.' }
+    return { ok: true }
+  } catch {
+    return { ok: false, error: 'Não foi possível conceder o papel de representante.' }
   }
 }
 

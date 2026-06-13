@@ -17,6 +17,7 @@ import {
   revogarPapel,
   concederPapel,
   concederCoordenador,
+  concederRepresentante,
   adminEditarPerfil,
   obterSessaoAdmin,
   listarCoordenadoresPendentes,
@@ -25,13 +26,17 @@ import {
   type UsuarioAdmin,
   type CoordenadorPendente,
 } from '@/lib/actions/admin-usuarios'
-import { CURSOS_UBM } from '@/lib/courses'
+import { CURSOS_UBM, type CursoUbm } from '@/lib/courses'
+import { CourseMultiSelect } from '@/components/course/CourseMultiSelect'
+import { EmpresaCombobox } from '@/components/empresa/EmpresaCombobox'
+import type { EmpresaResult } from '@/lib/actions/empresa'
 
 // Cursos disponíveis para conceder coordenação (exclui nao_sei)
 const CURSOS_COORD = CURSOS_UBM.filter((c) => c.value !== 'nao_sei')
 
-// Papéis concedíveis via concederPapel (coordenador usa fluxo próprio)
-const PAPEIS_SIMPLES = ['aluno', 'representante'] as const
+// 0057: coordenador usa RPC própria; representante também usa RPC própria (com empresa).
+// concederPapel só é válido para 'aluno'.
+const PAPEIS_SIMPLES = ['aluno'] as const
 
 // Mapa papel → label legível
 const PAPEL_LABEL: Record<string, string> = {
@@ -126,7 +131,7 @@ interface PainelGerirProps {
 
 type PendingAction =
   | { tipo: 'revogar-papel'; role: string }
-  | { tipo: 'conceder-papel'; role: string; cursoId?: string }
+  | { tipo: 'conceder-papel'; role: string; cursoSlugs?: string[]; empresaId?: string; empresaNome?: string }
   | { tipo: 'conceder-admin' }
   | { tipo: 'revogar-admin' }
   | null
@@ -140,7 +145,10 @@ function PainelGerir({
 }: PainelGerirProps) {
   const [pendingAction, setPendingAction] = useState<PendingAction>(null)
   const [selectedPapel, setSelectedPapel] = useState('')
-  const [selectedCurso, setSelectedCurso] = useState('')
+  // 0057: coordenador → N slugs via CourseMultiSelect
+  const [selectedCursos, setSelectedCursos] = useState<CursoUbm[]>([])
+  // 0057: representante → empresa obrigatória via EmpresaCombobox
+  const [selectedEmpresa, setSelectedEmpresa] = useState<EmpresaResult | null>(null)
   const [editandoNome, setEditandoNome] = useState(false)
   const [nomeEditado, setNomeEditado] = useState(usuario.nome)
   const [salvandoNome, setSalvandoNome] = useState(false)
@@ -152,17 +160,23 @@ function PainelGerir({
   // Papéis que o usuário já tem
   const papeisAtuais = new Set(usuario.papeis)
 
-  // Papéis simples disponíveis para conceder (que o usuário ainda não tem)
+  // Papéis simples disponíveis para conceder via concederPapel (só 'aluno' — 0057)
   const papeisDisponiveis = PAPEIS_SIMPLES.filter((p) => !papeisAtuais.has(p))
   const podeOfereceCoord = !papeisAtuais.has('coordenador')
-  // Opções para o <select>: simples + coordenador se disponível
+  const podeOfereceRepresentante = !papeisAtuais.has('representante')
+  // Opções para o <select>: aluno (via concederPapel) + coordenador + representante (via RPCs próprias)
   const opcoesPapel = [
     ...papeisDisponiveis,
     ...(podeOfereceCoord ? (['coordenador'] as const) : []),
+    ...(podeOfereceRepresentante ? (['representante'] as const) : []),
   ]
 
   const isCoordenador = selectedPapel === 'coordenador'
-  const concederDisabled = !selectedPapel || (isCoordenador && !selectedCurso)
+  const isRepresentante = selectedPapel === 'representante'
+  const concederDisabled =
+    !selectedPapel ||
+    (isCoordenador && selectedCursos.length === 0) ||
+    (isRepresentante && !selectedEmpresa)
 
   const getCursoLabel = (cursoId: string) =>
     CURSOS_COORD.find((c) => c.value === cursoId)?.label ?? cursoId
@@ -179,9 +193,19 @@ function PainelGerir({
         }
       case 'conceder-papel':
         if (pendingAction.role === 'coordenador') {
+          const cursosLabel = (pendingAction.cursoSlugs ?? [])
+            .map(getCursoLabel)
+            .join(', ')
           return {
             titulo: 'Conceder coordenador',
-            mensagem: `Conceder a ${usuario.nome} o papel de coordenador, já aprovado, no curso ${getCursoLabel(pendingAction.cursoId ?? '')}?`,
+            mensagem: `Conceder a ${usuario.nome} o papel de coordenador, já aprovado, nos cursos: ${cursosLabel}?`,
+            confirmVariant: 'primary',
+          }
+        }
+        if (pendingAction.role === 'representante') {
+          return {
+            titulo: 'Conceder representante',
+            mensagem: `Conceder a ${usuario.nome} o papel de representante vinculado à empresa ${pendingAction.empresaNome ?? ''}?`,
             confirmVariant: 'primary',
           }
         }
@@ -234,9 +258,14 @@ function PainelGerir({
         break
       }
       case 'conceder-papel': {
-        if (pendingAction.role === 'coordenador' && pendingAction.cursoId) {
-          const res = await concederCoordenador(usuario.id, pendingAction.cursoId)
+        if (pendingAction.role === 'coordenador' && pendingAction.cursoSlugs && pendingAction.cursoSlugs.length > 0) {
+          // 0057: N cursos via concederCoordenador(userId, slugs[])
+          const res = await concederCoordenador(usuario.id, pendingAction.cursoSlugs)
           if (res.ok) {
+            const novosCursos = pendingAction.cursoSlugs.map((slug) => ({
+              curso_id: slug,
+              curso_label: getCursoLabel(slug),
+            }))
             onRefresh((prev) =>
               prev.map((u) =>
                 u.id === usuario.id
@@ -245,20 +274,34 @@ function PainelGerir({
                       papeis: u.papeis.includes('coordenador') ? u.papeis : [...u.papeis, 'coordenador'],
                       cursos_coordenados: [
                         ...(u.cursos_coordenados ?? []),
-                        {
-                          curso_id: pendingAction.cursoId!,
-                          curso_label: getCursoLabel(pendingAction.cursoId!),
-                        },
+                        ...novosCursos,
                       ],
                     }
                   : u,
               ),
             )
-            onToast(`Papel de coordenador concedido a ${usuario.nome} (${getCursoLabel(pendingAction.cursoId)}).`)
+            const cursosLabel = pendingAction.cursoSlugs.map(getCursoLabel).join(', ')
+            onToast(`Papel de coordenador concedido a ${usuario.nome} (${cursosLabel}).`)
+          } else {
+            onToast('Não foi possível concluir. Tente novamente.')
+          }
+        } else if (pendingAction.role === 'representante' && pendingAction.empresaId) {
+          // 0057: representante via concederRepresentante(userId, empresaId)
+          const res = await concederRepresentante(usuario.id, pendingAction.empresaId)
+          if (res.ok) {
+            onRefresh((prev) =>
+              prev.map((u) =>
+                u.id === usuario.id
+                  ? { ...u, papeis: u.papeis.includes('representante') ? u.papeis : [...u.papeis, 'representante'] }
+                  : u,
+              ),
+            )
+            onToast(`Papel de representante concedido a ${usuario.nome}.`)
           } else {
             onToast('Não foi possível concluir. Tente novamente.')
           }
         } else {
+          // aluno — via concederPapel
           const res = await concederPapel(usuario.id, pendingAction.role)
           if (res.ok) {
             onRefresh((prev) =>
@@ -274,7 +317,8 @@ function PainelGerir({
           }
         }
         setSelectedPapel('')
-        setSelectedCurso('')
+        setSelectedCursos([])
+        setSelectedEmpresa(null)
         break
       }
       case 'conceder-admin': {
@@ -394,69 +438,77 @@ function PainelGerir({
 
             {/* Conceder novo papel */}
             {opcoesPapel.length > 0 && (
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
-                <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'flex-end', flexWrap: 'wrap' }}>
-                  <div style={{ display: 'flex', flexDirection: 'column', gap: '0.25rem' }}>
-                    <label
-                      htmlFor={`select-papel-${usuario.id}`}
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
+                {/* Select de papel */}
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '0.25rem' }}>
+                  <label
+                    htmlFor={`select-papel-${usuario.id}`}
+                    className="ubm-cota ubm-cota--muted"
+                    style={{ fontSize: '0.7rem' }}
+                  >
+                    Papel
+                  </label>
+                  <select
+                    id={`select-papel-${usuario.id}`}
+                    className="ubm-input"
+                    value={selectedPapel}
+                    onChange={(e) => {
+                      setSelectedPapel(e.target.value)
+                      setSelectedCursos([])
+                      setSelectedEmpresa(null)
+                    }}
+                    style={{ minWidth: '160px', height: '2.4rem', maxWidth: '240px' }}
+                    aria-label="Papel"
+                  >
+                    <option value="">Selecionar papel…</option>
+                    {opcoesPapel.map((p) => (
+                      <option key={p} value={p}>
+                        {PAPEL_LABEL[p] ?? p}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+
+                {/* 0057: CourseMultiSelect — aparece quando coordenador selecionado */}
+                {isCoordenador && (
+                  <div>
+                    <span
                       className="ubm-cota ubm-cota--muted"
-                      style={{ fontSize: '0.7rem' }}
+                      style={{ display: 'block', fontSize: '0.7rem', marginBottom: '0.4rem' }}
                     >
-                      Papel
-                    </label>
-                    <select
-                      id={`select-papel-${usuario.id}`}
-                      className="ubm-input"
-                      value={selectedPapel}
-                      onChange={(e) => {
-                        setSelectedPapel(e.target.value)
-                        setSelectedCurso('')
-                      }}
-                      style={{ minWidth: '160px', height: '2.4rem' }}
-                      aria-label="Papel"
-                    >
-                      <option value="">Selecionar papel…</option>
-                      {opcoesPapel.map((p) => (
-                        <option key={p} value={p}>
-                          {PAPEL_LABEL[p] ?? p}
-                        </option>
-                      ))}
-                    </select>
+                      Cursos <span aria-hidden>*</span>
+                    </span>
+                    <CourseMultiSelect
+                      value={selectedCursos}
+                      onChange={setSelectedCursos}
+                    />
+                    <p className="ubm-confirm-msg" style={{ margin: '0.4rem 0 0', fontSize: '0.8rem' }}>
+                      Como admin, você concede o papel de coordenador já aprovado para os cursos escolhidos.
+                    </p>
                   </div>
+                )}
 
-                  {/* Select de curso — aparece apenas quando coordenador selecionado */}
-                  {isCoordenador && (
-                    <div style={{ display: 'flex', flexDirection: 'column', gap: '0.25rem' }}>
-                      <label
-                        htmlFor={`select-curso-${usuario.id}`}
-                        className="ubm-cota ubm-cota--muted"
-                        style={{ fontSize: '0.7rem' }}
-                      >
-                        Curso <span aria-hidden>*</span>
-                      </label>
-                      <select
-                        id={`select-curso-${usuario.id}`}
-                        className="ubm-input"
-                        value={selectedCurso}
-                        onChange={(e) => setSelectedCurso(e.target.value)}
-                        style={{ minWidth: '200px', height: '2.4rem' }}
-                        aria-label="Curso"
-                        aria-required="true"
-                      >
-                        <option value="">Selecionar curso…</option>
-                        {CURSOS_COORD.map((c) => (
-                          <option key={c.value} value={c.value}>
-                            {c.label}
-                          </option>
-                        ))}
-                      </select>
-                    </div>
-                  )}
+                {/* 0057: EmpresaCombobox — aparece quando representante selecionado */}
+                {isRepresentante && (
+                  <div>
+                    <EmpresaCombobox
+                      value={selectedEmpresa}
+                      onChange={setSelectedEmpresa}
+                      mode="auth"
+                      label="Empresa *"
+                      placeholder="Busque ou crie a empresa…"
+                    />
+                    <p className="ubm-confirm-msg" style={{ margin: '0.4rem 0 0', fontSize: '0.8rem' }}>
+                      O representante será vinculado à empresa selecionada.
+                    </p>
+                  </div>
+                )}
 
+                <div>
                   <button
                     type="button"
                     className="ubm-btn ubm-btn-primary"
-                    style={{ height: '2.4rem', alignSelf: 'flex-end' }}
+                    style={{ height: '2.4rem' }}
                     disabled={concederDisabled || carregando}
                     aria-disabled={concederDisabled}
                     onClick={() => {
@@ -464,19 +516,15 @@ function PainelGerir({
                       setPendingAction({
                         tipo: 'conceder-papel',
                         role: selectedPapel,
-                        cursoId: isCoordenador ? selectedCurso : undefined,
+                        cursoSlugs: isCoordenador ? (selectedCursos as string[]) : undefined,
+                        empresaId: isRepresentante ? selectedEmpresa?.id : undefined,
+                        empresaNome: isRepresentante ? selectedEmpresa?.nome : undefined,
                       })
                     }}
                   >
                     Conceder
                   </button>
                 </div>
-
-                {isCoordenador && (
-                  <p className="ubm-confirm-msg" style={{ margin: 0, fontSize: '0.8rem' }}>
-                    Como admin, você concede o papel de coordenador já aprovado para o curso escolhido.
-                  </p>
-                )}
               </div>
             )}
           </div>

@@ -127,7 +127,7 @@ describe('0053 §2 — RPC onboarding_coordenador', () => {
     const db = await novoBanco()
     await seedBase(db)
     await comoUsuario(db, { uid: UID_COORD })
-    await db.query(`select public.onboarding_coordenador('${CURSO_ID}', 'Prof. Engcomp')`)
+    await db.query(`select public.onboarding_coordenador(array['${CURSO_SLUG}']::public.curso_ubm[],'Prof. Engcomp')`)
 
     await comoServiceRole(db)
     const row = (await db.query<{ aprovado: boolean }>(
@@ -141,7 +141,7 @@ describe('0053 §2 — RPC onboarding_coordenador', () => {
     const db = await novoBanco()
     await seedBase(db)
     await comoUsuario(db, { uid: UID_COORD })
-    await db.query(`select public.onboarding_coordenador('${CURSO_ID}', 'Prof. Engcomp')`)
+    await db.query(`select public.onboarding_coordenador(array['${CURSO_SLUG}']::public.curso_ubm[],'Prof. Engcomp')`)
 
     await comoServiceRole(db)
     const rows = (await db.query<{ role: string }>(
@@ -162,7 +162,7 @@ describe('0053 §2 — RPC onboarding_coordenador', () => {
     )
     // Re-chama como o próprio usuário
     await comoUsuario(db, { uid: UID_COORD })
-    await db.query(`select public.onboarding_coordenador('${CURSO_ID}', 'Prof. Engcomp')`)
+    await db.query(`select public.onboarding_coordenador(array['${CURSO_SLUG}']::public.curso_ubm[],'Prof. Engcomp')`)
 
     await comoServiceRole(db)
     const row = (await db.query<{ aprovado: boolean }>(
@@ -177,18 +177,18 @@ describe('0053 §2 — RPC onboarding_coordenador', () => {
     await seedBase(db)
     await comoUsuario(db, { uid: UID_COORD })
     await expect(
-      db.query(`select public.onboarding_coordenador('${CURSO_ID}', '')`)
+      db.query(`select public.onboarding_coordenador(array['${CURSO_SLUG}']::public.curso_ubm[],'')`)
     ).rejects.toThrow()
     await db.close()
   })
 
-  it('valida curso_id existente (raise quando não encontrado)', async () => {
+  it('valida curso existente (raise quando nenhum slug resolve a curso)', async () => {
     const db = await novoBanco()
     await seedBase(db)
-    const idInexistente = '99999999-9999-9999-9999-999999999999'
+    // 0057: slug válido do enum mas SEM curso seedado (só 'direito' existe) → raise
     await comoUsuario(db, { uid: UID_COORD })
     await expect(
-      db.query(`select public.onboarding_coordenador('${idInexistente}', 'Prof.')`)
+      db.query(`select public.onboarding_coordenador(array['engenharia_de_software']::public.curso_ubm[], 'Prof.')`)
     ).rejects.toThrow()
     await db.close()
   })
@@ -198,7 +198,7 @@ describe('0053 §2 — RPC onboarding_coordenador', () => {
     await seedBase(db)
     await comoAnon(db)
     await expect(
-      db.query(`select public.onboarding_coordenador('${CURSO_ID}', 'Prof.')`)
+      db.query(`select public.onboarding_coordenador(array['${CURSO_SLUG}']::public.curso_ubm[],'Prof.')`)
     ).rejects.toThrow()
     await db.close()
   })
@@ -206,7 +206,7 @@ describe('0053 §2 — RPC onboarding_coordenador', () => {
   it('anon não tem execute na RPC (grant negado — §5)', async () => {
     const db = await novoBanco()
     const ok = (await db.query<{ ok: boolean }>(
-      `select has_function_privilege('anon', 'public.onboarding_coordenador(uuid,text)', 'execute') ok`
+      `select has_function_privilege('anon', 'public.onboarding_coordenador(curso_ubm[],text)', 'execute') ok`
     )).rows[0]!.ok
     expect(ok).toBe(false)
     await db.close()
@@ -232,7 +232,7 @@ describe('0053 §2 — RPC aprovar_coordenador', () => {
     await seedBase(db)
     // Cria vínculo pendente via self-service
     await comoUsuario(db, { uid: UID_COORD })
-    await db.query(`select public.onboarding_coordenador('${CURSO_ID}', 'Prof. Coord')`)
+    await db.query(`select public.onboarding_coordenador(array['${CURSO_SLUG}']::public.curso_ubm[],'Prof. Coord')`)
 
     // Admin aprova
     await comoUsuario(db, { uid: UID_ADM, appMeta: { is_admin: true } })
@@ -317,7 +317,7 @@ describe('0053 §2 — RPCs recusar_coordenador e revogar_coordenador', () => {
     const db = await novoBanco()
     await seedBase(db)
     await comoUsuario(db, { uid: UID_COORD })
-    await db.query(`select public.onboarding_coordenador('${CURSO_ID}', 'Prof.')`)
+    await db.query(`select public.onboarding_coordenador(array['${CURSO_SLUG}']::public.curso_ubm[],'Prof.')`)
 
     await comoUsuario(db, { uid: UID_ADM, appMeta: { is_admin: true } })
     await db.query(`select public.recusar_coordenador('${UID_COORD}', '${CURSO_ID}')`)
@@ -647,7 +647,7 @@ describe('0053 §5 — Grants finais após hardening', () => {
   it('authenticated tem execute em onboarding_coordenador', async () => {
     const db = await novoBanco()
     const ok = (await db.query<{ ok: boolean }>(
-      `select has_function_privilege('authenticated', 'public.onboarding_coordenador(uuid,text)', 'execute') ok`
+      `select has_function_privilege('authenticated', 'public.onboarding_coordenador(curso_ubm[],text)', 'execute') ok`
     )).rows[0]!.ok
     expect(ok).toBe(true)
     await db.close()

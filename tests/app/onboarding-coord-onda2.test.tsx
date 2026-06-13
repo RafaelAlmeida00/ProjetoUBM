@@ -72,7 +72,7 @@ describe('A1 — CourseSingleSelect', () => {
   })
 })
 
-describe('A2 — Onboarding coordenador ativo (onda 2)', () => {
+describe('A2 — Onboarding coordenador ativo (onda 2 / 0057: N cursos via checkbox)', () => {
   beforeEach(() => {
     vi.clearAllMocks()
     assumirPapelMock.mockResolvedValue({ ok: true })
@@ -80,67 +80,73 @@ describe('A2 — Onboarding coordenador ativo (onda 2)', () => {
     atualizarPerfilMock.mockResolvedValue({ ok: true })
   })
 
-  it('ramo coordenador exibe seletor de curso (radio fieldset)', async () => {
-    render(<OnboardingPage />)
-    fireEvent.click(screen.getByRole('radio', { name: /coordenador/i }))
-    fireEvent.click(screen.getByRole('button', { name: /continuar/i }))
-    await waitFor(() => {
-      expect(document.querySelector('fieldset')).toBeInTheDocument()
-    })
-  })
-
-  it('botão Concluir desabilitado quando curso não selecionado', async () => {
+  /** helper: avança para etapa infos do coordenador */
+  async function irParaEtapaCoordenador() {
     render(<OnboardingPage />)
     fireEvent.click(screen.getByRole('radio', { name: /coordenador/i }))
     fireEvent.click(screen.getByRole('button', { name: /continuar/i }))
     await waitFor(() => expect(screen.getByRole('button', { name: /concluir/i })).toBeInTheDocument())
+  }
+
+  /** helper: obtém checkboxes de curso (CourseMultiSelect usa checkbox) */
+  function getCursosCheckboxes() {
+    return screen.getAllByRole('checkbox').filter(
+      (el) => !el.closest('[role="dialog"]')
+    )
+  }
+
+  it('ramo coordenador exibe seletor de cursos (fieldset com checkboxes)', async () => {
+    await irParaEtapaCoordenador()
+    expect(document.querySelector('fieldset')).toBeInTheDocument()
+    // CourseMultiSelect usa checkboxes
+    expect(getCursosCheckboxes().length).toBeGreaterThan(0)
+  })
+
+  it('botão Concluir desabilitado quando nenhum curso selecionado', async () => {
+    await irParaEtapaCoordenador()
     fireEvent.change(screen.getByLabelText(/nome/i), { target: { value: 'Prof. Braga' } })
-    // Sem curso selecionado, botão deve estar desabilitado
+    // Sem curso marcado, botão deve estar desabilitado
     expect(screen.getByRole('button', { name: /concluir/i })).toBeDisabled()
   })
 
-  it('botão Concluir habilitado quando nome e curso selecionados', async () => {
-    render(<OnboardingPage />)
-    fireEvent.click(screen.getByRole('radio', { name: /coordenador/i }))
-    fireEvent.click(screen.getByRole('button', { name: /continuar/i }))
-    await waitFor(() => expect(screen.getByRole('button', { name: /concluir/i })).toBeInTheDocument())
+  it('botão Concluir habilitado quando nome e ao menos 1 curso selecionado', async () => {
+    await irParaEtapaCoordenador()
     fireEvent.change(screen.getByLabelText(/nome/i), { target: { value: 'Prof. Braga' } })
-    // Selecionar o primeiro radio de curso
-    const cursosRadios = screen.getAllByRole('radio').filter(
-      (r) => r.getAttribute('name') === 'curso-coord'
-    )
-    fireEvent.click(cursosRadios[0])
+    // Marcar o primeiro checkbox de curso
+    fireEvent.click(getCursosCheckboxes()[0])
     expect(screen.getByRole('button', { name: /concluir/i })).not.toBeDisabled()
   })
 
-  it('ao concluir chama onboardingCoordenador com cursoId e nome', async () => {
-    render(<OnboardingPage />)
-    fireEvent.click(screen.getByRole('radio', { name: /coordenador/i }))
-    fireEvent.click(screen.getByRole('button', { name: /continuar/i }))
-    await waitFor(() => expect(screen.getByRole('button', { name: /concluir/i })).toBeInTheDocument())
+  it('ao concluir chama onboardingCoordenador com cursoSlugs (array) e nome', async () => {
+    await irParaEtapaCoordenador()
     fireEvent.change(screen.getByLabelText(/nome/i), { target: { value: 'Prof. Braga' } })
-    const cursosRadios = screen.getAllByRole('radio').filter(
-      (r) => r.getAttribute('name') === 'curso-coord'
-    )
-    fireEvent.click(cursosRadios[0])
+    fireEvent.click(getCursosCheckboxes()[0])
     fireEvent.click(screen.getByRole('button', { name: /concluir/i }))
     await waitFor(() => {
       expect(onboardingCoordenadorMock).toHaveBeenCalledWith(
-        expect.objectContaining({ cursoId: expect.any(String), nome: 'Prof. Braga' })
+        expect.objectContaining({ cursoSlugs: expect.any(Array), nome: 'Prof. Braga' })
       )
     })
+    // cursoSlugs deve ter ao menos 1 elemento
+    const call = onboardingCoordenadorMock.mock.calls[0][0]
+    expect(call.cursoSlugs.length).toBeGreaterThan(0)
+  })
+
+  it('ao concluir NÃO passa cursoId (parâmetro antigo singular)', async () => {
+    await irParaEtapaCoordenador()
+    fireEvent.change(screen.getByLabelText(/nome/i), { target: { value: 'Prof. Braga' } })
+    fireEvent.click(getCursosCheckboxes()[0])
+    fireEvent.click(screen.getByRole('button', { name: /concluir/i }))
+    await waitFor(() => expect(onboardingCoordenadorMock).toHaveBeenCalled())
+    const call = onboardingCoordenadorMock.mock.calls[0][0]
+    expect(call).not.toHaveProperty('cursoId')
+    expect(call).toHaveProperty('cursoSlugs')
   })
 
   it('estado enviado exibe painel EM ANÁLISE após concluir com sucesso', async () => {
-    render(<OnboardingPage />)
-    fireEvent.click(screen.getByRole('radio', { name: /coordenador/i }))
-    fireEvent.click(screen.getByRole('button', { name: /continuar/i }))
-    await waitFor(() => expect(screen.getByRole('button', { name: /concluir/i })).toBeInTheDocument())
+    await irParaEtapaCoordenador()
     fireEvent.change(screen.getByLabelText(/nome/i), { target: { value: 'Prof. Braga' } })
-    const cursosRadios = screen.getAllByRole('radio').filter(
-      (r) => r.getAttribute('name') === 'curso-coord'
-    )
-    fireEvent.click(cursosRadios[0])
+    fireEvent.click(getCursosCheckboxes()[0])
     fireEvent.click(screen.getByRole('button', { name: /concluir/i }))
     await waitFor(() => {
       expect(screen.getByText(/em análise/i)).toBeInTheDocument()
@@ -150,15 +156,9 @@ describe('A2 — Onboarding coordenador ativo (onda 2)', () => {
   })
 
   it('estado enviado exibe link "Ir para a plataforma"', async () => {
-    render(<OnboardingPage />)
-    fireEvent.click(screen.getByRole('radio', { name: /coordenador/i }))
-    fireEvent.click(screen.getByRole('button', { name: /continuar/i }))
-    await waitFor(() => expect(screen.getByRole('button', { name: /concluir/i })).toBeInTheDocument())
+    await irParaEtapaCoordenador()
     fireEvent.change(screen.getByLabelText(/nome/i), { target: { value: 'Prof. Braga' } })
-    const cursosRadios = screen.getAllByRole('radio').filter(
-      (r) => r.getAttribute('name') === 'curso-coord'
-    )
-    fireEvent.click(cursosRadios[0])
+    fireEvent.click(getCursosCheckboxes()[0])
     fireEvent.click(screen.getByRole('button', { name: /concluir/i }))
     await waitFor(() => {
       expect(screen.getByRole('link', { name: /ir para a plataforma/i })).toBeInTheDocument()
@@ -167,15 +167,9 @@ describe('A2 — Onboarding coordenador ativo (onda 2)', () => {
 
   it('erro no onboardingCoordenador exibe mensagem de erro e mantém form', async () => {
     onboardingCoordenadorMock.mockResolvedValueOnce({ ok: false, error: 'Falha no servidor' })
-    render(<OnboardingPage />)
-    fireEvent.click(screen.getByRole('radio', { name: /coordenador/i }))
-    fireEvent.click(screen.getByRole('button', { name: /continuar/i }))
-    await waitFor(() => expect(screen.getByRole('button', { name: /concluir/i })).toBeInTheDocument())
+    await irParaEtapaCoordenador()
     fireEvent.change(screen.getByLabelText(/nome/i), { target: { value: 'Prof. Braga' } })
-    const cursosRadios = screen.getAllByRole('radio').filter(
-      (r) => r.getAttribute('name') === 'curso-coord'
-    )
-    fireEvent.click(cursosRadios[0])
+    fireEvent.click(getCursosCheckboxes()[0])
     fireEvent.click(screen.getByRole('button', { name: /concluir/i }))
     await waitFor(() => {
       expect(screen.getByRole('alert')).toBeInTheDocument()

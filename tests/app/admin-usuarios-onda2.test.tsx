@@ -22,6 +22,7 @@ const revogarAdminMock = vi.fn().mockResolvedValue({ ok: true })
 const concederAdminMock = vi.fn().mockResolvedValue({ ok: true })
 const revogarPapelMock = vi.fn().mockResolvedValue({ ok: true })
 const concederCoordenadorMock = vi.fn().mockResolvedValue({ ok: true })
+const concederRepresentanteMock = vi.fn().mockResolvedValue({ ok: true })
 const adminEditarPerfilMock = vi.fn().mockResolvedValue({ ok: true })
 const listarCoordenadoresPendentesMock = vi.fn().mockResolvedValue([])
 const aprovarCoordenadorMock = vi.fn().mockResolvedValue({ ok: true })
@@ -36,11 +37,57 @@ vi.mock('@/lib/actions/admin-usuarios', () => ({
   concederAdmin: (...a: unknown[]) => concederAdminMock(...a),
   revogarPapel: (...a: unknown[]) => revogarPapelMock(...a),
   concederCoordenador: (...a: unknown[]) => concederCoordenadorMock(...a),
+  concederRepresentante: (...a: unknown[]) => concederRepresentanteMock(...a),
   adminEditarPerfil: (...a: unknown[]) => adminEditarPerfilMock(...a),
   listarCoordenadoresPendentes: () => listarCoordenadoresPendentesMock(),
   aprovarCoordenador: (...a: unknown[]) => aprovarCoordenadorMock(...a),
   recusarCoordenador: (...a: unknown[]) => recusarCoordenadorMock(...a),
   obterSessaoAdmin: () => obterSessaoAdminMock(),
+}))
+
+// Mock EmpresaCombobox — testa integração, não o componente em si
+vi.mock('@/components/empresa/EmpresaCombobox', () => ({
+  EmpresaCombobox: ({ onChange, label }: { onChange: (e: { id: string; nome: string } | null) => void; label?: string }) => (
+    <div>
+      <span>{label}</span>
+      <button
+        type="button"
+        data-testid="empresa-combobox-select"
+        onClick={() => onChange({ id: 'emp-uuid-1', nome: 'Empresa Teste' })}
+      >
+        Selecionar empresa
+      </button>
+      <button
+        type="button"
+        data-testid="empresa-combobox-clear"
+        onClick={() => onChange(null)}
+      >
+        Limpar empresa
+      </button>
+    </div>
+  ),
+}))
+
+// Mock CourseMultiSelect — renderiza checkboxes simples para o teste de admin
+vi.mock('@/components/course/CourseMultiSelect', () => ({
+  CourseMultiSelect: ({ value, onChange }: { value: string[]; onChange: (v: string[]) => void }) => (
+    <fieldset>
+      <legend>Cursos</legend>
+      {['direito', 'administracao', 'engenharia_de_software'].map((slug) => (
+        <label key={slug}>
+          <input
+            type="checkbox"
+            value={slug}
+            checked={value.includes(slug)}
+            onChange={() =>
+              onChange(value.includes(slug) ? value.filter((v) => v !== slug) : [...value, slug])
+            }
+          />
+          {slug}
+        </label>
+      ))}
+    </fieldset>
+  ),
 }))
 
 import AdminUsuariosPage from '@/app/admin/usuarios/page'
@@ -166,12 +213,14 @@ describe('Painel Gerir', () => {
 
   it('painel exibe select de "Conceder papel" com as opções ainda não detidas pelo usuário', async () => {
     await abrirPainelAluno()
-    // aluno já tem 'aluno', então não deve oferecer aluno novamente; deve oferecer representante
+    // aluno já tem 'aluno', então não deve oferecer aluno novamente
     const select = screen.getByRole('combobox', { name: /papel/i })
     expect(select).toBeInTheDocument()
-    // representante deve estar disponível
+    // representante deve estar disponível (via concederRepresentante — 0057)
     expect(screen.getByRole('option', { name: /representante/i })).toBeInTheDocument()
-    // aluno não deve aparecer como opção
+    // coordenador deve estar disponível
+    expect(screen.getByRole('option', { name: /coordenador/i })).toBeInTheDocument()
+    // aluno não deve aparecer como opção (já tem o papel)
     const alunoOption = screen.queryByRole('option', { name: /^aluno$/i })
     expect(alunoOption).not.toBeInTheDocument()
   })
@@ -183,60 +232,64 @@ describe('Painel Gerir', () => {
   })
 })
 
-// ─── 3. Conceder papel ──────────────────────────────────────────────────────
+// ─── 3. Conceder papel (0057: só 'aluno' via concederPapel) ────────────────────
+// representante → bloco 4b; coordenador → bloco 4
 
-describe('Conceder papel (não-coordenador)', () => {
+describe('Conceder papel aluno (via concederPapel)', () => {
   beforeEach(() => {
     vi.clearAllMocks()
     listarCoordenadoresPendentesMock.mockResolvedValue([])
     concederPapelMock.mockResolvedValue({ ok: true })
   })
 
-  it('conceder representante para aluno chama concederPapel(userId, "representante")', async () => {
-    listarUsuariosMock.mockResolvedValue([U_ALUNO])
+  // U_ALUNO já tem 'aluno'; usuário sem papel pode receber 'aluno'
+  const U_SEM_PAPEL = {
+    id: 'u5',
+    email: 'novo@ubm.br',
+    nome: 'Novo Usuário',
+    papeis: [] as string[],
+    is_admin: false,
+  }
+
+  it('conceder aluno para usuário sem papel chama concederPapel(userId, "aluno")', async () => {
+    listarUsuariosMock.mockResolvedValue([U_SEM_PAPEL])
     render(<AdminUsuariosPage />)
     await waitFor(() => expect(screen.getByRole('button', { name: /gerir/i })).toBeInTheDocument())
     fireEvent.click(screen.getByRole('button', { name: /gerir/i }))
     await waitFor(() => expect(screen.getByRole('combobox', { name: /papel/i })).toBeInTheDocument())
 
-    const select = screen.getByRole('combobox', { name: /papel/i })
-    fireEvent.change(select, { target: { value: 'representante' } })
+    fireEvent.change(screen.getByRole('combobox', { name: /papel/i }), { target: { value: 'aluno' } })
+    fireEvent.click(screen.getByRole('button', { name: /^conceder$/i }))
 
-    const concederBtn = screen.getByRole('button', { name: /^conceder$/i })
-    fireEvent.click(concederBtn)
-
-    // Confirm dialog aparece
     await waitFor(() => expect(screen.getByRole('dialog')).toBeInTheDocument())
-    const confirmarBtn = screen.getByRole('button', { name: /confirmar/i })
-    fireEvent.click(confirmarBtn)
+    fireEvent.click(screen.getByRole('button', { name: /confirmar/i }))
 
     await waitFor(() =>
-      expect(concederPapelMock).toHaveBeenCalledWith('u3', 'representante')
+      expect(concederPapelMock).toHaveBeenCalledWith('u5', 'aluno')
     )
   })
 
-  it('toast de sucesso exibe o nome após conceder papel', async () => {
-    listarUsuariosMock.mockResolvedValue([U_ALUNO])
+  it('toast de sucesso exibe o nome após conceder papel aluno', async () => {
+    listarUsuariosMock.mockResolvedValue([U_SEM_PAPEL])
     render(<AdminUsuariosPage />)
     await waitFor(() => expect(screen.getByRole('button', { name: /gerir/i })).toBeInTheDocument())
     fireEvent.click(screen.getByRole('button', { name: /gerir/i }))
     await waitFor(() => expect(screen.getByRole('combobox', { name: /papel/i })).toBeInTheDocument())
 
-    const select = screen.getByRole('combobox', { name: /papel/i })
-    fireEvent.change(select, { target: { value: 'representante' } })
+    fireEvent.change(screen.getByRole('combobox', { name: /papel/i }), { target: { value: 'aluno' } })
     fireEvent.click(screen.getByRole('button', { name: /^conceder$/i }))
     await waitFor(() => expect(screen.getByRole('dialog')).toBeInTheDocument())
     fireEvent.click(screen.getByRole('button', { name: /confirmar/i }))
 
     await waitFor(() =>
-      expect(screen.getByRole('status')).toHaveTextContent(/representante.*joão aluno|joão aluno.*representante/i)
+      expect(screen.getByRole('status')).toHaveTextContent(/aluno.*novo usuário|novo usuário.*aluno/i)
     )
   })
 })
 
-// ─── 4. Conceder coordenador (fluxo com curso) ─────────────────────────────
+// ─── 4. Conceder coordenador (0057: fluxo multi-curso via checkbox) ────────────
 
-describe('Conceder papel coordenador', () => {
+describe('Conceder papel coordenador (0057: multi-curso)', () => {
   beforeEach(() => {
     vi.clearAllMocks()
     listarCoordenadoresPendentesMock.mockResolvedValue([])
@@ -253,16 +306,24 @@ describe('Conceder papel coordenador', () => {
     fireEvent.change(select, { target: { value: 'coordenador' } })
   }
 
-  it('ao selecionar "coordenador", aparece select de curso obrigatório', async () => {
+  /** Obtém checkboxes de curso (CourseMultiSelect) excluindo checkboxes de diálogos */
+  function getCursosCheckboxes() {
+    return screen.getAllByRole('checkbox').filter(
+      (el) => !el.closest('[role="dialog"]')
+    )
+  }
+
+  it('ao selecionar "coordenador", aparece fieldset de cursos (checkboxes)', async () => {
     await selecionarCoordenador()
     await waitFor(() =>
-      expect(screen.getByRole('combobox', { name: /curso/i })).toBeInTheDocument()
+      expect(document.querySelector('fieldset')).toBeInTheDocument()
     )
+    expect(getCursosCheckboxes().length).toBeGreaterThan(0)
   })
 
-  it('botão Conceder fica disabled enquanto não há curso selecionado', async () => {
+  it('botão Conceder fica disabled enquanto não há curso marcado', async () => {
     await selecionarCoordenador()
-    await waitFor(() => expect(screen.getByRole('combobox', { name: /curso/i })).toBeInTheDocument())
+    await waitFor(() => expect(getCursosCheckboxes().length).toBeGreaterThan(0))
     const concederBtn = screen.getByRole('button', { name: /^conceder$/i })
     expect(concederBtn).toBeDisabled()
   })
@@ -270,40 +331,117 @@ describe('Conceder papel coordenador', () => {
   it('microcopy explicativo é exibido quando coordenador selecionado', async () => {
     await selecionarCoordenador()
     await waitFor(() =>
-      expect(screen.getByText(/já aprovado para o curso/i)).toBeInTheDocument()
+      expect(screen.getByText(/já aprovado para os cursos escolhidos/i)).toBeInTheDocument()
     )
   })
 
-  it('conceder coordenador chama concederCoordenador(userId, cursoId)', async () => {
+  it('conceder coordenador chama concederCoordenador(userId, cursoSlugs[])', async () => {
     await selecionarCoordenador()
-    await waitFor(() => expect(screen.getByRole('combobox', { name: /curso/i })).toBeInTheDocument())
-    const cursoSelect = screen.getByRole('combobox', { name: /curso/i })
-    fireEvent.change(cursoSelect, { target: { value: 'direito' } })
+    await waitFor(() => expect(getCursosCheckboxes().length).toBeGreaterThan(0))
+    // marcar o primeiro curso
+    fireEvent.click(getCursosCheckboxes()[0])
 
     const concederBtn = screen.getByRole('button', { name: /^conceder$/i })
     expect(concederBtn).not.toBeDisabled()
     fireEvent.click(concederBtn)
 
     await waitFor(() => expect(screen.getByRole('dialog')).toBeInTheDocument())
-    // confirm dialog deve mencionar o nome e o curso
     expect(screen.getByText(/conceder coordenador/i)).toBeInTheDocument()
-    const confirmarBtn = screen.getByRole('button', { name: /confirmar/i })
-    fireEvent.click(confirmarBtn)
+    fireEvent.click(screen.getByRole('button', { name: /confirmar/i }))
 
     await waitFor(() =>
-      expect(concederCoordenadorMock).toHaveBeenCalledWith('u3', 'direito')
+      expect(concederCoordenadorMock).toHaveBeenCalledWith('u3', expect.any(Array))
     )
+    // Deve ter ao menos 1 slug no array
+    const slugs = concederCoordenadorMock.mock.calls[0][1]
+    expect(slugs.length).toBeGreaterThan(0)
   })
 
   it('NÃO chama concederPapel para coordenador', async () => {
     await selecionarCoordenador()
-    await waitFor(() => expect(screen.getByRole('combobox', { name: /curso/i })).toBeInTheDocument())
-    fireEvent.change(screen.getByRole('combobox', { name: /curso/i }), { target: { value: 'direito' } })
+    await waitFor(() => expect(getCursosCheckboxes().length).toBeGreaterThan(0))
+    fireEvent.click(getCursosCheckboxes()[0])
     fireEvent.click(screen.getByRole('button', { name: /^conceder$/i }))
     await waitFor(() => expect(screen.getByRole('dialog')).toBeInTheDocument())
     fireEvent.click(screen.getByRole('button', { name: /confirmar/i }))
     await waitFor(() => expect(concederCoordenadorMock).toHaveBeenCalled())
     expect(concederPapelMock).not.toHaveBeenCalled()
+  })
+})
+
+// ─── 4b. Conceder representante (0057: fluxo com EmpresaCombobox) ──────────────
+
+describe('Conceder papel representante (0057: exige empresa)', () => {
+  beforeEach(() => {
+    vi.clearAllMocks()
+    listarCoordenadoresPendentesMock.mockResolvedValue([])
+    concederRepresentanteMock.mockResolvedValue({ ok: true })
+  })
+
+  async function selecionarRepresentante(usuarios = [U_ALUNO]) {
+    listarUsuariosMock.mockResolvedValue(usuarios)
+    render(<AdminUsuariosPage />)
+    await waitFor(() => expect(screen.getByRole('button', { name: /gerir/i })).toBeInTheDocument())
+    fireEvent.click(screen.getByRole('button', { name: /gerir/i }))
+    await waitFor(() => expect(screen.getByRole('combobox', { name: /papel/i })).toBeInTheDocument())
+    fireEvent.change(screen.getByRole('combobox', { name: /papel/i }), { target: { value: 'representante' } })
+  }
+
+  it('ao selecionar "representante", aparece EmpresaCombobox', async () => {
+    await selecionarRepresentante()
+    await waitFor(() =>
+      expect(screen.getByText(/empresa \*/i)).toBeInTheDocument()
+    )
+  })
+
+  it('botão Conceder fica disabled enquanto não há empresa selecionada', async () => {
+    await selecionarRepresentante()
+    await waitFor(() => expect(screen.getByText(/empresa \*/i)).toBeInTheDocument())
+    expect(screen.getByRole('button', { name: /^conceder$/i })).toBeDisabled()
+  })
+
+  it('botão Conceder habilitado após selecionar empresa', async () => {
+    await selecionarRepresentante()
+    await waitFor(() => expect(screen.getByTestId('empresa-combobox-select')).toBeInTheDocument())
+    fireEvent.click(screen.getByTestId('empresa-combobox-select'))
+    await waitFor(() =>
+      expect(screen.getByRole('button', { name: /^conceder$/i })).not.toBeDisabled()
+    )
+  })
+
+  it('conceder representante chama concederRepresentante(userId, empresaId)', async () => {
+    await selecionarRepresentante()
+    await waitFor(() => expect(screen.getByTestId('empresa-combobox-select')).toBeInTheDocument())
+    fireEvent.click(screen.getByTestId('empresa-combobox-select'))
+    fireEvent.click(screen.getByRole('button', { name: /^conceder$/i }))
+    await waitFor(() => expect(screen.getByRole('dialog')).toBeInTheDocument())
+    fireEvent.click(screen.getByRole('button', { name: /confirmar/i }))
+    await waitFor(() =>
+      expect(concederRepresentanteMock).toHaveBeenCalledWith('u3', 'emp-uuid-1')
+    )
+  })
+
+  it('NÃO chama concederPapel para representante', async () => {
+    await selecionarRepresentante()
+    await waitFor(() => expect(screen.getByTestId('empresa-combobox-select')).toBeInTheDocument())
+    fireEvent.click(screen.getByTestId('empresa-combobox-select'))
+    fireEvent.click(screen.getByRole('button', { name: /^conceder$/i }))
+    await waitFor(() => expect(screen.getByRole('dialog')).toBeInTheDocument())
+    fireEvent.click(screen.getByRole('button', { name: /confirmar/i }))
+    await waitFor(() => expect(concederRepresentanteMock).toHaveBeenCalled())
+    expect(concederPapelMock).not.toHaveBeenCalled()
+  })
+
+  it('toast de sucesso após conceder representante', async () => {
+    await selecionarRepresentante()
+    await waitFor(() => expect(screen.getByTestId('empresa-combobox-select')).toBeInTheDocument())
+    fireEvent.click(screen.getByTestId('empresa-combobox-select'))
+    fireEvent.click(screen.getByRole('button', { name: /^conceder$/i }))
+    await waitFor(() => expect(screen.getByRole('dialog')).toBeInTheDocument())
+    fireEvent.click(screen.getByRole('button', { name: /confirmar/i }))
+    await waitFor(() =>
+      expect(screen.getByRole('status')).toHaveTextContent(/representante.*joão aluno|joão aluno.*representante/i)
+    )
   })
 })
 

@@ -68,18 +68,18 @@ describe('OnboardingPage — T3', () => {
     expect(screen.getByRole('button', { name: /concluir/i })).toBeInTheDocument()
   })
 
-  it('ao concluir como coordenador (ativo onda2), chama onboardingCoordenador e exibe EM ANÁLISE', async () => {
-    // Onda 2: fluxo ativo — seleciona curso + nome → onboardingCoordenador → painel EM ANÁLISE (sem redirect)
+  it('ao concluir como coordenador (ativo onda2/0057), chama onboardingCoordenador e exibe EM ANÁLISE', async () => {
+    // 0057: fluxo ativo — seleciona N cursos (checkbox) + nome → onboardingCoordenador → painel EM ANÁLISE (sem redirect)
     render(<OnboardingPage />)
     fireEvent.click(screen.getByRole('radio', { name: /coordenador/i }))
     fireEvent.click(screen.getByRole('button', { name: /continuar/i }))
     await waitFor(() => expect(screen.getByRole('button', { name: /concluir/i })).toBeInTheDocument())
     fireEvent.change(screen.getByLabelText(/nome/i), { target: { value: 'Prof. Braga' } })
-    // Seleciona o primeiro radio de curso (curso-coord)
-    const cursosRadios = screen.getAllByRole('radio').filter(
-      (r) => r.getAttribute('name') === 'curso-coord'
+    // 0057: CourseMultiSelect usa checkboxes (não radios com name="curso-coord")
+    const cursosCheckboxes = screen.getAllByRole('checkbox').filter(
+      (el) => !el.closest('[role="dialog"]')
     )
-    fireEvent.click(cursosRadios[0])
+    fireEvent.click(cursosCheckboxes[0])
     fireEvent.click(screen.getByRole('button', { name: /concluir/i }))
     await waitFor(() => expect(onboardingAlunoMock).not.toHaveBeenCalled())
     // Não redireciona — exibe painel EM ANÁLISE
@@ -87,17 +87,18 @@ describe('OnboardingPage — T3', () => {
     await waitFor(() => expect(screen.getAllByText(/em análise/i).length).toBeGreaterThan(0))
   })
 
-  it('erro no concluir (coordenador onda2) mostra mensagem PT-BR e mantém tela', async () => {
+  it('erro no concluir (coordenador onda2/0057) mostra painel EM ANÁLISE quando ok:true', async () => {
     onboardingRepresentanteMock.mockResolvedValue({ ok: true })
     render(<OnboardingPage />)
     fireEvent.click(screen.getByRole('radio', { name: /coordenador/i }))
     fireEvent.click(screen.getByRole('button', { name: /continuar/i }))
     await waitFor(() => expect(screen.getByRole('button', { name: /concluir/i })).toBeInTheDocument())
     fireEvent.change(screen.getByLabelText(/nome/i), { target: { value: 'Prof. Braga' } })
-    const cursosRadios = screen.getAllByRole('radio').filter(
-      (r) => r.getAttribute('name') === 'curso-coord'
+    // 0057: checkbox
+    const cursosCheckboxes = screen.getAllByRole('checkbox').filter(
+      (el) => !el.closest('[role="dialog"]')
     )
-    fireEvent.click(cursosRadios[0])
+    fireEvent.click(cursosCheckboxes[0])
     fireEvent.click(screen.getByRole('button', { name: /concluir/i }))
     // onboardingCoordenadorMock padrão retorna { ok: true }, painel EM ANÁLISE deve aparecer
     await waitFor(() => {

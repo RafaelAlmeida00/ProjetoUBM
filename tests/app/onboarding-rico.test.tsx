@@ -176,25 +176,28 @@ describe('OnboardingPage rico — CA25 (aluno com cursos)', () => {
   })
 })
 
-describe('OnboardingPage rico — CA29 (coordenador onda2: self-select curso)', () => {
-  // Onda 2: CA29 mudou de "admin-assigned" para "self-select + aprovação admin".
-  // Coordenador escolhe o curso e envia cadastro; admin aprova depois.
+describe('OnboardingPage rico — CA29 (coordenador onda2: self-select cursos)', () => {
+  // Onda 2 / 0057: CA29 — coordenador escolhe N cursos (checkbox) e envia cadastro; admin aprova depois.
   beforeEach(() => vi.clearAllMocks())
 
-  it('CA29-1: ao selecionar coordenador, exibe seletor de curso (radio fieldset)', async () => {
+  /** Checkboxes de curso do CourseMultiSelect (exclui checkboxes de dialogs) */
+  function getCursosCheckboxes() {
+    return screen.getAllByRole('checkbox').filter(
+      (el) => !el.closest('[role="dialog"]')
+    )
+  }
+
+  it('CA29-1: ao selecionar coordenador, exibe seletor de cursos (fieldset com checkboxes)', async () => {
     render(<OnboardingPage />)
     fireEvent.click(screen.getByRole('radio', { name: /coordenador/i }))
     fireEvent.click(screen.getByRole('button', { name: /continuar/i }))
     await waitFor(() => expect(screen.getByRole('button', { name: /concluir/i })).toBeInTheDocument())
-    // Onda 2: seletor de curso obrigatório visível
+    // 0057: CourseMultiSelect usa checkboxes, não radios
     expect(document.querySelector('fieldset')).toBeInTheDocument()
-    const cursosRadios = screen.getAllByRole('radio').filter(
-      (r) => r.getAttribute('name') === 'curso-coord'
-    )
-    expect(cursosRadios.length).toBeGreaterThan(0)
+    expect(getCursosCheckboxes().length).toBeGreaterThan(0)
   })
 
-  it('CA29-2: coordenador NÃO pode concluir sem selecionar curso (onda2)', async () => {
+  it('CA29-2: coordenador NÃO pode concluir sem selecionar ao menos 1 curso (onda2)', async () => {
     render(<OnboardingPage />)
     fireEvent.click(screen.getByRole('radio', { name: /coordenador/i }))
     fireEvent.click(screen.getByRole('button', { name: /continuar/i }))
@@ -204,16 +207,14 @@ describe('OnboardingPage rico — CA29 (coordenador onda2: self-select curso)', 
     expect(screen.getByRole('button', { name: /concluir/i })).toBeDisabled()
   })
 
-  it('CA29-3: ao concluir com nome+curso, exibe painel EM ANÁLISE (não redireciona)', async () => {
+  it('CA29-3: ao concluir com nome+ao menos 1 curso, exibe painel EM ANÁLISE (não redireciona)', async () => {
     render(<OnboardingPage />)
     fireEvent.click(screen.getByRole('radio', { name: /coordenador/i }))
     fireEvent.click(screen.getByRole('button', { name: /continuar/i }))
     await waitFor(() => expect(screen.getByRole('button', { name: /concluir/i })).toBeInTheDocument())
     fireEvent.change(screen.getByLabelText(/nome/i), { target: { value: 'Prof. Lima' } })
-    const cursosRadios = screen.getAllByRole('radio').filter(
-      (r) => r.getAttribute('name') === 'curso-coord'
-    )
-    fireEvent.click(cursosRadios[0])
+    // 0057: marcar o primeiro checkbox de curso
+    fireEvent.click(getCursosCheckboxes()[0])
     fireEvent.click(screen.getByRole('button', { name: /concluir/i }))
     await waitFor(() => expect(screen.getAllByText(/em análise/i).length).toBeGreaterThan(0))
     expect(pushMock).not.toHaveBeenCalled()

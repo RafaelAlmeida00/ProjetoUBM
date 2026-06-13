@@ -254,3 +254,77 @@ describe('B6 — DorCardItem como article (não mais Link raiz)', () => {
     expect(screen.queryByRole('button', { name: /me indicar/i })).toBeNull()
   })
 })
+
+// ── (3) ADR-0002 Q1 — Selo de estágio no card da vitrine /dores ──────────────
+
+describe('ADR-0002 Q1 — EstagioSelo no card da vitrine', () => {
+  const DOR_COM_PROJETO_ATIVO = {
+    ...DOR_PUBLICADA,
+    projeto_status: 'em_analise',
+  }
+  const DOR_COM_PROJETO_FINALIZADO = {
+    ...DOR_PUBLICADA,
+    id: 'dor-pub-2',
+    projeto_status: 'finalizado',
+  }
+  const DOR_SEM_PROJETO = {
+    ...DOR_PUBLICADA,
+    id: 'dor-pub-3',
+    projeto_status: undefined,
+  }
+
+  it('card com projeto ativo exibe chip "VIROU CASO" (.ubm-status--caso)', () => {
+    const { container } = render(
+      <DoresPage
+        doresPublicadas={[DOR_COM_PROJETO_ATIVO]}
+        minhasDores={[]}
+        isRepresentante={false}
+        isVerificado={false}
+      />
+    )
+    expect(screen.getByText(/virou caso/i)).toBeInTheDocument()
+    expect(container.querySelector('.ubm-status--caso')).not.toBeNull()
+  })
+
+  it('card com projeto finalizado exibe chip "FINALIZADO" (.ubm-status--finalizado)', () => {
+    const { container } = render(
+      <DoresPage
+        doresPublicadas={[DOR_COM_PROJETO_FINALIZADO]}
+        minhasDores={[]}
+        isRepresentante={false}
+        isVerificado={false}
+      />
+    )
+    expect(screen.getByText(/finalizado/i)).toBeInTheDocument()
+    expect(container.querySelector('.ubm-status--finalizado')).not.toBeNull()
+  })
+
+  it('card sem projeto NÃO exibe nenhum selo de estágio', () => {
+    const { container } = render(
+      <DoresPage
+        doresPublicadas={[DOR_SEM_PROJETO]}
+        minhasDores={[]}
+        isRepresentante={false}
+        isVerificado={false}
+      />
+    )
+    expect(container.querySelector('.ubm-status--caso')).toBeNull()
+    expect(container.querySelector('.ubm-status--finalizado')).toBeNull()
+  })
+
+  it('selo não quebra o layout quando coexiste com MeIndicarSlot (aluno disponivel)', () => {
+    render(
+      <DoresPage
+        doresPublicadas={[DOR_COM_PROJETO_ATIVO]}
+        minhasDores={[]}
+        isRepresentante={false}
+        isVerificado={true}
+        papelUsuario="aluno"
+        vinculosUsuario={{ indicadoProjetoIds: [], membroProjetoIds: [] }}
+      />
+    )
+    // Ambos devem coexistir
+    expect(screen.getByText(/virou caso/i)).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: /me indicar/i })).toBeInTheDocument()
+  })
+})
