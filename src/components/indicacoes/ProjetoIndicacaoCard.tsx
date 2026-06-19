@@ -60,7 +60,7 @@ export function ProjetoIndicacaoCard({
 
       <div className="ubm-dor-card-foot ubm-card-action-row">
         <MeIndicarSlot
-          dorId={projetoId}
+          projetoId={projetoId}
           empresaNome={empresaNome}
           papelBase={papelBase}
           estado={estadoIndicacao}

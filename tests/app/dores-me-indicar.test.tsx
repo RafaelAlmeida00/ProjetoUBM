@@ -32,7 +32,7 @@ describe('B6 — MeIndicarSlot', () => {
     const { MeIndicarSlot } = await import('@/components/dores/MeIndicarSlot')
     render(
       <MeIndicarSlot
-        dorId="proj-1"
+        projetoId="proj-1"
         empresaNome="Nissan"
         papelBase="aluno"
         estado="disponivel"
@@ -47,7 +47,7 @@ describe('B6 — MeIndicarSlot', () => {
     const { MeIndicarSlot } = await import('@/components/dores/MeIndicarSlot')
     render(
       <MeIndicarSlot
-        dorId="proj-1"
+        projetoId="proj-1"
         empresaNome="Nissan"
         papelBase="aluno"
         estado="ja_indicado"
@@ -63,7 +63,7 @@ describe('B6 — MeIndicarSlot', () => {
     const { MeIndicarSlot } = await import('@/components/dores/MeIndicarSlot')
     render(
       <MeIndicarSlot
-        dorId="proj-1"
+        projetoId="proj-1"
         empresaNome="Nissan"
         papelBase="aluno"
         estado="ja_membro"
@@ -79,7 +79,7 @@ describe('B6 — MeIndicarSlot', () => {
     const { MeIndicarSlot } = await import('@/components/dores/MeIndicarSlot')
     const { container } = render(
       <MeIndicarSlot
-        dorId="proj-1"
+        projetoId="proj-1"
         empresaNome="Nissan"
         papelBase="coordenador"
         estado="coord_pendente"
@@ -94,7 +94,7 @@ describe('B6 — MeIndicarSlot', () => {
     const { MeIndicarSlot } = await import('@/components/dores/MeIndicarSlot')
     render(
       <MeIndicarSlot
-        dorId="proj-1"
+        projetoId="proj-1"
         empresaNome="Nissan"
         papelBase="aluno"
         estado="nao_verificado"
@@ -110,7 +110,7 @@ describe('B6 — MeIndicarSlot', () => {
     const { MeIndicarSlot } = await import('@/components/dores/MeIndicarSlot')
     render(
       <MeIndicarSlot
-        dorId="proj-1"
+        projetoId="proj-1"
         empresaNome="Nissan"
         papelBase="aluno"
         estado="disponivel"
@@ -131,7 +131,7 @@ describe('B6 — MeIndicarSlot', () => {
     const { MeIndicarSlot } = await import('@/components/dores/MeIndicarSlot')
     render(
       <MeIndicarSlot
-        dorId="proj-1"
+        projetoId="proj-1"
         empresaNome="Nissan"
         papelBase="aluno"
         estado="ja_indicado"
@@ -153,7 +153,7 @@ describe('B6 — MeIndicarSlot', () => {
     const { MeIndicarSlot } = await import('@/components/dores/MeIndicarSlot')
     render(
       <MeIndicarSlot
-        dorId="proj-1"
+        projetoId="proj-1"
         empresaNome="Nissan"
         papelBase="aluno"
         estado="disponivel"
@@ -215,7 +215,7 @@ describe('B6 — DorCardItem como article (não mais Link raiz)', () => {
   it('card renderiza botão "Me indicar" para aluno disponivel', () => {
     render(
       <DoresPage
-        doresPublicadas={[DOR_PUBLICADA]}
+        doresPublicadas={[{ ...DOR_PUBLICADA, projeto_id: 'proj-1', projeto_status: 'em_analise' }]}
         minhasDores={[]}
         isRepresentante={false}
         isVerificado={true}
@@ -229,12 +229,12 @@ describe('B6 — DorCardItem como article (não mais Link raiz)', () => {
   it('card renderiza chip "VOCÊ JÁ SE INDICOU" para aluno já indicado', () => {
     render(
       <DoresPage
-        doresPublicadas={[DOR_PUBLICADA]}
+        doresPublicadas={[{ ...DOR_PUBLICADA, projeto_id: 'proj-1', projeto_status: 'em_analise' }]}
         minhasDores={[]}
         isRepresentante={false}
         isVerificado={true}
         papelUsuario="aluno"
-        vinculosUsuario={{ indicadoProjetoIds: ['dor-pub-1'], membroProjetoIds: [] }}
+        vinculosUsuario={{ indicadoProjetoIds: ['proj-1'], membroProjetoIds: [] }}
       />
     )
     expect(screen.getByText(/você já se indicou/i)).toBeInTheDocument()
@@ -261,6 +261,7 @@ describe('ADR-0002 Q1 — EstagioSelo no card da vitrine (selo × botão = mutua
   // em_analise = janela de INDICAÇÃO aberta (equipe ainda não formada) → botão, sem selo.
   const DOR_EM_INDICACAO = {
     ...DOR_PUBLICADA,
+    projeto_id: 'proj-em',
     projeto_status: 'em_analise',
   }
   // aprovado = equipe fechada, PÓS-indicação → selo "VIROU CASO", sem botão (RN9: backend nega indicar).

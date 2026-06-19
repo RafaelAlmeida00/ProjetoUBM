@@ -22,7 +22,7 @@ export default async function DoresRoutePage() {
   // projeto(status) via FK dor_id — uq_projeto_dor garante 0 ou 1 linha por dor (ADR-0002 Q1)
   const { data: publicadas } = await supabase
     .from('dor')
-    .select('id, empresa_id, descricao, status_dor, publicada_em, aprovado_por, projeto(status)')
+    .select('id, empresa_id, descricao, status_dor, publicada_em, aprovado_por, projeto(id, status)')
     .eq('status_dor', 'publicada')
     .order('publicada_em', { ascending: false })
     .limit(50)
@@ -144,11 +144,12 @@ export default async function DoresRoutePage() {
   const doresPublicadas: DorCard[] = (publicadas ?? []).map((d: {
     id: string; empresa_id: string; descricao: string; status_dor: 'publicada'
     publicada_em: string | null; aprovado_por: string | null
-    projeto: { status: string } | { status: string }[] | null
+    projeto: { id: string; status: string } | { id: string; status: string }[] | null
   }) => {
     // projeto pode ser null (sem projeto), objeto único ou array (PostgREST FK)
     const projetoArr = Array.isArray(d.projeto) ? d.projeto : (d.projeto ? [d.projeto] : [])
-    const projetoStatus = projetoArr.find((p) => p?.status)?.status as string | undefined
+    // uq_projeto_dor garante 0 ou 1 projeto ativo por dor → pega o primeiro com id.
+    const projetoAtivo = projetoArr.find((p) => p?.id)
     return {
       id: d.id,
       empresa_nome: pubEmpMap[d.empresa_id] ?? 'Empresa',
@@ -157,7 +158,8 @@ export default async function DoresRoutePage() {
       cursos: pubCursosMap[d.id] ?? [],
       publicada_em: d.publicada_em,
       aprovado_por: d.aprovado_por,
-      projeto_status: projetoStatus,
+      projeto_status: projetoAtivo?.status as string | undefined,
+      projeto_id: projetoAtivo?.id as string | undefined,
     }
   })
 

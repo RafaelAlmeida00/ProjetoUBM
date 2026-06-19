@@ -23,6 +23,9 @@ export interface DorCard {
    *  "finalizado" = projeto encerrado (selo marsala).
    *  qualquer outro = projeto ativo (selo azul "VIROU CASO"). */
   projeto_status?: string
+  /** ID do projeto associado (uq_projeto_dor). É a CHAVE da indicação (indicar_se/retirar
+   *  e vínculos operam por projeto_id, não por dor_id). undefined = dor sem projeto ainda. */
+  projeto_id?: string
 }
 
 interface DoresPageProps {
@@ -113,10 +116,10 @@ function DorCardItem({
         <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', position: 'relative', zIndex: 1 }}>
           {/* Selo de estágio (ADR-0002 Q1) — só pós-indicação (aprovado+/finalizado) */}
           {estagio && <EstagioSelo estagio={estagio} />}
-          {/* Slot "Me indicar" — só com indicação aberta (em_analise/sem projeto) e papel/estado disponíveis (fail-safe) */}
-          {indicacaoAberta && estadoIndicacao && papelBase && (
+          {/* Slot "Me indicar" — só com indicação aberta (em_analise), projeto_id presente e papel/estado disponíveis (fail-safe) */}
+          {indicacaoAberta && estadoIndicacao && papelBase && dor.projeto_id && (
             <MeIndicarSlot
-              dorId={dor.id}
+              projetoId={dor.projeto_id}
               empresaNome={dor.empresa_nome}
               papelBase={papelBase}
               estado={estadoIndicacao}
@@ -142,19 +145,21 @@ function DorCardItem({
  * Retorna undefined quando o papel não deve ver o botão (representante, ou props ausentes).
  */
 function derivarEstadoIndicacao(
-  dorId: string,
+  projetoId: string | undefined,
   papelBase: 'aluno' | 'coordenador' | 'representante' | undefined,
   vinculosUsuario: MeusVinculosProjeto | undefined,
   coordAprovado: boolean,
 ): EstadoIndicacao | undefined {
-  // representante não se indica; sem papel/vínculos → fail-safe
-  if (!papelBase || papelBase === 'representante' || !vinculosUsuario) return undefined
+  // representante não se indica; sem papel/vínculos/projeto → fail-safe.
+  // projetoId é a chave real (indicacao + membro_equipe são keyed por projeto_id) — sem ele
+  // não há o que indicar (e era a causa do bug: comparávamos dor_id contra projeto_ids).
+  if (!papelBase || papelBase === 'representante' || !vinculosUsuario || !projetoId) return undefined
 
   // coordenador pendente (aprovação necessária, mas ainda não aprovado)
   if (papelBase === 'coordenador' && !coordAprovado) return 'coord_pendente'
 
-  if (vinculosUsuario.membroProjetoIds.includes(dorId)) return 'ja_membro'
-  if (vinculosUsuario.indicadoProjetoIds.includes(dorId)) return 'ja_indicado'
+  if (vinculosUsuario.membroProjetoIds.includes(projetoId)) return 'ja_membro'
+  if (vinculosUsuario.indicadoProjetoIds.includes(projetoId)) return 'ja_indicado'
   return 'disponivel'
 }
 
@@ -287,7 +292,7 @@ export function DoresPage({
                   <DorCardItem
                     key={d.id}
                     dor={d}
-                    estadoIndicacao={derivarEstadoIndicacao(d.id, papelUsuario, vinculosUsuario, coordAprovado)}
+                    estadoIndicacao={derivarEstadoIndicacao(d.projeto_id, papelUsuario, vinculosUsuario, coordAprovado)}
                     papelBase={papelBase}
                   />
                 ))}

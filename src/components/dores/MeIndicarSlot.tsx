@@ -10,7 +10,8 @@ export type EstadoIndicacao =
   | 'nao_verificado'
 
 interface MeIndicarSlotProps {
-  dorId: string
+  /** ID do PROJETO (não da dor): indicar_se / retirar_indicacao operam por projeto_id (RN9). */
+  projetoId: string
   empresaNome: string
   papelBase: 'aluno' | 'coordenador'
   estado: EstadoIndicacao
@@ -26,7 +27,7 @@ interface MeIndicarSlotProps {
  * A11y: aria-live no chip de troca; role=alert no erro.
  */
 export function MeIndicarSlot({
-  dorId,
+  projetoId,
   empresaNome,
   papelBase,
   estado: estadoInicial,
@@ -61,7 +62,7 @@ export function MeIndicarSlot({
   const handleIndicar = () => {
     setErro(null)
     startTransition(async () => {
-      const res = await onIndicar(dorId, papelBase)
+      const res = await onIndicar(projetoId, papelBase)
       if (res.ok) {
         setEstado('ja_indicado')
       } else {
@@ -73,7 +74,7 @@ export function MeIndicarSlot({
   const handleRetirar = () => {
     setErro(null)
     startTransition(async () => {
-      const res = await onRetirar(dorId)
+      const res = await onRetirar(projetoId)
       if (res.ok) {
         setEstado('disponivel')
       } else {
