@@ -231,19 +231,19 @@ describe('contarMinhasDoresPorStatus', () => {
     expect(tabelas).toContain('dor')
   })
 
-  it('retorna contagem separada por status_dor', async () => {
+  it('retorna contagem separada por status_dor (em_moderacao é o status real, não em_analise)', async () => {
     mockLimit.mockResolvedValueOnce({
       data: [
         { status_dor: 'rascunho' },
         { status_dor: 'rascunho' },
-        { status_dor: 'em_analise' },
+        { status_dor: 'em_moderacao' },
         { status_dor: 'publicada' },
       ],
       error: null,
     })
     const result = await contarMinhasDoresPorStatus()
     expect(result.rascunho).toBe(2)
-    expect(result.em_analise).toBe(1)
+    expect(result.em_moderacao).toBe(1)
     expect(result.publicada).toBe(1)
     expect(result.total).toBe(4)
   })

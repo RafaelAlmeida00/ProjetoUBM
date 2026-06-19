@@ -57,14 +57,14 @@ export interface BancadaRepresentanteProps {
  */
 export function BancadaRepresentante({ meusProjetos, contagemDores, nome }: BancadaRepresentanteProps) {
   const temProjetos = meusProjetos.length > 0
-  const emAnalise = contagemDores.em_analise ?? 0
+  const emModeracao = contagemDores.em_moderacao ?? 0
   const publicadas = contagemDores.publicada ?? 0
 
   // Métrica enxuta: frase de estado (não número solto)
   function metrica(): string {
     if (contagemDores.total === 0) return 'Nenhuma dor proposta ainda.'
     const partes: string[] = []
-    if (emAnalise > 0) partes.push(`${emAnalise} em moderação`)
+    if (emModeracao > 0) partes.push(`${emModeracao} em moderação`)
     if (publicadas > 0) partes.push(`${publicadas} publicada${publicadas > 1 ? 's' : ''}`)
     return partes.length > 0
       ? `Você tem ${partes.join(' e ')}.`
@@ -88,8 +88,8 @@ export function BancadaRepresentante({ meusProjetos, contagemDores, nome }: Banc
         <span className="ubm-cota">MINHAS DORES</span>
         <h2 id="rep-bloco-title" className="ubm-bancada-bloco-titulo">
           Minhas dores
-          {emAnalise > 0 && (
-            <BadgePendencia n={emAnalise} label="em moderação" />
+          {emModeracao > 0 && (
+            <BadgePendencia n={emModeracao} label="em moderação" />
           )}
         </h2>
 

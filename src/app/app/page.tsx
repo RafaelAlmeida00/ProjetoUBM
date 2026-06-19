@@ -55,10 +55,12 @@ export default async function AppDashboardPage() {
     let qtdDoresPendentes = 0
     let qtdProjetosPendentes = 0
     try {
+      // dor pendente de moderação = status_dor 'em_moderacao'. Antes usava 'em_analise'
+      // (status de PROJETO) → enum inválido → erro engolido pelo catch → contagem sempre 0.
       const { count: cd } = await supabase
         .from('dor')
         .select('id', { count: 'exact', head: true })
-        .eq('status_dor', 'em_analise')
+        .eq('status_dor', 'em_moderacao')
         .is('deleted_at', null)
       qtdDoresPendentes = cd ?? 0
     } catch { /* fail-soft */ }
@@ -87,7 +89,7 @@ export default async function AppDashboardPage() {
     const [meusProjetos, contagemDores] = await Promise.all([
       listarMeusProjetos().catch(() => []),
       contarMinhasDoresPorStatus().catch(() => ({
-        rascunho: 0, em_analise: 0, publicada: 0, arquivada: 0, total: 0,
+        rascunho: 0, em_moderacao: 0, publicada: 0, arquivada: 0, total: 0,
       })),
     ])
 

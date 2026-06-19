@@ -83,13 +83,23 @@ export default async function NotificacoesPage() {
   // Busca notificações do usuário (base 002 + tipos 005)
   let notificacoes: NotificacaoRow[] = []
   try {
+    // A coluna real é `lida_em` (timestamptz, migration 0010) — NÃO existe `lida`.
+    // Selecionar `lida` lançava "column notificacao.lida does not exist" → catch → lista vazia.
     const { data } = await supabase
       .from('notificacao')
-      .select('id, tipo, lida, created_at, payload')
+      .select('id, tipo, lida_em, created_at, payload')
       .eq('destinatario_id', user.id)
       .order('created_at', { ascending: false })
       .limit(50)
-    notificacoes = (data ?? []) as NotificacaoRow[]
+    notificacoes = ((data ?? []) as Array<{
+      id: string; tipo: string; lida_em: string | null; created_at: string; payload: unknown
+    }>).map((r) => ({
+      id: r.id,
+      tipo: r.tipo,
+      lida: !!r.lida_em, // derivado: lida = tem timestamp de leitura
+      created_at: r.created_at,
+      payload: r.payload,
+    }))
   } catch {
     notificacoes = []
   }

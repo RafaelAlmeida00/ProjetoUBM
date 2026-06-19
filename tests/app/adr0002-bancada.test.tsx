@@ -117,7 +117,7 @@ const INDICACOES = [
 ]
 
 const CONTAGEM_DORES = {
-  rascunho: 1, em_analise: 1, publicada: 1, arquivada: 0, total: 3,
+  rascunho: 1, em_moderacao: 1, publicada: 1, arquivada: 0, total: 3,
 }
 
 // ---------------------------------------------------------------------------
@@ -165,6 +165,18 @@ describe('B1 — Representante: bloco dominante + CTA', () => {
     expect(cta).toHaveAttribute('href', '/app/dores/nova')
   })
 
+  it('métrica reflete dores em_moderacao (campo real), não o antigo em_analise', () => {
+    render(
+      <BancadaRepresentante
+        meusProjetos={[]}
+        contagemDores={{ rascunho: 0, em_moderacao: 2, publicada: 0, arquivada: 0, total: 2 }}
+        nome="Rafael"
+      />,
+    )
+    // Bancada deve ler contagemDores.em_moderacao (dor pendente = em_moderacao; em_analise é de PROJETO)
+    expect(screen.getByText(/você tem 2 em moderação/i)).toBeInTheDocument()
+  })
+
   it('exibe métrica enxuta de status das dores', () => {
     render(
       <BancadaRepresentante
@@ -188,7 +200,7 @@ describe('B2 — Representante vazio: estado humanizado', () => {
     render(
       <BancadaRepresentante
         meusProjetos={[]}
-        contagemDores={{ rascunho: 0, em_analise: 0, publicada: 0, arquivada: 0, total: 0 }}
+        contagemDores={{ rascunho: 0, em_moderacao: 0, publicada: 0, arquivada: 0, total: 0 }}
         nome="Rafael"
       />,
     )
@@ -407,7 +419,7 @@ describe('B7 — Saudação com nome do usuário', () => {
     render(
       <BancadaRepresentante
         meusProjetos={[]}
-        contagemDores={{ rascunho: 0, em_analise: 0, publicada: 0, arquivada: 0, total: 0 }}
+        contagemDores={{ rascunho: 0, em_moderacao: 0, publicada: 0, arquivada: 0, total: 0 }}
         nome="Rafael"
       />,
     )
@@ -419,7 +431,7 @@ describe('B7 — Saudação com nome do usuário', () => {
     render(
       <BancadaRepresentante
         meusProjetos={[]}
-        contagemDores={{ rascunho: 0, em_analise: 0, publicada: 0, arquivada: 0, total: 0 }}
+        contagemDores={{ rascunho: 0, em_moderacao: 0, publicada: 0, arquivada: 0, total: 0 }}
         nome={null}
       />,
     )

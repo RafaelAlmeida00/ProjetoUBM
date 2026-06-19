@@ -361,7 +361,8 @@ export async function listarMinhasIndicacoes(): Promise<MinhaIndicacao[]> {
  */
 export interface ContagemDoresPorStatus {
   rascunho: number
-  em_analise: number
+  // dor pendente de moderação = status_dor 'em_moderacao' (NÃO 'em_analise', que é status de PROJETO).
+  em_moderacao: number
   publicada: number
   arquivada: number
   total: number
@@ -376,7 +377,7 @@ export interface ContagemDoresPorStatus {
 export async function contarMinhasDoresPorStatus(): Promise<ContagemDoresPorStatus> {
   const zero: ContagemDoresPorStatus = {
     rascunho: 0,
-    em_analise: 0,
+    em_moderacao: 0,
     publicada: 0,
     arquivada: 0,
     total: 0,
