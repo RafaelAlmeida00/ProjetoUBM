@@ -257,10 +257,17 @@ describe('B6 — DorCardItem como article (não mais Link raiz)', () => {
 
 // ── (3) ADR-0002 Q1 — Selo de estágio no card da vitrine /dores ──────────────
 
-describe('ADR-0002 Q1 — EstagioSelo no card da vitrine', () => {
-  const DOR_COM_PROJETO_ATIVO = {
+describe('ADR-0002 Q1 — EstagioSelo no card da vitrine (selo × botão = mutuamente exclusivos)', () => {
+  // em_analise = janela de INDICAÇÃO aberta (equipe ainda não formada) → botão, sem selo.
+  const DOR_EM_INDICACAO = {
     ...DOR_PUBLICADA,
     projeto_status: 'em_analise',
+  }
+  // aprovado = equipe fechada, PÓS-indicação → selo "VIROU CASO", sem botão (RN9: backend nega indicar).
+  const DOR_COM_PROJETO_ATIVO = {
+    ...DOR_PUBLICADA,
+    id: 'dor-pub-ap',
+    projeto_status: 'aprovado',
   }
   const DOR_COM_PROJETO_FINALIZADO = {
     ...DOR_PUBLICADA,
@@ -273,7 +280,7 @@ describe('ADR-0002 Q1 — EstagioSelo no card da vitrine', () => {
     projeto_status: undefined,
   }
 
-  it('card com projeto ativo exibe chip "VIROU CASO" (.ubm-status--caso)', () => {
+  it('card pós-indicação (aprovado) exibe chip "VIROU CASO" (.ubm-status--caso)', () => {
     const { container } = render(
       <DoresPage
         doresPublicadas={[DOR_COM_PROJETO_ATIVO]}
@@ -299,6 +306,19 @@ describe('ADR-0002 Q1 — EstagioSelo no card da vitrine', () => {
     expect(container.querySelector('.ubm-status--finalizado')).not.toBeNull()
   })
 
+  it('card em indicação (em_analise) NÃO exibe selo de estágio', () => {
+    const { container } = render(
+      <DoresPage
+        doresPublicadas={[DOR_EM_INDICACAO]}
+        minhasDores={[]}
+        isRepresentante={false}
+        isVerificado={false}
+      />
+    )
+    expect(container.querySelector('.ubm-status--caso')).toBeNull()
+    expect(container.querySelector('.ubm-status--finalizado')).toBeNull()
+  })
+
   it('card sem projeto NÃO exibe nenhum selo de estágio', () => {
     const { container } = render(
       <DoresPage
@@ -312,7 +332,22 @@ describe('ADR-0002 Q1 — EstagioSelo no card da vitrine', () => {
     expect(container.querySelector('.ubm-status--finalizado')).toBeNull()
   })
 
-  it('selo não quebra o layout quando coexiste com MeIndicarSlot (aluno disponivel)', () => {
+  it('em_analise (indicação aberta): mostra "Me indicar" e NÃO mostra "VIROU CASO"', () => {
+    render(
+      <DoresPage
+        doresPublicadas={[DOR_EM_INDICACAO]}
+        minhasDores={[]}
+        isRepresentante={false}
+        isVerificado={true}
+        papelUsuario="aluno"
+        vinculosUsuario={{ indicadoProjetoIds: [], membroProjetoIds: [] }}
+      />
+    )
+    expect(screen.getByRole('button', { name: /me indicar/i })).toBeInTheDocument()
+    expect(screen.queryByText(/virou caso/i)).toBeNull()
+  })
+
+  it('aprovado (pós-indicação): mostra "VIROU CASO" e NÃO mostra "Me indicar"', () => {
     render(
       <DoresPage
         doresPublicadas={[DOR_COM_PROJETO_ATIVO]}
@@ -323,8 +358,7 @@ describe('ADR-0002 Q1 — EstagioSelo no card da vitrine', () => {
         vinculosUsuario={{ indicadoProjetoIds: [], membroProjetoIds: [] }}
       />
     )
-    // Ambos devem coexistir
     expect(screen.getByText(/virou caso/i)).toBeInTheDocument()
-    expect(screen.getByRole('button', { name: /me indicar/i })).toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: /me indicar/i })).toBeNull()
   })
 })

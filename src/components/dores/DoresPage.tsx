@@ -74,6 +74,12 @@ function DorCardItem({
   papelBase?: 'aluno' | 'coordenador'
 }) {
   const data = dor.publicada_em ?? dor.criada_em
+  // Selo de estágio só para dor publicada. em_analise/sem-projeto → undefined (indicação aberta).
+  const estagio = dor.status === 'publicada' ? derivarEstagioSelo(dor.projeto_status) : undefined
+  // Selo × botão são MUTUAMENTE EXCLUSIVOS: enquanto a indicação está aberta (sem selo),
+  // só o botão "Me indicar" aparece; quando o projeto avança (aprovado+/finalizado → tem selo),
+  // a janela de indicação fecha (RN9: backend nega indicar fora de em_analise) → só o selo aparece.
+  const indicacaoAberta = !estagio
   return (
     <article className={`ubm-dor-card ubm-dor-card--linkable${minha ? ' ubm-dor-card--dor' : ''}`}>
       <div className="ubm-dor-card-head">
@@ -105,12 +111,10 @@ function DorCardItem({
           {data ? new Date(data).toLocaleDateString('pt-BR') : '—'}
         </span>
         <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', position: 'relative', zIndex: 1 }}>
-          {/* Selo de estágio (ADR-0002 Q1) — só para dores publicadas */}
-          {dor.status === 'publicada' && (
-            <EstagioSelo estagio={derivarEstagioSelo(dor.projeto_status)} />
-          )}
-          {/* Slot de ação — só renderizado quando estado e papel estão disponíveis (fail-safe) */}
-          {estadoIndicacao && papelBase && (
+          {/* Selo de estágio (ADR-0002 Q1) — só pós-indicação (aprovado+/finalizado) */}
+          {estagio && <EstagioSelo estagio={estagio} />}
+          {/* Slot "Me indicar" — só com indicação aberta (em_analise/sem projeto) e papel/estado disponíveis (fail-safe) */}
+          {indicacaoAberta && estadoIndicacao && papelBase && (
             <MeIndicarSlot
               dorId={dor.id}
               empresaNome={dor.empresa_nome}

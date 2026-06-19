@@ -57,10 +57,16 @@ describe('EstagioSelo', () => {
     expect(derivarEstagioSelo('finalizado')).toBe('finalizado')
   })
 
-  it('derivarEstagioSelo retorna "caso" para projeto_status ativo (ex: "em_analise")', () => {
-    expect(derivarEstagioSelo('em_analise')).toBe('caso')
+  it('derivarEstagioSelo retorna undefined para "em_analise" (indicação aberta — sem selo)', () => {
+    // em_analise = projeto recém-aberto, ainda recrutando equipe (janela de indicação).
+    // Não é "caso" ainda — o selo só aparece quando a indicação fecha (aprovado+).
+    expect(derivarEstagioSelo('em_analise')).toBeUndefined()
+  })
+
+  it('derivarEstagioSelo retorna "caso" para projeto ativo PÓS-indicação (aprovado+)', () => {
     expect(derivarEstagioSelo('aprovado')).toBe('caso')
     expect(derivarEstagioSelo('aguardando_proposta')).toBe('caso')
+    expect(derivarEstagioSelo('em_execucao')).toBe('caso')
   })
 
   it('derivarEstagioSelo retorna undefined para projeto_status undefined', () => {

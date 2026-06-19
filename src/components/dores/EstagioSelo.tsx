@@ -6,8 +6,11 @@ export type EstagioSoloTipo = 'caso' | 'finalizado'
 /**
  * Deriva o tipo de estágio a partir do projeto_status da dor.
  * - undefined → sem projeto → undefined (sem selo)
+ * - "em_analise" → projeto recém-aberto, AINDA EM INDICAÇÃO (equipe não formada) →
+ *   undefined (sem selo): a dor está só publicada/recrutando, não "virou caso" ainda.
+ *   É a janela em que o botão "Me indicar" aparece (RN9 — backend só aceita indicar em em_analise).
  * - "finalizado" → selo marsala "FINALIZADO"
- * - qualquer outro valor ativo → selo azul "VIROU CASO"
+ * - qualquer outro valor ativo PÓS-indicação (aprovado, em_execucao, …) → selo azul "VIROU CASO"
  *
  * O ciclo de moderação (StatusDor) é ortogonal — este componente trata
  * apenas o ciclo de vida do caso após a dor estar publicada.
@@ -16,6 +19,7 @@ export function derivarEstagioSelo(
   projeto_status: string | undefined,
 ): EstagioSoloTipo | undefined {
   if (!projeto_status) return undefined
+  if (projeto_status === 'em_analise') return undefined
   if (projeto_status === 'finalizado') return 'finalizado'
   return 'caso'
 }

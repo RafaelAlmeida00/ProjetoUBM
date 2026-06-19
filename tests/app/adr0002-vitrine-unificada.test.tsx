@@ -303,6 +303,21 @@ describe('T4 — /dores (lista): selo de estágio no card', () => {
     expect(screen.getByText(/virou caso/i)).toBeInTheDocument()
   })
 
+  it('card em indicação (em_analise) exibe "Publicada", NÃO "Virou caso"', async () => {
+    const { listarDoresVitrine } = await import('@/lib/data/dores')
+    vi.mocked(listarDoresVitrine).mockResolvedValue([
+      { ...DOR_COM_PROJETO, projeto_status: 'em_analise' },
+    ])
+
+    const mod = await import('@/app/dores/page')
+    const jsx = await mod.default()
+    render(jsx as React.ReactElement)
+
+    // em_analise = ainda recrutando equipe → "Publicada" (não virou caso ainda)
+    expect(screen.queryByText(/virou caso/i)).toBeNull()
+    expect(screen.getAllByText(/publicada/i).length).toBeGreaterThan(0)
+  })
+
   it('card com projeto finalizado exibe selo "Finalizado"', async () => {
     const { listarDoresVitrine } = await import('@/lib/data/dores')
     const doresFinalizadas = [
