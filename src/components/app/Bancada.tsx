@@ -120,7 +120,7 @@ export function BancadaRepresentante({ meusProjetos, contagemDores, nome }: Banc
 
         {/* CTA dominante azul */}
         <div className="ubm-bancada-bloco-actions">
-          <Link href="/propor" className="ubm-btn ubm-btn-primary" aria-label="Propor nova dor">
+          <Link href="/app/dores/nova" className="ubm-btn ubm-btn-primary" aria-label="Propor nova dor">
             Propor nova dor →
           </Link>
         </div>

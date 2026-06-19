@@ -40,7 +40,7 @@ const NAV_ITEMS: NavItem[] = [
   // 005: central de notificações — todos os logados
   { href: '/app/notificacoes', label: 'Notificações', icon: <Bell aria-hidden /> },
   {
-    href: '/propor',
+    href: '/app/dores/nova',
     label: 'Propor dor',
     icon: <PlusCircle aria-hidden />,
     roles: ['representante'],

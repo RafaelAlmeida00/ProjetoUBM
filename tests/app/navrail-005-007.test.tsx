@@ -127,6 +127,14 @@ describe('NavRail — BUG D1: prop papeis[] substitui role string', () => {
     expect(screen.getByRole('link', { name: /propor dor/i })).toBeInTheDocument()
   })
 
+  it('"Propor dor" aponta para a rota INTERNA /app/dores/nova (não a captação anônima /propor)', () => {
+    render(<NavRail papeis={['representante']} isAdmin={false} />)
+    expect(screen.getByRole('link', { name: /propor dor/i })).toHaveAttribute(
+      'href',
+      '/app/dores/nova',
+    )
+  })
+
   it('role=undefined + papeis=["coordenador"] → coordenador vê Indicações (fix do JWT vazio)', () => {
     render(<NavRail papeis={['coordenador']} isAdmin={false} />)
     expect(screen.getByRole('link', { name: /indica[çc][õo]es/i })).toBeInTheDocument()

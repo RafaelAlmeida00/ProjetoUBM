@@ -151,6 +151,20 @@ describe('B1 — Representante: bloco dominante + CTA', () => {
     expect(cta).toBeInTheDocument()
   })
 
+  it('CTA "Propor nova dor" aponta para a rota INTERNA (/app/dores/nova), não a captação anônima /propor', () => {
+    render(
+      <BancadaRepresentante
+        meusProjetos={DORES_REPRESENTANTE}
+        contagemDores={CONTAGEM_DORES}
+        nome="Rafael"
+      />,
+    )
+
+    const cta = screen.getByRole('link', { name: /propor nova dor/i })
+    // representante logado cria pela rota autenticada (sem repetir dados da empresa)
+    expect(cta).toHaveAttribute('href', '/app/dores/nova')
+  })
+
   it('exibe métrica enxuta de status das dores', () => {
     render(
       <BancadaRepresentante

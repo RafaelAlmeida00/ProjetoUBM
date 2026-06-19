@@ -744,7 +744,11 @@ export default function AdminUsuariosPage() {
     const res = await aprovarCoordenador(pendente.user_id, pendente.curso_id)
     setConfirmandoCoord(null)
     if (res.ok) {
-      setPendentes((prev) => prev.filter((p) => p.user_id !== pendente.user_id))
+      // chave composta (user_id+curso_id): o mesmo usuário pode ter N cursos pendentes;
+      // aprovar um não pode derrubar os demais (a RPC 0054 dá o mesmo id às linhas).
+      setPendentes((prev) =>
+        prev.filter((p) => !(p.user_id === pendente.user_id && p.curso_id === pendente.curso_id)),
+      )
       mostrarToast(
         `Coordenador aprovado. ${pendente.nome} já pode acessar as indicações de ${pendente.curso_label}.`,
       )
@@ -757,7 +761,10 @@ export default function AdminUsuariosPage() {
     const res = await recusarCoordenador(pendente.user_id, pendente.curso_id)
     setConfirmandoCoord(null)
     if (res.ok) {
-      setPendentes((prev) => prev.filter((p) => p.user_id !== pendente.user_id))
+      // mesma chave composta da aprovação — recusar um curso não derruba os outros.
+      setPendentes((prev) =>
+        prev.filter((p) => !(p.user_id === pendente.user_id && p.curso_id === pendente.curso_id)),
+      )
       mostrarToast('Cadastro de coordenador recusado.')
     } else {
       mostrarToast('Não foi possível concluir. Tente novamente.')
@@ -810,7 +817,7 @@ export default function AdminUsuariosPage() {
           <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
             {pendentes.map((p) => (
               <div
-                key={p.id}
+                key={`${p.user_id}-${p.curso_id}`}
                 className="ubm-machined ubm-indication-row"
                 style={{ borderColor: 'hsl(var(--warning) / 0.4)', padding: '0.75rem 1rem' }}
                 role="group"
