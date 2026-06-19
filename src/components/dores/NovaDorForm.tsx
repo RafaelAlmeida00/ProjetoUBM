@@ -3,7 +3,7 @@ import { useState } from 'react'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 import { Lock, AlertCircle } from 'lucide-react'
-import { criarDor } from '@/lib/actions/dor'
+import { criarDor, submeterDor } from '@/lib/actions/dor'
 import { CourseMultiSelect } from '@/components/course/CourseMultiSelect'
 import { ConsentGate } from '@/components/consent/ConsentGate'
 import type { CursoUbm } from '@/lib/courses'
@@ -32,7 +32,8 @@ export function NovaDorForm({ empresas }: NovaDorFormProps) {
   const [descricao, setDescricao] = useState('')
   const [cursos, setCursos] = useState<CursoUbm[]>([])
   const [consentimento, setConsentimento] = useState(false)
-  const [enviando, setEnviando] = useState(false)
+  // qual ação está em voo: 'enviar' (→ moderação) | 'rascunho' (só salva) | null (ocioso)
+  const [acao, setAcao] = useState<'enviar' | 'rascunho' | null>(null)
   const [erro, setErro] = useState('')
 
   /* ── Bloqueado: usuário não é representante de nenhuma empresa ── */
@@ -54,12 +55,14 @@ export function NovaDorForm({ empresas }: NovaDorFormProps) {
   }
 
   const descricaoValida = descricao.trim().length >= 10
-  const podeCriar = descricaoValida && consentimento && !enviando && !!empresaId
+  const ocupado = acao !== null
+  const podeCriar = descricaoValida && consentimento && !ocupado && !!empresaId
 
-  async function handleSubmit(e: React.FormEvent) {
-    e.preventDefault()
+  // Cria a dor e, no modo 'enviar', já a submete à moderação (criar = enviar ao admin).
+  // No modo 'rascunho', apenas salva — o autor envia depois pela tela da dor.
+  async function criar(modo: 'enviar' | 'rascunho') {
     if (!podeCriar) return
-    setEnviando(true)
+    setAcao(modo)
     setErro('')
     const result = await criarDor({
       empresaId,
@@ -69,12 +72,22 @@ export function NovaDorForm({ empresas }: NovaDorFormProps) {
       consentVersion: CONSENT_VERSION,
       consentAt: new Date().toISOString(),
     })
-    setEnviando(false)
-    if (result.ok) {
-      router.push(`/app/dores/${result.dorId}`)
-    } else {
+    if (!result.ok) {
+      setAcao(null)
       setErro(result.error)
+      return
     }
+    // Enviar = submete à moderação. Se o submit falhar, a dor já existe como rascunho
+    // e pode ser reenviada na própria tela da dor — não recriamos (evita duplicar).
+    if (modo === 'enviar') {
+      await submeterDor(result.dorId)
+    }
+    router.push(`/app/dores/${result.dorId}`)
+  }
+
+  async function handleSubmit(e: React.FormEvent) {
+    e.preventDefault()
+    await criar('enviar')
   }
 
   return (
@@ -147,15 +160,24 @@ export function NovaDorForm({ empresas }: NovaDorFormProps) {
         </p>
       )}
 
-      {/* ── Botão ── */}
-      <div style={{ display: 'flex', justifyContent: 'flex-end' }}>
+      {/* ── Ações: enviar (primário, à frente) + salvar rascunho (secundário) ── */}
+      <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '0.75rem', flexWrap: 'wrap' }}>
         <button
           type="submit"
           className="ubm-btn ubm-btn-primary"
           disabled={!podeCriar}
           style={{ minWidth: '10rem' }}
         >
-          {enviando ? 'Criando…' : 'Criar rascunho'}
+          {acao === 'enviar' ? 'Enviando…' : 'Enviar dor'}
+        </button>
+        <button
+          type="button"
+          className="ubm-btn ubm-btn-secondary"
+          onClick={() => criar('rascunho')}
+          disabled={!podeCriar}
+          style={{ minWidth: '10rem' }}
+        >
+          {acao === 'rascunho' ? 'Salvando…' : 'Salvar como rascunho'}
         </button>
       </div>
     </form>
