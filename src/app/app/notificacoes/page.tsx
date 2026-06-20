@@ -150,11 +150,7 @@ export default async function NotificacoesPage() {
             </p>
           </div>
         ) : (
-          <ul
-            className="ubm-notif-list"
-            aria-label="Lista de notificações"
-            style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem', listStyle: 'none', padding: 0 }}
-          >
+          <ul className="ubm-notif-list" aria-label="Lista de notificações">
             {todasOrdenadas.map((notif) => {
               const link = deepLink(notif)
               const copy = copyNotif(notif)
@@ -166,10 +162,6 @@ export default async function NotificacoesPage() {
                 <li
                   key={notif.id}
                   className={`ubm-notif-item ubm-machined${notif.lida ? ' ubm-notif-item--lida' : ''}`}
-                  style={{
-                    opacity: notif.lida ? 0.65 : 1,
-                    padding: '0.9rem 1.1rem',
-                  }}
                 >
                   {/* Ícone-nó decorativo */}
                   <span className="ubm-node ubm-clip-node" aria-hidden="true"
@@ -185,7 +177,6 @@ export default async function NotificacoesPage() {
                   <a
                     href={link}
                     className="ubm-notif-link"
-                    style={{ color: 'hsl(var(--foreground))', textDecoration: 'none', fontWeight: 500 }}
                     aria-label={`${copy} — Abrir`}
                   >
                     {copy}

@@ -179,6 +179,20 @@
   .ubm-overlap::after { border: 1.5px solid hsl(var(--accent) / 0.45); transform: rotate(45deg) scale(0.62) translate(10px, 10px); }
   .ubm-clip-node { clip-path: polygon(50% 3%, 97% 50%, 50% 97%, 3% 50%); }
 
+  /* ───────────── NOTIFICAÇÕES ───────────── */
+  /* Item em linha: nó · cota(tipo) · corpo(cresce) · data(à direita). Sem isto, kicker+corpo+data colam. */
+  .ubm-notif-list { display: flex; flex-direction: column; gap: 0.75rem; list-style: none; padding: 0; margin: 0; }
+  .ubm-notif-item {
+    display: flex; align-items: center; gap: 0.7rem; flex-wrap: wrap;
+    padding: 0.9rem 1.1rem;
+  }
+  .ubm-notif-item--lida { opacity: 0.65; }
+  .ubm-notif-link {
+    flex: 1 1 12rem; min-width: 0; line-height: 1.4; font-weight: 500;
+    color: hsl(var(--foreground)); text-decoration: none;
+  }
+  .ubm-notif-link:hover, .ubm-notif-link:focus-visible { text-decoration: underline; }
+
   /* Divisor-cota entre seções */
   .ubm-divider {
     display: flex; align-items: center; gap: 1rem;

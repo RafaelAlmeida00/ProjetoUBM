@@ -457,7 +457,7 @@ function PainelGerir({
                       setSelectedCursos([])
                       setSelectedEmpresa(null)
                     }}
-                    style={{ minWidth: '160px', height: '2.4rem', maxWidth: '240px' }}
+                    style={{ minWidth: '160px', maxWidth: '240px' }}
                     aria-label="Papel"
                   >
                     <option value="">Selecionar papel…</option>
