@@ -11,13 +11,18 @@ import { CURSOS_UBM } from '@/lib/courses'
 import { UbmTabs } from '@/components/ubm-tabs'
 import { UbmTimeline } from '@/components/ubm-timeline'
 import { UbmTeam } from '@/components/ubm-team'
+import { ProjetoDetalheClient } from '@/components/dores/ProjetoDetalheClient'
+import { IndicacoesRecebidas } from '@/components/indicacoes/IndicacoesRecebidas'
 import type { AnexoMeta } from '@/lib/actions/anexo'
 import type { CursoUbm } from '@/lib/courses'
-import type { MembroPublico, EventoTimeline } from '@/lib/data/projetos'
+import type { MembroPublico, EventoTimeline, FuncaoTarefa, MembroGestao } from '@/lib/data/projetos'
 import type { EventoTimelineDor } from '@/lib/data/dores'
+import type { GrupoIndicacoes } from '@/components/indicacoes/IndicacoesRecebidas'
 
 export interface DorData {
   id: string
+  /** 009 — título do projeto (vem da dor); compõe "Título — Empresa" / fallback empresa. */
+  titulo?: string | null
   empresa_nome: string
   descricao: string
   status: 'rascunho' | 'em_moderacao' | 'publicada' | 'rejeitada'
@@ -48,6 +53,15 @@ interface DorDetalheProps {
   timeline?: EventoTimeline[]
   /** Delta-edição: linha do tempo append-only da própria dor (ler_timeline_dor) */
   timelineDor?: EventoTimelineDor[]
+  /** 009 — projeto vinculado + papel/gates para a zona de gestão (host/admin) e indicações (coord/admin).
+   *  Todos GATED pelo RSC: chegam vazios/null quando o papel não tem direito. */
+  projetoId?: string | null
+  projetoStatus?: string | null
+  hostElected?: boolean
+  papelAtual?: 'admin' | 'host' | 'aluno' | null
+  gestao?: MembroGestao[]
+  indicacoesGrupos?: GrupoIndicacoes[]
+  tarefas?: FuncaoTarefa[]
 }
 
 function labelCurso(value: string): string {
@@ -132,6 +146,13 @@ export function DorDetalhe({
   equipe = [],
   timeline = [],
   timelineDor = [],
+  projetoId = null,
+  projetoStatus = null,
+  hostElected = false,
+  papelAtual = null,
+  gestao = [],
+  indicacoesGrupos = [],
+  tarefas = [],
 }: DorDetalheProps) {
   const [enviando, setEnviando] = useState(false)
   const [enviado, setEnviado] = useState(false)
@@ -564,6 +585,69 @@ export function DorDetalhe({
             ]}
           />
         </section>
+
+        {/* ── 009: ZONA DE GESTÃO (gated por papel; colapsada; separada da leitura pública) ── */}
+        {(papelAtual === 'admin' || papelAtual === 'host') && projetoId && (
+          <details className="ubm-section-block ubm-gestao-zona">
+            <summary className="ubm-section-title ubm-gestao-summary">Gestão da equipe</summary>
+            <ProjetoDetalheClient
+              projetoId={projetoId}
+              indicacoes={indicacoesGrupos[0]?.indicacoes ?? []}
+              papelAtual={papelAtual}
+              projetoStatus={projetoStatus ?? ''}
+              hostElected={hostElected}
+              gestao={gestao}
+              currentUserId={currentUserId}
+            />
+          </details>
+        )}
+
+        {/* ── 009: Indicações recebidas (coord-do-curso/admin; gate pelo RETORNO não-vazio — B2) ── */}
+        {indicacoesGrupos.length > 0 && (
+          <details className="ubm-section-block ubm-gestao-zona">
+            <summary className="ubm-section-title ubm-gestao-summary">Indicações recebidas</summary>
+            <IndicacoesRecebidas grupos={indicacoesGrupos} />
+          </details>
+        )}
+
+        {/* ── 009: Funções e tarefas (membro/admin; .ubm-locked p/ não-membro — CA22) ── */}
+        {projetoId && (
+          <section className="ubm-section-block">
+            <h2 className="ubm-section-title">Funções e tarefas</h2>
+            {papelAtual ? (
+              <ProjetoDetalheClient
+                projetoId={projetoId}
+                indicacoes={[]}
+                papelAtual={papelAtual}
+                projetoStatus={projetoStatus ?? ''}
+                tarefas={tarefas}
+                currentUserId={currentUserId}
+                equipe={equipe}
+                modoTarefas
+              />
+            ) : (
+              <div className="ubm-locked">
+                <span className="ubm-locked-title">Este projeto é da equipe.</span>
+                <p className="ubm-locked-msg">
+                  Funções e tarefas são visíveis apenas aos membros e à moderação.
+                </p>
+              </div>
+            )}
+          </section>
+        )}
+
+        {/* ── 009: Proposta e assinatura — peça lacrada 006 (teaser para quem vê a dor com projeto) ── */}
+        {projetoId && (
+          <section className="ubm-section-block">
+            <div className="ubm-locked" aria-label="Próximas etapas em breve">
+              <span className="ubm-cota ubm-cota--muted">EM BREVE · 006</span>
+              <span className="ubm-locked-title">Proposta e assinatura</span>
+              <p className="ubm-locked-msg">
+                Proposta e assinatura aparecerão aqui quando a equipe avançar.
+              </p>
+            </div>
+          </section>
+        )}
       </div>
     </article>
   )
