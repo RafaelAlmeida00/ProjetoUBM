@@ -137,6 +137,12 @@ export function ProjetoDetalheClient({
         <UbmTeamBuilder
           projetoId={projetoId}
           indicacoes={indicacoes}
+          nomesIndicados={Object.fromEntries(
+            indicacoes.map((i) => [
+              i.pessoa_id,
+              i.aluno_nome || i.aluno_email || `Indicado (${i.papel_pretendido})`,
+            ]),
+          )}
           onFechar={() => setModalAberto(false)}
           onConfirmar={fecharEquipe}
         />

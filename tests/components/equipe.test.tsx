@@ -17,14 +17,16 @@ import type { MembroPublico } from '@/lib/data/projetos'
 
 const MEMBRO_HOST_COM_OPTIN: MembroPublico = {
   papel_projeto: 'host',
-  nome_ou_papel: 'Ana Souza', // tem opt-in → nome real
+  nome_ou_papel: 'Ana Souza', // tem opt-in → nome real revelado
+  nome_revelado: true,
   ranking_optin: true,
   curso: 'Engenharia de Software',
 }
 
 const MEMBRO_CO_SEM_OPTIN: MembroPublico = {
   papel_projeto: 'co_coordenador',
-  nome_ou_papel: 'COORDENADOR · ADMINISTRAÇÃO', // sem opt-in → papel+curso
+  nome_ou_papel: 'COORDENADOR · ADMINISTRAÇÃO', // sem opt-in/sem audiência interna → papel+curso
+  nome_revelado: false,
   ranking_optin: false,
   curso: 'Administração',
 }
@@ -32,6 +34,7 @@ const MEMBRO_CO_SEM_OPTIN: MembroPublico = {
 const MEMBRO_ALUNO_SEM_OPTIN: MembroPublico = {
   papel_projeto: 'aluno',
   nome_ou_papel: 'ALUNO · DIREITO', // sem opt-in → papel+curso
+  nome_revelado: false,
   ranking_optin: false,
   curso: 'Direito',
 }
@@ -67,6 +70,7 @@ describe('UbmTeam — T-O3.2', () => {
     const membroComNomePII: MembroPublico = {
       papel_projeto: 'aluno',
       nome_ou_papel: 'ALUNO · DIREITO', // dado já anonimizado na source
+      nome_revelado: false,
       ranking_optin: false,
       curso: 'Direito',
     }
@@ -108,11 +112,32 @@ describe('UbmTeam — T-O3.2', () => {
     const membroOptIn: MembroPublico = {
       papel_projeto: 'aluno',
       nome_ou_papel: 'Maria Pereira',
+      nome_revelado: true,
       ranking_optin: true,
       curso: 'Direito',
     }
     render(<UbmTeam membros={[membroOptIn]} />)
     expect(screen.getByText('Maria Pereira')).toBeInTheDocument()
+  })
+
+  it('nome revelado internamente (sem opt-in público) mostra o NOME, sem selo público', () => {
+    // Audiência interna (admin/host/coord/membro): nome_revelado=true mesmo com ranking_optin=false.
+    render(
+      <UbmTeam
+        membros={[{
+          papel_projeto: 'aluno',
+          nome_ou_papel: 'Carla Dias',
+          nome_revelado: true,
+          ranking_optin: false,
+          curso: 'Direito',
+        }]}
+      />,
+    )
+    expect(screen.getByText('Carla Dias')).toBeInTheDocument()
+    // inicial do avatar = 'C' (nome), não 'A' (papel aluno)
+    expect(screen.getByText('C')).toBeInTheDocument()
+    // sem opt-in público → não exibe o selo PERFIL PÚBLICO
+    expect(screen.queryByText(/PERFIL PÚBLICO/i)).toBeNull()
   })
 
   it('optin-seal visível para membro com ranking_optin=true', () => {

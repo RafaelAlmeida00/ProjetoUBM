@@ -291,7 +291,7 @@ export function BancadaCoordenador({ indicacoes, nome }: BancadaCoordenadorProps
           <ul className="ubm-bancada-lista" aria-label="Indicações pendentes">
             {pendentes.slice(0, 5).map((ind) => (
               <li key={ind.id} className="ubm-bancada-lista-item">
-                <span className="ubm-bancada-lista-label">{ind.aluno_nome}</span>
+                <span className="ubm-bancada-lista-label">{ind.aluno_nome || ind.aluno_email || 'Indicado'}</span>
                 <span className="ubm-cota ubm-cota--muted">{ind.curso}</span>
               </li>
             ))}

@@ -225,7 +225,7 @@ export default async function IndicacoesPage() {
                               {(ind.papel_pretendido === 'coordenador' ? 'C' : 'A')}
                             </span>
                             <span className="ubm-indication-nome">
-                              {ind.aluno_nome || ind.aluno_email || ind.pessoa_id}
+                              {ind.aluno_nome || ind.aluno_email || `Indicado (${ind.papel_pretendido})`}
                               {ind.curso ? (
                                 <span className="ubm-indication-curso"> · {ind.curso}</span>
                               ) : null}

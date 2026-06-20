@@ -18,7 +18,11 @@ export interface ProjetoVitrine {
 export interface MembroPublico {
   papel_projeto: 'host' | 'co_coordenador' | 'aluno'
   nome_ou_papel: string
+  /** true quando nome_ou_papel é o NOME real (revelado p/ audiência interna ou opt-in público);
+   *  false quando é o fallback "Papel · curso" (vitrine anon sem opt-in). */
+  nome_revelado: boolean
   ranking_optin: boolean
+  curso?: string | null
   [key: string]: unknown
 }
 
@@ -26,6 +30,9 @@ export interface EventoTimeline {
   de_status: string | null
   para_status: string
   ocorrido_em: string
+  motivo?: string | null
+  /** nome do autor da transição — revelado p/ audiência interna ou opt-in; null caso contrário. */
+  autor_nome?: string | null
   [key: string]: unknown
 }
 
