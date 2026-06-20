@@ -28,7 +28,7 @@ vi.mock('@/lib/actions/tarefa', () => ({
   reatribuirTarefa: vi.fn().mockResolvedValue({ ok: true }),
 }))
 
-import { ProjetoDetalheClient } from '@/app/app/projetos/[id]/projeto-detalhe-client'
+import { ProjetoDetalheClient } from '@/components/dores/ProjetoDetalheClient'
 import type { FuncaoTarefa, MembroPublico } from '@/lib/data/projetos'
 import { criarTarefa, concluirTarefa } from '@/lib/actions/tarefa'
 

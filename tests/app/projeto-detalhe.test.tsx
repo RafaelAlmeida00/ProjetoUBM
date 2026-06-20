@@ -26,7 +26,7 @@ vi.mock('@/lib/actions/projeto', () => ({
 import { UbmTeam } from '@/components/ubm-team'
 import { UbmTimeline } from '@/components/ubm-timeline'
 import { UbmTeamBuilder } from '@/components/ubm-team-builder'
-import { ProjetoDetalheClient } from '@/app/app/projetos/[id]/projeto-detalhe-client'
+import { ProjetoDetalheClient } from '@/components/dores/ProjetoDetalheClient'
 import type { MembroPublico, EventoTimeline, Indicacao } from '@/lib/data/projetos'
 import { avancarProjeto } from '@/lib/actions/projeto'
 

@@ -218,6 +218,28 @@ export async function obterProjetoDaDor(dorId: string): Promise<ProjetoDaDor | n
   }
 }
 
+/**
+ * 009 — Lookup reverso projeto→dor (forward). Usado pelo redirect
+ * /app/projetos/[id]→/app/dores/[dor_id] e pelo remapeamento de deep-links de notificação.
+ * SEM ORÁCULO de existência: projeto inexistente, soft-deletado ou sem-acesso (RLS) caem todos
+ * no mesmo caminho → null uniforme. NUNCA faz select de perfil/PII (RS9).
+ */
+export async function obterDorDoProjeto(projetoId: string): Promise<string | null> {
+  try {
+    const supabase = await createSupabaseServerClient()
+    const { data, error } = await supabase
+      .from('projeto')
+      .select('dor_id')
+      .eq('id', projetoId)
+      .is('deleted_at', null)
+      .maybeSingle()
+    if (error || !data) return null
+    return (data.dor_id as string) ?? null
+  } catch {
+    return null
+  }
+}
+
 // ---------------------------------------------------------------------------
 // obterTimelineDor — RSC /app/dores/[id] (Delta-edição)
 // ---------------------------------------------------------------------------

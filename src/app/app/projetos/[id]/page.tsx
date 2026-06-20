@@ -21,7 +21,7 @@ import {
 import { UbmTimeline } from '@/components/ubm-timeline'
 import { UbmTeam } from '@/components/ubm-team'
 import { rotuloProjeto } from '@/lib/format/projeto'
-import { ProjetoDetalheClient } from './projeto-detalhe-client'
+import { ProjetoDetalheClient } from '@/components/dores/ProjetoDetalheClient'
 
 interface Props {
   params: Promise<{ id: string }>

@@ -32,7 +32,7 @@ vi.mock('@/lib/actions/tarefa', () => ({
   criarTarefa: vi.fn(), editarTarefa: vi.fn(), concluirTarefa: vi.fn(), reatribuirTarefa: vi.fn(),
 }))
 
-import { ProjetoDetalheClient } from '@/app/app/projetos/[id]/projeto-detalhe-client'
+import { ProjetoDetalheClient } from '@/components/dores/ProjetoDetalheClient'
 
 beforeEach(() => {
   elegerHostMock.mockResolvedValue({ ok: true })
