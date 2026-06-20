@@ -3,10 +3,11 @@ import { DorDetalhe } from '@/components/dores/DorDetalhe'
 import type { DorData, AnexoComUrl } from '@/components/dores/DorDetalhe'
 import {
   obterEquipePublica, obterTimelinePublica,
-  listarFuncoesTarefas, listarIndicacoes, listarEquipeGestao,
+  listarFuncoesTarefas, listarIndicacoes, listarEquipeGestao, obterMeusVinculosProjeto,
 } from '@/lib/data/projetos'
 import { obterTimelineDor } from '@/lib/data/dores'
 import { rotuloProjeto } from '@/lib/format/projeto'
+import type { EstadoIndicacao } from '@/components/dores/MeIndicarSlot'
 import type { MembroPublico, EventoTimeline, FuncaoTarefa, MembroGestao } from '@/lib/data/projetos'
 import type { EventoTimelineDor } from '@/lib/data/dores'
 import type { GrupoIndicacoes } from '@/components/indicacoes/IndicacoesRecebidas'
@@ -145,6 +146,8 @@ export default async function DorDetalhePage({ params }: Props) {
   let tarefas: FuncaoTarefa[] = []
   let gestao: MembroGestao[] = []
   let indicacoesGrupos: GrupoIndicacoes[] = []
+  let papelBaseIndicacao: 'aluno' | 'coordenador' | null = null
+  let estadoIndicacao: EstadoIndicacao | undefined = undefined
 
   const { data: projetoVinculado } = await supabase
     .from('projeto')
@@ -184,6 +187,21 @@ export default async function DorDetalhePage({ params }: Props) {
         indicacoesGrupos = [{ projetoId, rotulo: rotuloProjeto(dor.titulo, empresa_nome), indicacoes: inds }]
       }
     }
+
+    // 009 T11 — estado da ação "Me indicar" no detalhe (aluno/coord; só na janela aberta).
+    const pBase: 'aluno' | 'coordenador' | null =
+      roles.includes('coordenador') ? 'coordenador' : roles.includes('aluno') ? 'aluno' : null
+    if (pBase && projetoStatus === 'em_analise' && user) {
+      papelBaseIndicacao = pBase
+      const vinc = await obterMeusVinculosProjeto()
+      const verificado = !!(user.app_metadata?.verificado || user.email_confirmed_at)
+      const coordPend = pBase === 'coordenador' && !user.app_metadata?.coord_aprovado
+      estadoIndicacao =
+        vinc.membroProjetoIds.includes(projetoId) ? 'ja_membro' :
+        vinc.indicadoProjetoIds.includes(projetoId) ? 'ja_indicado' :
+        coordPend ? 'coord_pendente' :
+        !verificado ? 'nao_verificado' : 'disponivel'
+    }
   }
 
   const dorData: DorData = {
@@ -217,6 +235,8 @@ export default async function DorDetalhePage({ params }: Props) {
       gestao={gestao}
       indicacoesGrupos={indicacoesGrupos}
       tarefas={tarefas}
+      papelBaseIndicacao={papelBaseIndicacao}
+      estadoIndicacao={estadoIndicacao}
     />
   )
 }

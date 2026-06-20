@@ -3,6 +3,8 @@ import { useState } from 'react'
 import Link from 'next/link'
 import { Lock, CornerUpLeft, AlertCircle, CheckCircle2, Clock, Download, Trash2, Info, Send } from 'lucide-react'
 import { StatusDor } from './StatusDor'
+import { MeIndicarSlot, type EstadoIndicacao } from '@/components/dores/MeIndicarSlot'
+import { indicarSe, retirarIndicacao } from '@/lib/actions/indicacao'
 import { submeterDor, editarDor } from '@/lib/actions/dor'
 import { removerAnexo } from '@/lib/actions/anexo'
 import { AnexoUploader } from '@/components/anexos/AnexoUploader'
@@ -62,6 +64,9 @@ interface DorDetalheProps {
   gestao?: MembroGestao[]
   indicacoesGrupos?: GrupoIndicacoes[]
   tarefas?: FuncaoTarefa[]
+  /** 009 — ação contextual "Me indicar" no detalhe (aluno/coord; só em_analise). */
+  papelBaseIndicacao?: 'aluno' | 'coordenador' | null
+  estadoIndicacao?: EstadoIndicacao
 }
 
 function labelCurso(value: string): string {
@@ -153,6 +158,8 @@ export function DorDetalhe({
   gestao = [],
   indicacoesGrupos = [],
   tarefas = [],
+  papelBaseIndicacao = null,
+  estadoIndicacao,
 }: DorDetalheProps) {
   const [enviando, setEnviando] = useState(false)
   const [enviado, setEnviado] = useState(false)
@@ -537,16 +544,30 @@ export function DorDetalhe({
           </section>
         )}
 
-        {/* ── Timeline da dor + equipe/projeto via UbmTabs (005 + Delta-edição) ── */}
+        {/* ── 009 T11: ação contextual "Me indicar" (aluno/coord; janela aberta = em_analise) ── */}
+        {projetoStatus === 'em_analise' && papelBaseIndicacao && estadoIndicacao && projetoId && (
+          <section className="ubm-section-block ubm-card-action-row">
+            <MeIndicarSlot
+              projetoId={projetoId}
+              empresaNome={dor.empresa_nome}
+              papelBase={papelBaseIndicacao}
+              estado={estadoIndicacao}
+              onIndicar={indicarSe}
+              onRetirar={retirarIndicacao}
+            />
+          </section>
+        )}
+
+        {/* ── Andamento (jornada da dor) + equipe via UbmTabs (005 + Delta-edição) ── */}
         <section className="ubm-section-block">
-          <h2 className="ubm-section-title">Linha do tempo e equipe</h2>
+          <h2 className="ubm-section-title">Andamento e equipe</h2>
           <UbmTabs
             aria-label="Linha do tempo e equipe do projeto"
             tabs={[
               /* BUG #1: projeto primeiro (cliente: ver avanço do projeto antes do histórico da dor) */
               {
                 id: 'timeline',
-                label: 'Linha do tempo do projeto',
+                label: 'Andamento',
                 content: timeline.length > 0
                   ? <UbmTimeline eventos={timeline} />
                   : (
