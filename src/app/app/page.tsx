@@ -107,22 +107,28 @@ export default async function AppDashboardPage() {
   // ── COORDENADOR ──────────────────────────────────────────────────────────
   if (papelBase === 'coordenador') {
     const meusProjetos = await listarMeusProjetos().catch(() => [])
-    const projetosCoord = meusProjetos.filter(
-      (p) => p.papel_projeto === 'host' || p.papel_projeto === 'co_coordenador',
+    // Só projetos com a JANELA AINDA ABERTA (em_analise) onde o coord é host/co — são os que
+    // pedem ação. Projetos já fechados (aprovado+) não contam como "candidatura a revisar".
+    const projetosAbertos = meusProjetos.filter(
+      (p) => (p.papel_projeto === 'host' || p.papel_projeto === 'co_coordenador') && p.status === 'em_analise',
     )
+    // Projeto onde o coord é HOST: ele pode compor a equipe (Fase 3) → CTA leva direto a compor.
+    const hostProjetoId = projetosAbertos.find((p) => p.papel_projeto === 'host')?.projeto_id
 
     const indicacoesPorProjeto = await Promise.all(
-      projetosCoord.slice(0, 5).map((p) =>
+      projetosAbertos.slice(0, 5).map((p) =>
         listarIndicacoes(p.projeto_id).catch(() => []),
       ),
     )
-    const todasIndicacoes = indicacoesPorProjeto.flat()
+    // Exclui a PRÓPRIA indicação do coordenador (não conta a si como candidato a revisar).
+    const todasIndicacoes = indicacoesPorProjeto.flat().filter((i) => i.pessoa_id !== user!.id)
 
     return (
       <div className="p-[clamp(1.25rem,4vw,2rem)]">
         <BancadaCoordenador
           nome={nome}
           indicacoes={todasIndicacoes}
+          hostProjetoId={hostProjetoId}
         />
       </div>
     )

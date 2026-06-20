@@ -248,6 +248,8 @@ export function BancadaAluno({ indicacoes, tarefas, nome }: BancadaAlunoProps) {
 export interface BancadaCoordenadorProps {
   indicacoes: Indicacao[]
   nome: string | null
+  /** Projeto (em_analise) onde o coordenador é HOST — habilita o CTA "Compor equipe". */
+  hostProjetoId?: string
 }
 
 /**
@@ -256,13 +258,13 @@ export interface BancadaCoordenadorProps {
  * CTA dominante: Revisar indicações.
  * Badge marsala na contagem — única licença de marsala fora do selo "Finalizado".
  */
-export function BancadaCoordenador({ indicacoes, nome }: BancadaCoordenadorProps) {
+export function BancadaCoordenador({ indicacoes, nome, hostProjetoId }: BancadaCoordenadorProps) {
   const pendentes = indicacoes.filter((i) => !i.deleted_at)
   const temPendencias = pendentes.length > 0
 
   function metrica(): string {
     if (!temPendencias) return 'Sua fila está em dia.'
-    return `${pendentes.length} indicaç${pendentes.length > 1 ? 'ões' : 'ão'} aguardando revisão.`
+    return `${pendentes.length} indicaç${pendentes.length > 1 ? 'ões' : 'ão'} ${hostProjetoId ? 'para compor sua equipe' : 'no(s) seu(s) projeto(s)'}.`
   }
 
   return (
@@ -308,9 +310,15 @@ export function BancadaCoordenador({ indicacoes, nome }: BancadaCoordenadorProps
 
         {/* CTA dominante */}
         <div className="ubm-bancada-bloco-actions">
-          <Link href="/app/indicacoes" className="ubm-btn ubm-btn-primary" aria-label="Revisar indicações">
-            Revisar indicações →
-          </Link>
+          {hostProjetoId ? (
+            <Link href={`/app/projetos/${hostProjetoId}`} className="ubm-btn ubm-btn-primary" aria-label="Compor equipe">
+              Compor equipe →
+            </Link>
+          ) : (
+            <Link href="/app/indicacoes" className="ubm-btn ubm-btn-primary" aria-label="Ver indicações">
+              Ver indicações →
+            </Link>
+          )}
         </div>
       </section>
 
@@ -355,7 +363,7 @@ export function BancadaAdmin({ qtdDoresPendentes, qtdProjetosPendentes, nome }: 
     if (!temPendencias) return 'Plataforma saudável. Nada aguardando moderação.'
     const partes: string[] = []
     if (qtdDoresPendentes > 0) partes.push(`${qtdDoresPendentes} dor${qtdDoresPendentes > 1 ? 'es' : ''} aguardando moderação`)
-    if (qtdProjetosPendentes > 0) partes.push(`${qtdProjetosPendentes} projeto${qtdProjetosPendentes > 1 ? 's' : ''} em análise`)
+    if (qtdProjetosPendentes > 0) partes.push(`${qtdProjetosPendentes} projeto${qtdProjetosPendentes > 1 ? 's' : ''} aguardando equipe`)
     return partes.join(' · ')
   }
 
@@ -394,9 +402,9 @@ export function BancadaAdmin({ qtdDoresPendentes, qtdProjetosPendentes, nome }: 
             {qtdProjetosPendentes > 0 && (
               <li className="ubm-bancada-lista-item">
                 <span className="ubm-bancada-lista-label">
-                  {qtdProjetosPendentes} projeto{qtdProjetosPendentes > 1 ? 's' : ''} em análise
+                  {qtdProjetosPendentes} projeto{qtdProjetosPendentes > 1 ? 's' : ''} aguardando host/equipe
                 </span>
-                <span className="ubm-status ubm-status--moderacao">projetos</span>
+                <span className="ubm-status ubm-status--moderacao">recrutando</span>
               </li>
             )}
           </ul>
@@ -413,6 +421,11 @@ export function BancadaAdmin({ qtdDoresPendentes, qtdProjetosPendentes, nome }: 
           <Link href="/admin/dores" className="ubm-btn ubm-btn-primary" aria-label="Moderar dores">
             Moderar dores →
           </Link>
+          {qtdProjetosPendentes > 0 && (
+            <Link href="/app/indicacoes" className="ubm-btn ubm-btn-secondary" aria-label="Compor equipes">
+              Compor equipes →
+            </Link>
+          )}
         </div>
       </section>
 
