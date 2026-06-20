@@ -4,6 +4,7 @@ import { usePathname } from 'next/navigation'
 import {
   LayoutDashboard,
   FileQuestion,
+  FolderKanban,
   Building2,
   Users,
   ClipboardList,
@@ -29,6 +30,8 @@ interface NavItem {
 const NAV_ITEMS: NavItem[] = [
   { href: '/app', label: 'Bancada', icon: <LayoutDashboard aria-hidden /> },
   { href: '/app/dores', label: 'Dores', icon: <FileQuestion aria-hidden /> },
+  // Lista de projetos → Sala da equipe (eleger host, compor/fechar, reabrir indicações)
+  { href: '/app/projetos', label: 'Projetos', icon: <FolderKanban aria-hidden /> },
   // ADR-0002: /casos unificado em /dores — item "Casos" removido do NavRail
   // 005: auto-indicação — só aluno e coordenador (representante não se indica)
   {
