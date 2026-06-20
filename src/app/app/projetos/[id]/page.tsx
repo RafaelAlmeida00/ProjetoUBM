@@ -1,27 +1,13 @@
 /**
- * T-O3.7 — S3 /app/projetos/[id] · Visão da equipe + funções/tarefas + timeline compacta
- * design.md §S3 — admin fecha equipe / troca host; host avança; 006 lacrada.
- * Sigilo não-membro = .ubm-locked (CA22).
+ * 009 T17 — /app/projetos/[id] consolidada em /app/dores/[dor_id].
+ * A "Sala da equipe" (gestão, funções/tarefas, timeline, 006) migrou para o detalhe da dor
+ * (T7-T13). Esta rota vira stub de redirect via lookup reverso projeto→dor.
+ *
+ * Sem oráculo de existência (RN13/CA5/CA6): projeto inexistente, soft-deleted ou sem acesso
+ * retornam `null` de obterDorDoProjeto → notFound() GENÉRICO (resposta idêntica nos 3 casos).
  */
-
-import React from 'react'
-import { notFound } from 'next/navigation'
-import { createSupabaseServerClient } from '@/lib/supabase/server'
-import {
-  listarProjetosVitrine,
-  obterEquipePublica,
-  obterTimelinePublica,
-  listarIndicacoes,
-  listarFuncoesTarefas,
-  listarEquipeGestao,
-  type FuncaoTarefa,
-  type Indicacao,
-  type MembroGestao,
-} from '@/lib/data/projetos'
-import { UbmTimeline } from '@/components/ubm-timeline'
-import { UbmTeam } from '@/components/ubm-team'
-import { rotuloProjeto } from '@/lib/format/projeto'
-import { ProjetoDetalheClient } from '@/components/dores/ProjetoDetalheClient'
+import { notFound, redirect } from 'next/navigation'
+import { obterDorDoProjeto } from '@/lib/data/dores'
 
 interface Props {
   params: Promise<{ id: string }>
@@ -29,147 +15,7 @@ interface Props {
 
 export default async function ProjetoDetalhePage({ params }: Props) {
   const { id } = await params
-  const supabase = await createSupabaseServerClient()
-  const { data: { user } } = await supabase.auth.getUser()
-
-  // Valida projeto público
-  const projetos = await listarProjetosVitrine()
-  const projeto = projetos.find((p) => p.id === id)
-  if (!projeto) return notFound()
-
-  const isAdmin = !!(user?.app_metadata?.is_admin)
-  const userId = user?.id ?? null
-
-  // Dados públicos (timeline + equipe via RPC)
-  const [timeline, equipe] = await Promise.all([
-    obterTimelinePublica(id),
-    obterEquipePublica(id),
-  ])
-
-  // Verifica se usuário é membro da equipe
-  // (equipe pública retorna papel — checamos se userId aparece como host)
-  // Para verificar membro autenticado, buscamos tarefas (RLS filtra por membro)
-  let isMembro = false
-  let isHost = false
-  let tarefas: FuncaoTarefa[] = []
-  let indicacoes: Indicacao[] = []
-  let gestao: MembroGestao[] = []
-
-  if (userId) {
-    // Host eleito: projeto.host_coordenador_id (agora trazido por listarProjetosVitrine).
-    isHost = !!projeto.host_coordenador_id && projeto.host_coordenador_id === userId
-
-    // Busca tarefas (catch→[] por design — listarFuncoesTarefas nunca lança)
-    tarefas = await listarFuncoesTarefas(id)
-
-    // P1.2 fix: isMembro derivado de tarefas retornadas (RLS), host ou admin
-    isMembro = isAdmin || isHost || tarefas.length > 0
-
-    // Admin E host podem ver indicações (host compõe a equipe — RPC 0060) e gerir membros
-    if (isAdmin || isHost) {
-      try {
-        indicacoes = await listarIndicacoes(id)
-      } catch {
-        indicacoes = []
-      }
-      gestao = await listarEquipeGestao(id)
-    }
-  }
-
-  const papelAtual = isAdmin ? 'admin' : isHost ? 'host' : isMembro ? 'aluno' : null
-
-  const statusLabel = projeto.status.replace(/_/g, ' ').toUpperCase()
-  const rotulo = rotuloProjeto(projeto.titulo, projeto.empresa_nome)
-
-  return (
-    <main className="ubm-shell-main">
-      <div className="ubm-stamp-header">
-        <span className="ubm-stamp-header-trail">
-          <span>PROJETO</span>
-          <b>·</b>
-          <span className="ubm-cota">{statusLabel}</span>
-        </span>
-        {isAdmin && (
-          <span className="ubm-navrail-mode">MODO CURADORIA</span>
-        )}
-      </div>
-
-      <div className="ubm-section">
-        <div aria-live="polite" aria-atomic="true" id="projeto-status-live" />
-
-        {/* Cabeçalho institucional do projeto */}
-        <header className="ubm-page-header">
-          <span className="ubm-cota ubm-section-kicker">SALA DA EQUIPE · {statusLabel}</span>
-          <h1 className="ubm-page-title">{rotulo}</h1>
-          <p className="ubm-page-lead">
-            Aqui a equipe se organiza: quem está dentro, o que cada um faz e como
-            o trabalho avança — etapa por etapa.
-          </p>
-        </header>
-
-        <div className="ubm-article">
-          {/* Equipe */}
-          <section className="ubm-section-block" aria-labelledby="equipe-heading">
-            <h2 id="equipe-heading" className="ubm-section-title">Equipe</h2>
-            <div className="ubm-detalhe-stack">
-              <UbmTeam membros={equipe} />
-              {/* Ações de equipe — admin (elege/troca/fecha/reabre) e host (compõe/fecha/avança) */}
-              {(isAdmin || isHost) && (
-                <ProjetoDetalheClient
-                  projetoId={id}
-                  indicacoes={indicacoes}
-                  papelAtual={isAdmin ? 'admin' : 'host'}
-                  projetoStatus={projeto.status}
-                  hostElected={!!projeto.host_coordenador_id}
-                  gestao={gestao}
-                  currentUserId={userId}
-                />
-              )}
-            </div>
-          </section>
-
-          {/* Funções e tarefas — privado para membros/admin (CA22) */}
-          <section className="ubm-section-block" aria-labelledby="tarefas-heading">
-            <h2 id="tarefas-heading" className="ubm-section-title">Funções e tarefas</h2>
-            {!isMembro && !isAdmin ? (
-              <div className="ubm-locked">
-                <span className="ubm-locked-title">Este projeto é da equipe.</span>
-                <p className="ubm-locked-msg">
-                  Funções e tarefas são visíveis apenas aos membros e à moderação.
-                </p>
-              </div>
-            ) : (
-              <ProjetoDetalheClient
-                projetoId={id}
-                indicacoes={[]}
-                papelAtual={papelAtual}
-                projetoStatus={projeto.status}
-                tarefas={tarefas}
-                currentUserId={userId}
-                equipe={equipe}
-                modoTarefas
-              />
-            )}
-          </section>
-
-          {/* Linha do tempo compacta */}
-          <section className="ubm-section-block" aria-labelledby="timeline-heading">
-            <h2 id="timeline-heading" className="ubm-section-title">Linha do tempo</h2>
-            <UbmTimeline eventos={timeline} compacto />
-          </section>
-
-          {/* Peça lacrada 006 */}
-          <section className="ubm-section-block">
-            <div className="ubm-locked" aria-label="Próximas etapas em breve">
-              <span className="ubm-cota ubm-cota--muted">EM BREVE · 006</span>
-              <span className="ubm-locked-title">Proposta e assinatura</span>
-              <p className="ubm-locked-msg">
-                Proposta e assinatura aparecerão aqui quando a equipe avançar.
-              </p>
-            </div>
-          </section>
-        </div>
-      </div>
-    </main>
-  )
+  const dorId = await obterDorDoProjeto(id)
+  if (!dorId) notFound()
+  redirect(`/app/dores/${dorId}`)
 }
