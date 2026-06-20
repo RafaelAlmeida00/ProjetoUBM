@@ -90,10 +90,14 @@ describe('leitura interna autenticada (RLS aplica)', () => {
     mockFrom.mockReturnValue({ select: mockSelect })
   })
 
-  it('listarIndicacoes lê de `indicacao` (RLS: coord-do-curso + admin + próprio — RN25)', async () => {
+  it('listarIndicacoes chama RPC indicacoes_coordenador (identidade gated por coord-do-curso-APROVADO/admin — RN25/CA25; #6)', async () => {
+    // Pós-#6 (0052/0053): listarIndicacoes deixou de ler a tabela `indicacao` direto e passou
+    // a chamar a RPC DEFINER `indicacoes_coordenador`, que devolve nome/email/curso do candidato
+    // só ao coordenador-do-curso APROVADO ou admin (gate interno). Contrato mais estrito, não enfraquecido.
+    mockRpc.mockResolvedValueOnce({ data: [], error: null })
     await listarIndicacoes('proj-1')
-    expect(mockFrom).toHaveBeenCalledWith('indicacao')
-    expect(mockEq).toHaveBeenCalledWith('projeto_id', 'proj-1')
+    expect(mockRpc).toHaveBeenCalledWith('indicacoes_coordenador', { p_projeto_id: 'proj-1' })
+    expect(mockFrom).not.toHaveBeenCalledWith('indicacao')
   })
 
   it('listarFuncoesTarefas lê de `funcao_tarefa` (RLS: membros + admin — RN21/RN22)', async () => {

@@ -57,6 +57,7 @@ export function ProporSubmitForm({
   const [empresa, setEmpresa] = useState<EmpresaResult | null>(
     empresaId && empresaNome ? { id: empresaId, nome: empresaNome } : null,
   )
+  const [titulo, setTitulo] = useState('')
   const [descricao, setDescricao] = useState(descricaoInicial ?? '')
   const [cursos, setCursos] = useState<CursoUbm[]>([])
   const [consent, setConsent] = useState(consentido)
@@ -110,6 +111,7 @@ export function ProporSubmitForm({
         const result = await submeterDorLandingAnon({
           empresaId: isSentinel(empresa) ? null : (empresa!.id || null),
           empresaNome: isSentinel(empresa) ? empresa!.nome : null,
+          titulo: titulo.trim() || undefined,
           descricao: descricao.trim(),
           repNome: email.split('@')[0] ?? 'Representante',
           email,
@@ -204,6 +206,7 @@ export function ProporSubmitForm({
 
     const result = await submeterDorLanding({
       empresaId,
+      titulo: titulo.trim() || undefined,
       descricao: descricao.trim(),
       repNome: email.split('@')[0] ?? 'Representante',
       consentimento: consent,
@@ -345,6 +348,16 @@ export function ProporSubmitForm({
               Descreva o problema operacional que você gostaria que a UBM ajudasse a resolver.
             </p>
             <div className="ubm-step-field">
+              <input
+                id={`${formId}-titulo`}
+                type="text"
+                aria-label="Título do projeto"
+                value={titulo}
+                onChange={(e) => setTitulo(e.target.value)}
+                placeholder="Título do projeto (opcional) — ex.: Controle de estoque"
+                maxLength={160}
+                style={{ marginBottom: '0.6rem' }}
+              />
               <textarea
                 id={`${formId}-dor`}
                 aria-label="Descrição da dor"

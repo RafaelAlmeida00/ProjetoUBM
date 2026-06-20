@@ -3,8 +3,8 @@
  * RN17/CA17: visitante anônimo vê dores publicadas, cursos e anexos.
  * Testa os componentes das rotas públicas via mock do data layer.
  */
-import { describe, it, expect, vi, beforeEach } from 'vitest'
-import { render, screen } from '@testing-library/react'
+import { describe, it, expect, vi, afterEach } from 'vitest'
+import { render, screen, cleanup } from '@testing-library/react'
 import React from 'react'
 
 vi.mock('next/navigation', () => ({
@@ -21,6 +21,25 @@ vi.mock('next/link', () => ({
 vi.mock('@/lib/data/dores', () => ({
   listarDoresVitrine: vi.fn(),
   obterDorPublica: vi.fn(),
+  obterProjetoDaDor: vi.fn(),
+}))
+
+vi.mock('@/lib/data/projetos', () => ({
+  listarMeusProjetos: vi.fn(),
+  listarMinhasTarefasAbertas: vi.fn(),
+  listarMinhasIndicacoes: vi.fn(),
+  contarMinhasDoresPorStatus: vi.fn(),
+  listarIndicacoes: vi.fn(),
+  obterTimelinePublica: vi.fn().mockResolvedValue([]),
+  obterEquipePublica: vi.fn().mockResolvedValue([]),
+}))
+
+vi.mock('@/components/ubm-timeline', () => ({
+  UbmTimeline: () => React.createElement('div', { 'data-testid': 'ubm-timeline' }),
+}))
+
+vi.mock('@/components/ubm-team', () => ({
+  UbmTeam: () => React.createElement('div', { 'data-testid': 'ubm-team' }),
 }))
 
 import type { DorVitrine, DorPublica } from '@/lib/data/dores'
@@ -78,8 +97,9 @@ async function renderDoresVitrinePage(dores: DorVitrine[]) {
 }
 
 async function renderDorDetalhePage(dor: DorPublica | null) {
-  const { obterDorPublica } = await import('@/lib/data/dores')
+  const { obterDorPublica, obterProjetoDaDor } = await import('@/lib/data/dores')
   vi.mocked(obterDorPublica).mockResolvedValue(dor)
+  vi.mocked(obterProjetoDaDor).mockResolvedValue(null) // sem projeto = sem seção jornada
   const mod = await import('@/app/dores/[id]/page')
   const PageComponent = mod.default
   if (dor === null) {
@@ -97,21 +117,9 @@ async function renderDorDetalhePage(dor: DorPublica | null) {
 // ---------------------------------------------------------------------------
 
 describe('/dores — vitrine pública (lista)', () => {
-  beforeEach(() => {
-    vi.resetModules()
-    vi.mock('next/navigation', () => ({
-      useRouter: () => ({ push: vi.fn() }),
-      usePathname: () => '/dores',
-      notFound: () => { throw new Error('NOTFOUND') },
-    }))
-    vi.mock('next/link', () => ({
-      default: ({ href, children, ...props }: { href: string; children: React.ReactNode; [key: string]: unknown }) =>
-        React.createElement('a', { href, ...props }, children),
-    }))
-    vi.mock('@/lib/data/dores', () => ({
-      listarDoresVitrine: vi.fn(),
-      obterDorPublica: vi.fn(),
-    }))
+  afterEach(() => {
+    cleanup()
+    vi.clearAllMocks()
   })
 
   it('renderiza main com heading institucional', async () => {
@@ -152,21 +160,9 @@ describe('/dores — vitrine pública (lista)', () => {
 // ---------------------------------------------------------------------------
 
 describe('/dores/[id] — detalhe público', () => {
-  beforeEach(() => {
-    vi.resetModules()
-    vi.mock('next/navigation', () => ({
-      useRouter: () => ({ push: vi.fn() }),
-      usePathname: () => '/dores/aaa-111',
-      notFound: () => { throw new Error('NOTFOUND') },
-    }))
-    vi.mock('next/link', () => ({
-      default: ({ href, children, ...props }: { href: string; children: React.ReactNode; [key: string]: unknown }) =>
-        React.createElement('a', { href, ...props }, children),
-    }))
-    vi.mock('@/lib/data/dores', () => ({
-      listarDoresVitrine: vi.fn(),
-      obterDorPublica: vi.fn(),
-    }))
+  afterEach(() => {
+    cleanup()
+    vi.clearAllMocks()
   })
 
   it('renderiza detalhe com empresa e descrição', async () => {

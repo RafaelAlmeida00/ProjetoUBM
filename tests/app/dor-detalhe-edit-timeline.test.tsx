@@ -246,6 +246,8 @@ describe('DorDetalhe — aba linha do tempo da dor (timelineDor)', () => {
         timelineDor={TIMELINE_DOR}
       />
     )
+    // BUG #1: "projeto" é a 1ª/default; precisa clicar em "dor" para ver seu painel.
+    fireEvent.click(screen.getByRole('tab', { name: 'Linha do tempo da dor' }))
     // Deve encontrar rótulos dos eventos (escopado à lista da timeline da dor —
     // "Publicada" também aparece no badge de status)
     const tl = within(screen.getByLabelText('Histórico de eventos da dor'))
@@ -263,6 +265,8 @@ describe('DorDetalhe — aba linha do tempo da dor (timelineDor)', () => {
         timelineDor={TIMELINE_DOR}
       />
     )
+    // BUG #1: navega para a aba "dor" antes de consultar seu painel
+    fireEvent.click(screen.getByRole('tab', { name: 'Linha do tempo da dor' }))
     // Papel do ator formatado (representante/admin)
     expect(screen.getAllByText(/representante|admin/i).length).toBeGreaterThan(0)
   })
@@ -277,6 +281,8 @@ describe('DorDetalhe — aba linha do tempo da dor (timelineDor)', () => {
         timelineDor={TIMELINE_DOR}
       />
     )
+    // BUG #1: navega para a aba "dor" antes de consultar seu painel
+    fireEvent.click(screen.getByRole('tab', { name: 'Linha do tempo da dor' }))
     // Data de '2026-06-01' em pt-BR → contém "jun" ou "01/06"
     // (escopado à timeline — há 3 eventos, todos com data; getByText global colidiria)
     const tl = within(screen.getByLabelText('Histórico de eventos da dor'))

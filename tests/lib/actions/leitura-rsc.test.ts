@@ -154,10 +154,7 @@ describe('obterTimelinePublica', () => {
 describe('listarIndicacoes', () => {
   beforeEach(() => {
     vi.clearAllMocks()
-    mockFrom.mockReturnValue({ select: mockSelect })
-    mockSelect.mockReturnValue({ eq: mockEq, order: mockOrder })
-    mockEq.mockReturnValue({ order: mockOrder })
-    mockOrder.mockResolvedValue({ data: [], error: null })
+    mockRpc.mockResolvedValue({ data: [], error: null })
   })
 
   it('usa createSupabaseServerClient (autenticado, RLS aplica)', async () => {
@@ -166,14 +163,13 @@ describe('listarIndicacoes', () => {
     expect(createSupabaseServerClient).toHaveBeenCalled()
   })
 
-  it('lê da tabela indicacao filtrando por projeto_id', async () => {
+  it('chama RPC indicacoes_coordenador com p_projeto_id (Bug #6)', async () => {
     await listarIndicacoes('proj-1')
-    expect(mockFrom).toHaveBeenCalledWith('indicacao')
-    expect(mockEq).toHaveBeenCalledWith('projeto_id', 'proj-1')
+    expect(mockRpc).toHaveBeenCalledWith('indicacoes_coordenador', { p_projeto_id: 'proj-1' })
   })
 
   it('retorna array vazio em caso de erro (fail-soft)', async () => {
-    mockOrder.mockResolvedValueOnce({ data: null, error: { message: 'rls denied' } })
+    mockRpc.mockResolvedValueOnce({ data: null, error: { message: 'rls denied' } })
     const result = await listarIndicacoes('proj-1')
     expect(Array.isArray(result)).toBe(true)
   })

@@ -26,6 +26,10 @@ export interface AnexoPublico {
 /**
  * Dor para a vitrine pública (/dores) — lista resumida.
  * Nunca expõe autor_id, rep_nome, departamento, cargo (PII — RS-D2).
+ * projeto_status: status do projeto ativo para esta dor (ADR-0002 — selo de estágio).
+ *   undefined = dor publicada sem projeto ainda ("Publicada")
+ *   "finalizado" = projeto encerrado ("Finalizado")
+ *   qualquer outro valor = projeto ativo ("Virou caso")
  */
 export interface DorVitrine {
   id: string
@@ -33,6 +37,8 @@ export interface DorVitrine {
   empresa_nome: string
   cursos: string[]
   publicada_em: string | null
+  /** Status do projeto associado via uq_projeto_dor. undefined = sem projeto ainda. */
+  projeto_status?: string
 }
 
 /**
@@ -56,11 +62,12 @@ export async function listarDoresVitrine(): Promise<DorVitrine[]> {
   try {
     const supabase = await createSupabaseServerClient()
 
-    // Busca dores publicadas com empresa e cursos em paralelo
+    // Busca dores publicadas com empresa, cursos e projeto ativo (ADR-0002 — selo de estágio)
+    // projeto(status) via FK dor_id — uq_projeto_dor garante 0 ou 1 linha por dor
     const { data, error } = await supabase
       .from('dor')
       .select(
-        'id, descricao, publicada_em, empresa_id, empresa:empresa(nome_canonico), dor_curso(curso)',
+        'id, descricao, publicada_em, empresa_id, empresa:empresa(nome_canonico), dor_curso(curso), projeto(status)',
       )
       .eq('status_dor', 'publicada')
       .is('deleted_at', null)
@@ -72,12 +79,20 @@ export async function listarDoresVitrine(): Promise<DorVitrine[]> {
     return data.map((row) => {
       const emp = Array.isArray(row.empresa) ? row.empresa[0] : row.empresa
       const cursos = (row.dor_curso ?? []).map((dc: { curso: string }) => dc.curso)
+
+      // projeto pode ser [] (sem projeto) ou [{ status }] (com projeto ativo)
+      const projetoArr = Array.isArray(row.projeto) ? row.projeto : (row.projeto ? [row.projeto] : [])
+      // Filtra só projetos ativos (deleted_at não é retornado aqui — o join já filtra via RLS pública)
+      const projetoAtivo = projetoArr.find((p: { status: string }) => p?.status)
+      const projeto_status = projetoAtivo?.status as string | undefined
+
       return {
         id: row.id as string,
         descricao: row.descricao as string,
         empresa_nome: (emp?.nome_canonico as string | undefined) ?? '—',
         cursos,
         publicada_em: (row.publicada_em as string | null) ?? null,
+        projeto_status,
       }
     })
   } catch {
@@ -160,6 +175,43 @@ export async function obterDorPublica(id: string): Promise<DorPublica | null> {
       cursos,
       publicada_em: (data.publicada_em as string | null) ?? null,
       anexos,
+    }
+  } catch {
+    return null
+  }
+}
+
+// ---------------------------------------------------------------------------
+// obterProjetoDaDor — lookup reverso dor_id → projeto (ADR-0002)
+// ---------------------------------------------------------------------------
+
+/**
+ * Lookup reverso: dado um dor_id, retorna o projeto ativo (deleted_at is null)
+ * que referencia essa dor via uq_projeto_dor (relação 1:1).
+ * Retorna null se não houver projeto (dor sem caso ainda) ou em erro.
+ * Usado por /dores/[id] para decidir se exibe a seção "A jornada deste caso".
+ * NUNCA faz select de perfil — PII de equipe fica nas RPCs SECURITY DEFINER.
+ */
+export interface ProjetoDaDor {
+  projeto_id: string
+  status: string
+}
+
+export async function obterProjetoDaDor(dorId: string): Promise<ProjetoDaDor | null> {
+  try {
+    const supabase = await createSupabaseServerClient()
+    const { data, error } = await supabase
+      .from('projeto')
+      .select('id, status')
+      .eq('dor_id', dorId)
+      .is('deleted_at', null)
+      .maybeSingle()
+
+    if (error || !data) return null
+
+    return {
+      projeto_id: data.id as string,
+      status: data.status as string,
     }
   } catch {
     return null

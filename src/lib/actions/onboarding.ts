@@ -141,6 +141,49 @@ export async function onboardingAluno(
   }
 }
 
+export interface OnboardingCoordenadorInput {
+  nome: string
+  /** 0057: N cursos — array de slugs curso_ubm[]. Obrigatório >= 1. */
+  cursoSlugs: string[]
+}
+
+/**
+ * Server Action — onboarding self-service do coordenador (Onda 2 / CA29).
+ * 0057: aceita N cursos via p_curso_slugs (curso_ubm[]).
+ * Chama a RPC onboarding_coordenador (SECURITY DEFINER).
+ * Cria papel + nome + vínculos coordenador_curso pendentes (aprovado=false).
+ * Nunca concede aprovação automaticamente — admin aprova depois.
+ */
+export async function onboardingCoordenador(
+  input: OnboardingCoordenadorInput,
+): Promise<OnboardingResult> {
+  if (!input.cursoSlugs || input.cursoSlugs.length === 0) {
+    return { ok: false, error: 'Selecione ao menos um curso que você coordena.' }
+  }
+
+  try {
+    const supabase = await createSupabaseServerClient()
+    const {
+      data: { user },
+      error: authErr,
+    } = await supabase.auth.getUser()
+
+    if (authErr || !user) {
+      return { ok: false, error: 'Sessão necessária. Faça login para continuar.' }
+    }
+
+    const { error } = await supabase.rpc('onboarding_coordenador', {
+      p_curso_slugs: input.cursoSlugs,
+      p_nome: input.nome,
+    })
+
+    if (error) return { ok: false, error: mapError(error.message) }
+    return { ok: true }
+  } catch (e) {
+    return { ok: false, error: mapError(e instanceof Error ? e.message : String(e)) }
+  }
+}
+
 function mapError(msg: string): string {
   if (/e-mail corp|corporativo/i.test(msg))
     return 'Representante exige e-mail corporativo.'

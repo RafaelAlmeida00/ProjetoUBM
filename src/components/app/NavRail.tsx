@@ -12,7 +12,6 @@ import {
   ShieldAlert,
   UserCircle,
   LogOut,
-  Briefcase,
   Star,
   Bell,
   Palette,
@@ -30,8 +29,7 @@ interface NavItem {
 const NAV_ITEMS: NavItem[] = [
   { href: '/app', label: 'Bancada', icon: <LayoutDashboard aria-hidden /> },
   { href: '/app/dores', label: 'Dores', icon: <FileQuestion aria-hidden /> },
-  // 005: vitrine pública de projetos — todos os logados
-  { href: '/casos', label: 'Casos', icon: <Briefcase aria-hidden /> },
+  // ADR-0002: /casos unificado em /dores — item "Casos" removido do NavRail
   // 005: auto-indicação — só aluno e coordenador (representante não se indica)
   {
     href: '/app/indicacoes',
@@ -42,7 +40,7 @@ const NAV_ITEMS: NavItem[] = [
   // 005: central de notificações — todos os logados
   { href: '/app/notificacoes', label: 'Notificações', icon: <Bell aria-hidden /> },
   {
-    href: '/propor',
+    href: '/app/dores/nova',
     label: 'Propor dor',
     icon: <PlusCircle aria-hidden />,
     roles: ['representante'],
@@ -77,7 +75,10 @@ const NAV_ITEMS: NavItem[] = [
 ]
 
 interface NavRailProps {
+  /** Papel único (legado — mantido para compat com testes existentes) */
   role?: string
+  /** Papéis reais do usuário (preferencial — lidos de papel_usuario, não do JWT claim) */
+  papeis?: string[]
   isAdmin?: boolean
   isOpen?: boolean
   onClose?: () => void
@@ -97,12 +98,16 @@ function LogoutItem({ onClose }: { onClose?: () => void }) {
   )
 }
 
-export function NavRail({ role, isAdmin, onClose }: NavRailProps) {
+export function NavRail({ role, papeis, isAdmin, onClose }: NavRailProps) {
   const pathname = usePathname()
+
+  // BUG D1: usa `papeis` (array real de papel_usuario) quando disponível;
+  // cai para `role` legado para compat com testes e render sem supabase.
+  const roleSet = papeis ?? (role ? [role] : [])
 
   const visibleItems = NAV_ITEMS.filter((item) => {
     if (item.adminOnly) return isAdmin
-    if (item.roles) return item.roles.includes(role ?? '')
+    if (item.roles) return item.roles.some((r) => roleSet.includes(r))
     return true
   })
 

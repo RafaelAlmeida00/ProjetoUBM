@@ -13,11 +13,14 @@ import {
   obterTimelinePublica,
   listarIndicacoes,
   listarFuncoesTarefas,
+  listarEquipeGestao,
   type FuncaoTarefa,
   type Indicacao,
+  type MembroGestao,
 } from '@/lib/data/projetos'
 import { UbmTimeline } from '@/components/ubm-timeline'
 import { UbmTeam } from '@/components/ubm-team'
+import { rotuloProjeto } from '@/lib/format/projeto'
 import { ProjetoDetalheClient } from './projeto-detalhe-client'
 
 interface Props {
@@ -50,33 +53,33 @@ export default async function ProjetoDetalhePage({ params }: Props) {
   let isHost = false
   let tarefas: FuncaoTarefa[] = []
   let indicacoes: Indicacao[] = []
+  let gestao: MembroGestao[] = []
 
   if (userId) {
-    // Verifica se é host (deve vir antes de isMembro para usar na derivação)
-    const hostId = (projeto as { host_coordenador_id?: string }).host_coordenador_id ?? null
-    isHost = !!userId && hostId === userId
+    // Host eleito: projeto.host_coordenador_id (agora trazido por listarProjetosVitrine).
+    isHost = !!projeto.host_coordenador_id && projeto.host_coordenador_id === userId
 
     // Busca tarefas (catch→[] por design — listarFuncoesTarefas nunca lança)
     tarefas = await listarFuncoesTarefas(id)
 
     // P1.2 fix: isMembro derivado de tarefas retornadas (RLS), host ou admin
-    // Tarefas só retornam para membros via RLS — se length>0, é membro.
     isMembro = isAdmin || isHost || tarefas.length > 0
 
-    // Admin e coord podem ver indicações
-    if (isAdmin) {
+    // Admin E host podem ver indicações (host compõe a equipe — RPC 0060) e gerir membros
+    if (isAdmin || isHost) {
       try {
         indicacoes = await listarIndicacoes(id)
       } catch {
         indicacoes = []
       }
+      gestao = await listarEquipeGestao(id)
     }
   }
 
-  const semEquipe = projeto.status === 'em_analise' && equipe.length === 0
   const papelAtual = isAdmin ? 'admin' : isHost ? 'host' : isMembro ? 'aluno' : null
 
   const statusLabel = projeto.status.replace(/_/g, ' ').toUpperCase()
+  const rotulo = rotuloProjeto(projeto.titulo, projeto.empresa_nome)
 
   return (
     <main className="ubm-shell-main">
@@ -96,8 +99,8 @@ export default async function ProjetoDetalhePage({ params }: Props) {
 
         {/* Cabeçalho institucional do projeto */}
         <header className="ubm-page-header">
-          <span className="ubm-cota ubm-section-kicker">PROJETO · {statusLabel}</span>
-          <h1 className="ubm-page-title">Sala da <em>equipe</em></h1>
+          <span className="ubm-cota ubm-section-kicker">SALA DA EQUIPE · {statusLabel}</span>
+          <h1 className="ubm-page-title">{rotulo}</h1>
           <p className="ubm-page-lead">
             Aqui a equipe se organiza: quem está dentro, o que cada um faz e como
             o trabalho avança — etapa por etapa.
@@ -108,41 +111,21 @@ export default async function ProjetoDetalhePage({ params }: Props) {
           {/* Equipe */}
           <section className="ubm-section-block" aria-labelledby="equipe-heading">
             <h2 id="equipe-heading" className="ubm-section-title">Equipe</h2>
-            {semEquipe ? (
-              <div className="ubm-detalhe-stack">
-                <p className="ubm-cota ubm-cota--muted">Equipe ainda não formada.</p>
-                {isAdmin && (
-                  <ProjetoDetalheClient
-                    projetoId={id}
-                    indicacoes={indicacoes}
-                    papelAtual="admin"
-                    projetoStatus={projeto.status}
-                  />
-                )}
-              </div>
-            ) : (
-              <div className="ubm-detalhe-stack">
-                <UbmTeam membros={equipe} />
-                {/* Ações do host */}
-                {isHost && projeto.status === 'aprovado' && (
-                  <ProjetoDetalheClient
-                    projetoId={id}
-                    indicacoes={[]}
-                    papelAtual="host"
-                    projetoStatus={projeto.status}
-                  />
-                )}
-                {/* Ações do admin */}
-                {isAdmin && (
-                  <ProjetoDetalheClient
-                    projetoId={id}
-                    indicacoes={indicacoes}
-                    papelAtual="admin"
-                    projetoStatus={projeto.status}
-                  />
-                )}
-              </div>
-            )}
+            <div className="ubm-detalhe-stack">
+              <UbmTeam membros={equipe} />
+              {/* Ações de equipe — admin (elege/troca/fecha/reabre) e host (compõe/fecha/avança) */}
+              {(isAdmin || isHost) && (
+                <ProjetoDetalheClient
+                  projetoId={id}
+                  indicacoes={indicacoes}
+                  papelAtual={isAdmin ? 'admin' : 'host'}
+                  projetoStatus={projeto.status}
+                  hostElected={!!projeto.host_coordenador_id}
+                  gestao={gestao}
+                  currentUserId={userId}
+                />
+              )}
+            </div>
           </section>
 
           {/* Funções e tarefas — privado para membros/admin (CA22) */}

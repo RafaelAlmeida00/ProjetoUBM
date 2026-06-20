@@ -32,7 +32,7 @@ describe('0004 helpers + hook', () => {
         `insert into public.curso(slug,nome) values ('engenharia_de_software','Eng. de Software') returning id`,
       )
     ).rows[0]!.id
-    await db.exec(`insert into public.coordenador_curso(user_id,curso_id) values ('${A}','${curso}')`)
+    await db.exec(`insert into public.coordenador_curso(user_id,curso_id,aprovado) values ('${A}','${curso}',true)`)
     // empresa real (a 003 adicionou FK membro_empresa->empresa)
     const emp = (
       await db.query<{ id: string }>(`insert into public.empresa(nome_canonico,created_by) values ('Empresa Teste','${A}') returning id`)

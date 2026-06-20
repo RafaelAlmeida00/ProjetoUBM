@@ -9,6 +9,7 @@ import { headers } from 'next/headers'
 
 export interface SubmeterDorLandingInput {
   empresaId: string
+  titulo?: string
   descricao: string
   repNome: string
   departamento?: string
@@ -24,6 +25,7 @@ export interface SubmeterDorLandingAnonInput {
   empresaId?: string | null
   /** nome da empresa nova para persistir no cache (diferida ao claim — E.3) */
   empresaNome?: string | null
+  titulo?: string
   descricao: string
   repNome: string
   departamento?: string
@@ -70,6 +72,7 @@ export async function submeterDorLanding(
       p_consent_version: input.consentVersion,
       p_consent_at: input.consentAt,
       p_cursos: input.cursos && input.cursos.length > 0 ? input.cursos : null,
+      p_titulo: input.titulo ?? null,
     })
 
     if (error) {
@@ -123,6 +126,7 @@ export async function submeterDorLandingAnon(
       // Parâmetros novos da assinatura estendida (0040 — E.2)
       p_email: input.email,
       p_empresa_nome: input.empresaNome ?? null,
+      p_titulo: input.titulo ?? null,
     })
 
     if (error) {
@@ -241,6 +245,7 @@ export async function submeterDor(
  */
 export async function criarDor(input: {
   empresaId: string
+  titulo?: string
   descricao: string
   cursos?: string[]
   consentimento: boolean
@@ -257,6 +262,7 @@ export async function criarDor(input: {
       p_consent_version: input.consentVersion,
       p_consent_at:      input.consentAt,
       p_cursos:          input.cursos && input.cursos.length > 0 ? input.cursos : null,
+      p_titulo:          input.titulo ?? null,
     })
 
     if (error) return { ok: false, error: mapDbError(error.message) }
@@ -276,6 +282,7 @@ export async function criarDor(input: {
  */
 export async function editarDor(input: {
   dorId: string
+  titulo?: string
   descricao: string
   cursos?: string[]
 }): Promise<{ ok: true } | { ok: false; error: string }> {
@@ -286,6 +293,7 @@ export async function editarDor(input: {
       p_dor_id:    input.dorId,
       p_descricao: input.descricao,
       p_cursos:    input.cursos && input.cursos.length > 0 ? input.cursos : null,
+      p_titulo:    input.titulo ?? null,
     })
 
     if (error) return { ok: false, error: mapDbError(error.message) }

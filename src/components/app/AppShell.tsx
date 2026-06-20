@@ -7,6 +7,8 @@ import { IdentidadeGate } from '@/components/onboarding/IdentidadeGate'
 interface AppShellProps {
   children: React.ReactNode
   role?: string
+  /** BUG D1: papéis reais lidos de papel_usuario (preferencial sobre role) */
+  papeis?: string[]
   isAdmin?: boolean
 }
 
@@ -15,7 +17,7 @@ interface AppShellProps {
  * Trilho lateral (ubm-shell-rail) + junta costura 45° + conteúdo (ubm-shell-main).
  * Mobile: trilho vira drawer (foco preso, ESC fecha).
  */
-export function AppShell({ children, role, isAdmin }: AppShellProps) {
+export function AppShell({ children, role, papeis, isAdmin }: AppShellProps) {
   const [drawerOpen, setDrawerOpen] = useState(false)
 
   return (
@@ -25,7 +27,7 @@ export function AppShell({ children, role, isAdmin }: AppShellProps) {
         className="ubm-shell-rail"
         id="app-navrail"
       >
-        <NavRail role={role} isAdmin={isAdmin} onClose={() => setDrawerOpen(false)} />
+        <NavRail role={role} papeis={papeis} isAdmin={isAdmin} onClose={() => setDrawerOpen(false)} />
       </aside>
 
       {/* OVERLAY do drawer mobile */}
@@ -49,6 +51,7 @@ export function AppShell({ children, role, isAdmin }: AppShellProps) {
       >
         <NavRail
           role={role}
+          papeis={papeis}
           isAdmin={isAdmin}
           isOpen={drawerOpen}
           onClose={() => setDrawerOpen(false)}

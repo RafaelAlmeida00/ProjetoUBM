@@ -1,7 +1,7 @@
 'use client'
 import { useState } from 'react'
 import Link from 'next/link'
-import { Lock, CornerUpLeft, AlertCircle, CheckCircle2, Clock, Download, Trash2, Info } from 'lucide-react'
+import { Lock, CornerUpLeft, AlertCircle, CheckCircle2, Clock, Download, Trash2, Info, Send } from 'lucide-react'
 import { StatusDor } from './StatusDor'
 import { submeterDor, editarDor } from '@/lib/actions/dor'
 import { removerAnexo } from '@/lib/actions/anexo'
@@ -104,7 +104,7 @@ function DorTimeline({ eventos }: { eventos: EventoTimelineDor[] }) {
         ))}
       </ol>
       <footer className="ubm-dor-timeline-footer">
-        <span className="ubm-cota ubm-cota--muted">REGISTRO IMUTÁVEL · A COSTURA NÃO SE DESFAZ</span>
+        <span className="ubm-cota ubm-cota--muted">Histórico permanente · não editável</span>
       </footer>
     </div>
   )
@@ -324,6 +324,53 @@ export function DorDetalhe({
           <section className="ubm-section-block" aria-label="Editar dor">
             <h2 className="ubm-section-title">Editar a dor</h2>
 
+            {/* Enviar rascunho à moderação (fix-fluxo): rascunho só é visto pelo autor —
+                criar = enviar ao admin. Sem este botão, o rascunho era beco sem saída. */}
+            {dor.status === 'rascunho' && isAutor && (
+              <div
+                className="ubm-machined"
+                role="group"
+                aria-label="Enviar rascunho para moderação"
+                style={{
+                  padding: '1rem 1.25rem',
+                  marginBottom: '1rem',
+                  borderColor: 'hsl(var(--primary) / 0.5)',
+                  background: 'hsl(var(--primary) / 0.06)',
+                }}
+              >
+                <p style={{ fontWeight: 600, marginBottom: '0.25rem' }}>Pronto para enviar?</p>
+                <p style={{ color: 'hsl(var(--muted-foreground))', fontSize: '0.92rem', marginBottom: '0.75rem' }}>
+                  Este rascunho só é visível para você. Envie para a moderação da UBM analisar e publicar.
+                </p>
+                {erroEnvio && (
+                  <p
+                    role="alert"
+                    style={{ color: 'hsl(var(--destructive))', fontSize: '0.88rem', marginBottom: '0.5rem', display: 'flex', gap: '0.4rem', alignItems: 'center' }}
+                  >
+                    <AlertCircle size={14} aria-hidden />
+                    {erroEnvio}
+                  </p>
+                )}
+                {!enviado ? (
+                  <button
+                    type="button"
+                    className="ubm-btn ubm-btn-primary"
+                    onClick={handleReenviar}
+                    disabled={enviando}
+                    style={{ display: 'inline-flex', gap: '0.4rem', alignItems: 'center' }}
+                  >
+                    <Send size={15} aria-hidden />
+                    {enviando ? 'Enviando…' : 'Enviar para moderação'}
+                  </button>
+                ) : (
+                  <p style={{ color: 'hsl(var(--success))', fontWeight: 600, display: 'flex', gap: '0.4rem', alignItems: 'center' }}>
+                    <CheckCircle2 size={15} aria-hidden />
+                    Dor enviada para moderação.
+                  </p>
+                )}
+              </div>
+            )}
+
             {/* Aviso de re-moderação (cybersecurity ruling) — publicada ou em_moderacao */}
             {(dor.status === 'publicada' || dor.status === 'em_moderacao') && (
               <div
@@ -475,13 +522,12 @@ export function DorDetalhe({
           <UbmTabs
             aria-label="Linha do tempo e equipe do projeto"
             tabs={[
+              /* BUG #1: projeto primeiro (cliente: ver avanço do projeto antes do histórico da dor) */
               {
-                id: 'timeline-dor',
-                label: 'Linha do tempo da dor',
-                content: timelineDor.length > 0
-                  ? (
-                    <DorTimeline eventos={timelineDor} />
-                  )
+                id: 'timeline',
+                label: 'Linha do tempo do projeto',
+                content: timeline.length > 0
+                  ? <UbmTimeline eventos={timeline} />
                   : (
                     <div className="ubm-empty">
                       <div className="ubm-empty-node" aria-hidden="true" />
@@ -490,10 +536,12 @@ export function DorDetalhe({
                   ),
               },
               {
-                id: 'timeline',
-                label: 'Linha do tempo do projeto',
-                content: timeline.length > 0
-                  ? <UbmTimeline eventos={timeline} />
+                id: 'timeline-dor',
+                label: 'Linha do tempo da dor',
+                content: timelineDor.length > 0
+                  ? (
+                    <DorTimeline eventos={timelineDor} />
+                  )
                   : (
                     <div className="ubm-empty">
                       <div className="ubm-empty-node" aria-hidden="true" />

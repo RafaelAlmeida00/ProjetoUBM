@@ -205,7 +205,7 @@ describe('0049 criar_dor — guardas de segurança', () => {
     const db = await novoBanco()
     const r = (await db.query<{ ok: boolean }>(
       `select has_function_privilege('anon',
-         'public.criar_dor(uuid, text, boolean, text, timestamptz, public.curso_ubm[])',
+         'public.criar_dor(uuid, text, boolean, text, timestamptz, public.curso_ubm[], text)',
          'execute') ok`
     )).rows[0]!.ok
     expect(r, 'anon nao deve ter execute em criar_dor').toBe(false)
@@ -371,7 +371,7 @@ describe('0049 editar_dor — guardas de segurança', () => {
     const db = await novoBanco()
     const r = (await db.query<{ ok: boolean }>(
       `select has_function_privilege('anon',
-         'public.editar_dor(uuid, text, public.curso_ubm[])',
+         'public.editar_dor(uuid, text, public.curso_ubm[], text)',
          'execute') ok`
     )).rows[0]!.ok
     expect(r, 'anon nao deve ter execute em editar_dor').toBe(false)

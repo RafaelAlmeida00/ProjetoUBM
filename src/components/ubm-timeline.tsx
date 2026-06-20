@@ -106,7 +106,7 @@ export function UbmTimeline({ eventos, compacto = false }: UbmTimelineProps) {
                 'Etapa:',
                 rotulo,
                 evt.ocorrido_em ? `— ${formatarData(evt.ocorrido_em)}` : '',
-                (evt as EventoTimeline & { ator?: string }).ator ? `, por ${(evt as EventoTimeline & { ator?: string }).ator}` : '',
+                evt.autor_nome ? `, por ${evt.autor_nome}` : '',
               ].filter(Boolean).join(' ')}
             >
               {/* Pino-nó: cor + forma + rótulo (nunca só cor — a11y) */}
@@ -143,10 +143,10 @@ export function UbmTimeline({ eventos, compacto = false }: UbmTimelineProps) {
                   </time>
                 )}
 
-                {/* Ator (papel+curso ou nome com opt-in) */}
-                {(evt as EventoTimeline & { ator?: string }).ator && (
+                {/* Autor da transição (nome revelado p/ interno/opt-in; oculto caso contrário) */}
+                {evt.autor_nome && (
                   <span className="ubm-timeline-step-ator">
-                    {(evt as EventoTimeline & { ator?: string }).ator}
+                    {evt.autor_nome}
                   </span>
                 )}
 
@@ -166,7 +166,7 @@ export function UbmTimeline({ eventos, compacto = false }: UbmTimelineProps) {
       {!compacto && (
         <footer className="ubm-timeline-footer">
           <span className="ubm-cota ubm-cota--muted">
-            REGISTRO IMUTÁVEL · A COSTURA NÃO SE DESFAZ
+            Histórico permanente · não editável
           </span>
         </footer>
       )}

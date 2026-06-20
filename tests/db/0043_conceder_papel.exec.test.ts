@@ -21,15 +21,17 @@ describe('0043 conceder_papel — admin concede papel (coluna role) (T-X3a)', ()
     const db = await novoBanco()
     await seedBase(db)
 
+    // 0055/0057: conceder_papel agora é SÓ-aluno (coordenador→conceder_coordenador c/ curso;
+    // representante→conceder_representante c/ empresa). Testa o papel direto remanescente: aluno.
     await comoUsuario(db, { uid: ADM, email: 'adm@empresa.com' })
-    await db.query(`select public.conceder_papel($1, $2)`, [USR, 'representante'])
+    await db.query(`select public.conceder_papel($1, $2)`, [USR, 'aluno'])
 
     await comoServiceRole(db)
     const rows = (await db.query<{ role: string }>(
       `select role from public.papel_usuario where user_id = $1`, [USR],
     )).rows
     expect(rows.length, 'deve existir 1 linha em papel_usuario').toBe(1)
-    expect(rows[0]!.role, 'coluna role deve conter o papel concedido').toBe('representante')
+    expect(rows[0]!.role, 'coluna role deve conter o papel concedido').toBe('aluno')
     await db.close()
   })
 
@@ -38,12 +40,12 @@ describe('0043 conceder_papel — admin concede papel (coluna role) (T-X3a)', ()
     await seedBase(db)
 
     await comoUsuario(db, { uid: ADM, email: 'adm@empresa.com' })
-    await db.query(`select public.conceder_papel($1, $2)`, [USR, 'representante'])
-    await db.query(`select public.conceder_papel($1, $2)`, [USR, 'representante'])
+    await db.query(`select public.conceder_papel($1, $2)`, [USR, 'aluno'])
+    await db.query(`select public.conceder_papel($1, $2)`, [USR, 'aluno'])
 
     await comoServiceRole(db)
     const rows = (await db.query<{ n: number }>(
-      `select count(*)::int n from public.papel_usuario where user_id = $1 and role = 'representante'`,
+      `select count(*)::int n from public.papel_usuario where user_id = $1 and role = 'aluno'`,
       [USR],
     )).rows
     expect(rows[0]!.n, 'on conflict: apenas 1 linha, sem duplicata').toBe(1)
@@ -74,20 +76,27 @@ describe('0043 conceder_papel — admin concede papel (coluna role) (T-X3a)', ()
     await db.close()
   })
 
-  it('admin pode conceder múltiplos papéis distintos ao mesmo usuário', async () => {
+  it('[0055/0057] conceder_papel BLOQUEIA coordenador e representante (força RPCs dedicadas)', async () => {
     const db = await novoBanco()
     await seedBase(db)
 
+    // coordenador exige curso (conceder_coordenador); representante exige empresa (conceder_representante)
     await comoUsuario(db, { uid: ADM, email: 'adm@empresa.com' })
-    await db.query(`select public.conceder_papel($1, $2)`, [USR, 'representante'])
-    await db.query(`select public.conceder_papel($1, $2)`, [USR, 'coordenador'])
+    const errCoord = await negado(
+      db.query(`select public.conceder_papel($1, $2)`, [USR, 'coordenador']),
+    )
+    expect(errCoord, 'conceder_papel(coordenador) deve ser bloqueado').toBe(true)
+    const errRep = await negado(
+      db.query(`select public.conceder_papel($1, $2)`, [USR, 'representante']),
+    )
+    expect(errRep, 'conceder_papel(representante) deve ser bloqueado').toBe(true)
 
+    // Nenhum papel inserido pelos caminhos bloqueados
     await comoServiceRole(db)
-    const papeis = (await db.query<{ role: string }>(
-      `select role from public.papel_usuario where user_id = $1 order by role`, [USR],
-    )).rows.map(r => r.role)
-    expect(papeis).toContain('representante')
-    expect(papeis).toContain('coordenador')
+    const n = (await db.query<{ n: number }>(
+      `select count(*)::int n from public.papel_usuario where user_id = $1`, [USR],
+    )).rows[0]!.n
+    expect(n, 'nenhum papel inserido por conceder_papel bloqueado').toBe(0)
     await db.close()
   })
 

@@ -15,6 +15,24 @@ function labelCurso(value: string): string {
   return CURSOS_UBM.find((c) => c.value === value)?.label ?? value
 }
 
+/**
+ * Selo de estágio da dor (ADR-0002): chip discreto baseado no projeto_status.
+ * "Publicada" → sem projeto ainda OU projeto em em_analise (ainda recrutando equipe — janela
+ *               de indicação aberta; não "virou caso" ainda)
+ * "Virou caso" → projeto ativo PÓS-indicação (aprovado, em_execucao, … exceto finalizado)
+ * "Finalizado" → projeto com status=finalizado (marsala via ubm-status--finalizado)
+ * Reusa classes .ubm-status existentes — zero hex novo.
+ */
+function SeloEstagio({ projeto_status }: { projeto_status?: string }) {
+  if (projeto_status === 'finalizado') {
+    return <span className="ubm-status ubm-status--finalizado">Finalizado</span>
+  }
+  if (!projeto_status || projeto_status === 'em_analise') {
+    return <span className="ubm-status ubm-status--publicada">Publicada</span>
+  }
+  return <span className="ubm-status ubm-status--caso">Virou caso</span>
+}
+
 function DorVitrineCard({ dor }: { dor: DorVitrine }) {
   return (
     <li>
@@ -25,7 +43,8 @@ function DorVitrineCard({ dor }: { dor: DorVitrine }) {
       >
         <div className="ubm-dor-card-head">
           <span className="ubm-dor-card-empresa">{dor.empresa_nome}</span>
-          <span className="ubm-status ubm-status--publicada">Publicada</span>
+          {/* Selo de estágio (ADR-0002) */}
+          <SeloEstagio projeto_status={dor.projeto_status} />
         </div>
         <p className="ubm-dor-card-desc">{dor.descricao}</p>
         {dor.cursos.length > 0 && (

@@ -8,6 +8,9 @@
  *   - 'Indicações'    → /app/indicacoes  (roles: aluno, coordenador)
  *   - 'Notificações'  → /app/notificacoes (todos logados; sem filtro de role)
  *   - 'Paletas'       → /admin/paletas   (adminOnly)
+ *
+ * BUG D1: NavRail via prop `papeis: string[]` (JWT claim não-confiável).
+ *   coordenador E aluno veem "Indicações"; representante não.
  */
 import { describe, it, expect, vi } from 'vitest'
 import { render, screen } from '@testing-library/react'
@@ -25,27 +28,8 @@ vi.mock('@/lib/auth/logout', () => ({
 import { NavRail } from '@/components/app/NavRail'
 
 describe('NavRail — itens 005/007', () => {
-  // ── Casos (/casos) ────────────────────────────────────────────────────────
-
-  it('aluno vê "Casos"', () => {
-    render(<NavRail role="aluno" isAdmin={false} />)
-    expect(screen.getByRole('link', { name: /casos/i })).toBeInTheDocument()
-  })
-
-  it('coordenador vê "Casos"', () => {
-    render(<NavRail role="coordenador" isAdmin={false} />)
-    expect(screen.getByRole('link', { name: /casos/i })).toBeInTheDocument()
-  })
-
-  it('representante vê "Casos"', () => {
-    render(<NavRail role="representante" isAdmin={false} />)
-    expect(screen.getByRole('link', { name: /casos/i })).toBeInTheDocument()
-  })
-
-  it('"Casos" aponta para /casos', () => {
-    render(<NavRail role="aluno" isAdmin={false} />)
-    expect(screen.getByRole('link', { name: /casos/i })).toHaveAttribute('href', '/casos')
-  })
+  // ADR-0002: item "Casos" foi removido do NavRail — vitrine unificada em /dores.
+  // Os testes de ausência de "Casos" estão em adr0002-vitrine-unificada.test.tsx (T7).
 
   // ── Indicações (/app/indicacoes) ─────────────────────────────────────────
 
@@ -110,5 +94,49 @@ describe('NavRail — itens 005/007', () => {
       'href',
       '/admin/paletas',
     )
+  })
+})
+
+// ── BUG D1: papeis array (JWT claim não-confiável) ──────────────────────────
+// NavRail deve aceitar `papeis: string[]` para filtro real de visibilidade.
+// role=undefined (JWT claim vazio) + papeis=['coordenador'] → deve ver Indicações.
+
+describe('NavRail — BUG D1: prop papeis[] substitui role string', () => {
+  it('coordenador via papeis=["coordenador"] vê "Indicações"', () => {
+    render(<NavRail papeis={['coordenador']} isAdmin={false} />)
+    expect(screen.getByRole('link', { name: /indica[çc][õo]es/i })).toBeInTheDocument()
+  })
+
+  it('aluno via papeis=["aluno"] vê "Indicações"', () => {
+    render(<NavRail papeis={['aluno']} isAdmin={false} />)
+    expect(screen.getByRole('link', { name: /indica[çc][õo]es/i })).toBeInTheDocument()
+  })
+
+  it('representante via papeis=["representante"] NÃO vê "Indicações"', () => {
+    render(<NavRail papeis={['representante']} isAdmin={false} />)
+    expect(screen.queryByRole('link', { name: /indica[çc][õo]es/i })).toBeNull()
+  })
+
+  it('coordenador via papeis=["coordenador"] vê "Propor dor" não (sem role representante)', () => {
+    render(<NavRail papeis={['coordenador']} isAdmin={false} />)
+    expect(screen.queryByRole('link', { name: /propor dor/i })).toBeNull()
+  })
+
+  it('representante via papeis=["representante"] vê "Propor dor"', () => {
+    render(<NavRail papeis={['representante']} isAdmin={false} />)
+    expect(screen.getByRole('link', { name: /propor dor/i })).toBeInTheDocument()
+  })
+
+  it('"Propor dor" aponta para a rota INTERNA /app/dores/nova (não a captação anônima /propor)', () => {
+    render(<NavRail papeis={['representante']} isAdmin={false} />)
+    expect(screen.getByRole('link', { name: /propor dor/i })).toHaveAttribute(
+      'href',
+      '/app/dores/nova',
+    )
+  })
+
+  it('role=undefined + papeis=["coordenador"] → coordenador vê Indicações (fix do JWT vazio)', () => {
+    render(<NavRail papeis={['coordenador']} isAdmin={false} />)
+    expect(screen.getByRole('link', { name: /indica[çc][õo]es/i })).toBeInTheDocument()
   })
 })

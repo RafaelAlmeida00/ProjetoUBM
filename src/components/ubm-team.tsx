@@ -50,7 +50,7 @@ export interface UbmMemberProps {
 }
 
 export function UbmMember({ membro }: UbmMemberProps) {
-  const { papel_projeto, nome_ou_papel, ranking_optin } = membro
+  const { papel_projeto, nome_ou_papel, nome_revelado, ranking_optin } = membro
   const isHost = papel_projeto === 'host'
   const papelLabel = PAPEL_LABELS[papel_projeto] ?? papel_projeto.toUpperCase()
 
@@ -66,22 +66,24 @@ export function UbmMember({ membro }: UbmMemberProps) {
       {/* Avatar-losango */}
       <div className="ubm-member-avatar ubm-clip-node" aria-hidden="true">
         <span className="ubm-member-avatar-inicial">
-          {ranking_optin && nome_ou_papel
+          {nome_revelado && nome_ou_papel
             ? nome_ou_papel.charAt(0).toUpperCase()
             : papel_projeto.charAt(0).toUpperCase()}
         </span>
       </div>
 
       <div className="ubm-member-body">
-        {/* Nome ou anon-tag */}
-        {ranking_optin ? (
+        {/* Nome revelado (interno/opt-in) ou anon-tag (vitrine sem opt-in) */}
+        {nome_revelado ? (
           <div className="ubm-member-nome font-display">
             {nome_ou_papel}
-            {/* Selo de perfil público (opt-in) */}
-            <span className="ubm-optin-seal ubm-cota" aria-label="Perfil público">
-              <span className="ubm-optin-seal-node ubm-clip-node" aria-hidden="true" />
-              PERFIL PÚBLICO
-            </span>
+            {/* Selo de perfil público — só quando a pessoa optou pelo ranking público */}
+            {ranking_optin && (
+              <span className="ubm-optin-seal ubm-cota" aria-label="Perfil público">
+                <span className="ubm-optin-seal-node ubm-clip-node" aria-hidden="true" />
+                PERFIL PÚBLICO
+              </span>
+            )}
           </div>
         ) : (
           <div className="ubm-anon-tag ubm-cota" aria-label={`Membro anônimo: ${nome_ou_papel}`}>

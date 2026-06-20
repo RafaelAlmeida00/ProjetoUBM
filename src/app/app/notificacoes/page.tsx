@@ -83,13 +83,23 @@ export default async function NotificacoesPage() {
   // Busca notificações do usuário (base 002 + tipos 005)
   let notificacoes: NotificacaoRow[] = []
   try {
+    // A coluna real é `lida_em` (timestamptz, migration 0010) — NÃO existe `lida`.
+    // Selecionar `lida` lançava "column notificacao.lida does not exist" → catch → lista vazia.
     const { data } = await supabase
       .from('notificacao')
-      .select('id, tipo, lida, created_at, payload')
+      .select('id, tipo, lida_em, created_at, payload')
       .eq('destinatario_id', user.id)
       .order('created_at', { ascending: false })
       .limit(50)
-    notificacoes = (data ?? []) as NotificacaoRow[]
+    notificacoes = ((data ?? []) as Array<{
+      id: string; tipo: string; lida_em: string | null; created_at: string; payload: unknown
+    }>).map((r) => ({
+      id: r.id,
+      tipo: r.tipo,
+      lida: !!r.lida_em, // derivado: lida = tem timestamp de leitura
+      created_at: r.created_at,
+      payload: r.payload,
+    }))
   } catch {
     notificacoes = []
   }
@@ -140,11 +150,7 @@ export default async function NotificacoesPage() {
             </p>
           </div>
         ) : (
-          <ul
-            className="ubm-notif-list"
-            aria-label="Lista de notificações"
-            style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem', listStyle: 'none', padding: 0 }}
-          >
+          <ul className="ubm-notif-list" aria-label="Lista de notificações">
             {todasOrdenadas.map((notif) => {
               const link = deepLink(notif)
               const copy = copyNotif(notif)
@@ -156,10 +162,6 @@ export default async function NotificacoesPage() {
                 <li
                   key={notif.id}
                   className={`ubm-notif-item ubm-machined${notif.lida ? ' ubm-notif-item--lida' : ''}`}
-                  style={{
-                    opacity: notif.lida ? 0.65 : 1,
-                    padding: '0.9rem 1.1rem',
-                  }}
                 >
                   {/* Ícone-nó decorativo */}
                   <span className="ubm-node ubm-clip-node" aria-hidden="true"
@@ -175,7 +177,6 @@ export default async function NotificacoesPage() {
                   <a
                     href={link}
                     className="ubm-notif-link"
-                    style={{ color: 'hsl(var(--foreground))', textDecoration: 'none', fontWeight: 500 }}
                     aria-label={`${copy} — Abrir`}
                   >
                     {copy}

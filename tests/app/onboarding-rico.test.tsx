@@ -26,6 +26,7 @@ vi.mock('@/lib/actions/assumir-papel', () => ({
 vi.mock('@/lib/actions/onboarding', () => ({
   onboardingRepresentante: (...args: unknown[]) => onboardingRepresentanteMock(...args),
   onboardingAluno: (...args: unknown[]) => onboardingAlunoMock(...args),
+  onboardingCoordenador: (..._args: unknown[]) => Promise.resolve({ ok: true }),
 }))
 
 vi.mock('@/lib/actions/empresa', () => ({
@@ -175,43 +176,47 @@ describe('OnboardingPage rico — CA25 (aluno com cursos)', () => {
   })
 })
 
-describe('OnboardingPage rico — CA29 (coordenador admin-only)', () => {
+describe('OnboardingPage rico — CA29 (coordenador onda2: self-select cursos)', () => {
+  // Onda 2 / 0057: CA29 — coordenador escolhe N cursos (checkbox) e envia cadastro; admin aprova depois.
   beforeEach(() => vi.clearAllMocks())
 
-  it('CA29-1: ao selecionar coordenador, NÃO exibe seletor de curso (admin-assigned)', async () => {
+  /** Checkboxes de curso do CourseMultiSelect (exclui checkboxes de dialogs) */
+  function getCursosCheckboxes() {
+    return screen.getAllByRole('checkbox').filter(
+      (el) => !el.closest('[role="dialog"]')
+    )
+  }
+
+  it('CA29-1: ao selecionar coordenador, exibe seletor de cursos (fieldset com checkboxes)', async () => {
     render(<OnboardingPage />)
     fireEvent.click(screen.getByRole('radio', { name: /coordenador/i }))
     fireEvent.click(screen.getByRole('button', { name: /continuar/i }))
     await waitFor(() => expect(screen.getByRole('button', { name: /concluir/i })).toBeInTheDocument())
-    // Não deve ter select/combobox/listbox de curso
-    // Mas deve ter mensagem "aguardando atribuição"
-    expect(screen.queryByRole('listbox')).toBeNull()
-    // Deve ter pelo menos um elemento com "aguardando" (h1 ou status span)
-    expect(screen.getAllByText(/aguardando/i).length).toBeGreaterThan(0)
+    // 0057: CourseMultiSelect usa checkboxes, não radios
+    expect(document.querySelector('fieldset')).toBeInTheDocument()
+    expect(getCursosCheckboxes().length).toBeGreaterThan(0)
   })
 
-  it('CA29-2: coordenador pode concluir em estado passivo (sem auto-selecionar curso)', async () => {
-    // Fix identidade: Nome obrigatório — com nome preenchido, botão deve estar habilitado.
+  it('CA29-2: coordenador NÃO pode concluir sem selecionar ao menos 1 curso (onda2)', async () => {
     render(<OnboardingPage />)
     fireEvent.click(screen.getByRole('radio', { name: /coordenador/i }))
     fireEvent.click(screen.getByRole('button', { name: /continuar/i }))
     await waitFor(() => expect(screen.getByRole('button', { name: /concluir/i })).toBeInTheDocument())
-    // Sem nome → botão desabilitado; com nome → habilitado
+    // Nome preenchido mas sem curso → botão desabilitado
     fireEvent.change(screen.getByLabelText(/nome/i), { target: { value: 'Prof. Lima' } })
-    const btn = screen.getByRole('button', { name: /concluir/i })
-    expect(btn).not.toBeDisabled()
+    expect(screen.getByRole('button', { name: /concluir/i })).toBeDisabled()
   })
 
-  it('CA29-3: ao concluir como coordenador, chama assumirPapel("coordenador") e redireciona', async () => {
-    // Fix identidade: Nome obrigatório — preencher antes de Concluir.
-    assumirPapelMock.mockResolvedValue({ ok: true })
+  it('CA29-3: ao concluir com nome+ao menos 1 curso, exibe painel EM ANÁLISE (não redireciona)', async () => {
     render(<OnboardingPage />)
     fireEvent.click(screen.getByRole('radio', { name: /coordenador/i }))
     fireEvent.click(screen.getByRole('button', { name: /continuar/i }))
     await waitFor(() => expect(screen.getByRole('button', { name: /concluir/i })).toBeInTheDocument())
     fireEvent.change(screen.getByLabelText(/nome/i), { target: { value: 'Prof. Lima' } })
+    // 0057: marcar o primeiro checkbox de curso
+    fireEvent.click(getCursosCheckboxes()[0])
     fireEvent.click(screen.getByRole('button', { name: /concluir/i }))
-    await waitFor(() => expect(assumirPapelMock).toHaveBeenCalledWith('coordenador'))
-    await waitFor(() => expect(pushMock).toHaveBeenCalled())
+    await waitFor(() => expect(screen.getAllByText(/em análise/i).length).toBeGreaterThan(0))
+    expect(pushMock).not.toHaveBeenCalled()
   })
 })

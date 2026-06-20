@@ -21,19 +21,19 @@ const EVENTOS: EventoTimeline[] = [
     de_status: null,
     para_status: 'em_analise',
     ocorrido_em: '2026-04-01T10:00:00Z',
-    ator: null,
+    autor_nome:null,
   },
   {
     de_status: 'em_analise',
     para_status: 'aprovado',
     ocorrido_em: '2026-04-12T14:30:00Z',
-    ator: 'Coordenador · Eng. de Software',
+    autor_nome:'Coordenador · Eng. de Software',
   },
   {
     de_status: 'aprovado',
     para_status: 'aguardando_proposta',
     ocorrido_em: '2026-05-03T09:15:00Z',
-    ator: 'Host · Administração',
+    autor_nome:'Host · Administração',
   },
 ]
 
@@ -44,7 +44,7 @@ const EVENTOS_COM_FUTURO: EventoTimeline[] = [
     de_status: 'aguardando_proposta',
     para_status: 'proposta_em_analise',
     ocorrido_em: '', // futura — sem data
-    ator: null,
+    autor_nome:null,
     futuro: true,
   } as EventoTimeline & { futuro: boolean },
 ]
@@ -131,7 +131,8 @@ describe('UbmTimeline — T-O3.1', () => {
 
   it('rodapé de imutabilidade presente', () => {
     render(<UbmTimeline eventos={EVENTOS} />)
-    expect(screen.getByText(/REGISTRO IMUTÁVEL|costura não se desfaz/i)).toBeInTheDocument()
+    // BUG #3: microcopy atualizado pelo ux-ui ("Histórico permanente · não editável")
+    expect(screen.getByText(/histórico permanente|não editável/i)).toBeInTheDocument()
   })
 
   it('lista vazia exibe estado vazio (não erro)', () => {
