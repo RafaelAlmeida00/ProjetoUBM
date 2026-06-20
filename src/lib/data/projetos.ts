@@ -249,6 +249,31 @@ export async function obterMeusVinculosProjeto(): Promise<MeusVinculosProjeto> {
 }
 
 /**
+ * Membro para GESTÃO (admin/host) — inclui pessoa_id (id necessário p/ remover_membro).
+ * Diferente de MembroPublico (anonimizado): só admin/host veem; via RPC equipe_gestao (DEFINER).
+ */
+export interface MembroGestao {
+  pessoa_id: string
+  nome: string
+  papel_projeto: 'host' | 'co_coordenador' | 'aluno'
+}
+
+/**
+ * Lista os membros da equipe com pessoa_id+nome para gestão (admin/host).
+ * Delega à RPC equipe_gestao (gate is_admin OR is_project_host). Degrada para [].
+ */
+export async function listarEquipeGestao(projetoId: string): Promise<MembroGestao[]> {
+  try {
+    const supabase = await createSupabaseServerClient()
+    const { data, error } = await supabase.rpc('equipe_gestao', { p_projeto_id: projetoId })
+    if (error || !data) return []
+    return data as MembroGestao[]
+  } catch {
+    return []
+  }
+}
+
+/**
  * Lista funções/tarefas de um projeto (membros sob RLS — CA20/RN22).
  * Aluno vê as suas; host/co veem todas; não-membro = negado.
  */

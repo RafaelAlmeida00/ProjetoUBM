@@ -65,7 +65,75 @@ export async function trocarHost(
   }
 }
 
+/**
+ * Server Action: eleger host (admin) — SEM fechar a equipe.
+ * O projeto continua em em_analise (aberto a indicações); só o host fecha depois.
+ */
+export async function elegerHost(
+  projetoId: string,
+  hostPessoaId: string,
+): Promise<ActionResult> {
+  try {
+    const supabase = await createSupabaseServerClient()
+    const { error } = await supabase.rpc('eleger_host', {
+      p_projeto_id: projetoId,
+      p_host_pessoa_id: hostPessoaId,
+    })
+    if (error) return { ok: false, error: mapDbError(error.message) }
+    return { ok: true }
+  } catch (e) {
+    const msg = e instanceof Error ? e.message : String(e)
+    return { ok: false, error: mapDbError(msg) }
+  }
+}
+
+/**
+ * Server Action: reabrir indicações (admin) — volta o projeto a em_analise de qualquer status.
+ */
+export async function reabrirIndicacoes(projetoId: string): Promise<ActionResult> {
+  try {
+    const supabase = await createSupabaseServerClient()
+    const { error } = await supabase.rpc('reabrir_indicacoes', { p_projeto_id: projetoId })
+    if (error) return { ok: false, error: mapDbError(error.message) }
+    return { ok: true }
+  } catch (e) {
+    const msg = e instanceof Error ? e.message : String(e)
+    return { ok: false, error: mapDbError(msg) }
+  }
+}
+
+/**
+ * Server Action: remover membro da equipe (host ou admin) — não a si mesmo; o host não por aqui.
+ */
+export async function removerMembro(
+  projetoId: string,
+  pessoaId: string,
+): Promise<ActionResult> {
+  try {
+    const supabase = await createSupabaseServerClient()
+    const { error } = await supabase.rpc('remover_membro', {
+      p_projeto_id: projetoId,
+      p_pessoa_id: pessoaId,
+    })
+    if (error) return { ok: false, error: mapDbError(error.message) }
+    return { ok: true }
+  } catch (e) {
+    const msg = e instanceof Error ? e.message : String(e)
+    return { ok: false, error: mapDbError(msg) }
+  }
+}
+
 function mapDbError(msg: string): string {
+  if (/eleger_host exige admin|reabrir.*exige admin/i.test(msg))
+    return 'Apenas administradores podem eleger host ou reabrir indicações.'
+  if (/host não pode ser removido|host nao pode ser removido/i.test(msg))
+    return 'O host não pode ser removido — troque o host antes.'
+  if (/remover a si|a si mesmo/i.test(msg))
+    return 'Você não pode remover a si mesmo da equipe.'
+  if (/remover_membro exige|fechar_equipe exige o host/i.test(msg))
+    return 'Apenas o host do projeto ou um administrador podem alterar a equipe.'
+  if (/só em projeto em_analise|so em projeto em_analise|aberto a indica/i.test(msg))
+    return 'Só é possível eleger host enquanto o projeto está aberto a indicações.'
   if (/exatamente.*host|host.*obrigatorio|escolha.*host/i.test(msg))
     return 'Escolha exatamente um host para a equipe.'
   if (/host.*coord|coord.*indicacao|novo host.*coordenador/i.test(msg))
