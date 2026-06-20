@@ -180,9 +180,14 @@ export async function listarIndicacoes(projetoId: string): Promise<Indicacao[]> 
 
 /**
  * Retorna os IDs de projetos onde o usuário logado já está indicado (indicacao ativa)
- * ou já é membro da equipe (membro_equipe ativo). Usado pelo FE para esconder o botão
- * "se indicar" nos cards de projeto (Onda 2).
- * Lê sob RLS própria (indicacao_select_propria + membro_equipe select do próprio).
+ * ou já é membro da equipe (membro_equipe ativo). Usado pelo FE para esconder/derivar o
+ * slot "Me indicar" nos cards de dor (Onda 2).
+ *
+ * SEGURANÇA (RS9): filtra `pessoa_id = auth.uid()` EXPLICITAMENTE — NÃO confia só no RLS.
+ * `indicacao` tem `indicacao_select_coord` (coordenador-do-curso/admin lê indicações de
+ * terceiros) e `membro_equipe` tem `membro_equipe_select_publica` (deleted_at is null → PÚBLICA).
+ * Sem o `.eq('pessoa_id', uid)` o coordenador (ou qualquer usuário) veria vínculos alheios como
+ * seus — era a causa do bug "/app/dores mostra 'já indicado' + Retirar sem o usuário ter se indicado".
  */
 export interface MeusVinculosProjeto {
   indicadoProjetoIds: string[]
@@ -190,23 +195,28 @@ export interface MeusVinculosProjeto {
 }
 
 export async function obterMeusVinculosProjeto(): Promise<MeusVinculosProjeto> {
+  const vazio: MeusVinculosProjeto = { indicadoProjetoIds: [], membroProjetoIds: [] }
   try {
     const supabase = await createSupabaseServerClient()
+    const { data: { user } } = await supabase.auth.getUser()
+    if (!user) return vazio
     const [indicacoesRes, membrosRes] = await Promise.all([
       supabase
         .from('indicacao')
         .select('projeto_id')
+        .eq('pessoa_id', user.id)
         .is('deleted_at', null),
       supabase
         .from('membro_equipe')
         .select('projeto_id')
+        .eq('pessoa_id', user.id)
         .is('deleted_at', null),
     ])
     const indicadoProjetoIds = (indicacoesRes.data ?? []).map((r) => r.projeto_id as string)
     const membroProjetoIds = (membrosRes.data ?? []).map((r) => r.projeto_id as string)
     return { indicadoProjetoIds, membroProjetoIds }
   } catch {
-    return { indicadoProjetoIds: [], membroProjetoIds: [] }
+    return vazio
   }
 }
 
@@ -252,18 +262,23 @@ export interface MeuProjeto {
 
 /**
  * Lista projetos onde o usuário autenticado é membro da equipe (papel host/co/aluno).
- * RLS membro_equipe_select_publica aplica (deleted_at is null); o banco filtra por posse.
+ * SEGURANÇA (RS9): `membro_equipe_select_publica` é PÚBLICA (deleted_at is null) — NÃO isola por
+ * posse. Filtra `pessoa_id = auth.uid()` EXPLICITAMENTE; sem isso a bancada listaria membros/projetos
+ * de TODA a plataforma como se fossem do usuário.
  * NUNCA faz select de `perfil` de terceiros (RS9).
  * Degrada para [] em erro — bancada não quebra se este widget falhar.
  */
 export async function listarMeusProjetos(): Promise<MeuProjeto[]> {
   try {
     const supabase = await createSupabaseServerClient()
+    const { data: { user } } = await supabase.auth.getUser()
+    if (!user) return []
     const { data, error } = await supabase
       .from('membro_equipe')
       .select(
         'projeto_id, papel_projeto, projeto:projeto(id, dor_id, status, dor:dor(empresa:empresa(nome_canonico)))',
       )
+      .eq('pessoa_id', user.id)
       .is('deleted_at', null)
       .order('created_at', { ascending: false })
       .limit(50)
@@ -303,15 +318,20 @@ export interface TarefaAberta {
 
 /**
  * Lista funções/tarefas atribuídas ao usuário logado que ainda não foram concluídas.
- * RLS funcao_tarefa aplica: aluno vê as suas; host/co veem todas (o banco filtra por papel).
+ * SEGURANÇA (RS9): `funcao_tarefa_select` libera por `is_team_member(projeto)` — qualquer membro
+ * (host/co/aluno) lê TODAS as tarefas do projeto, não só as suas. Filtra `responsavel_id = auth.uid()`
+ * EXPLICITAMENTE para devolver apenas as MINHAS; sem isso a bancada mostraria tarefas de colegas.
  * Degrada para [] em erro.
  */
 export async function listarMinhasTarefasAbertas(): Promise<TarefaAberta[]> {
   try {
     const supabase = await createSupabaseServerClient()
+    const { data: { user } } = await supabase.auth.getUser()
+    if (!user) return []
     const { data, error } = await supabase
       .from('funcao_tarefa')
       .select('id, projeto_id, titulo, descricao, created_at')
+      .eq('responsavel_id', user.id)
       .eq('concluida', false)
       .is('deleted_at', null)
       .order('created_at', { ascending: true })
@@ -335,15 +355,20 @@ export interface MinhaIndicacao {
 
 /**
  * Lista indicações ativas (deleted_at is null) do próprio usuário logado.
- * RLS indicacao_select_propria aplica: pessoa_id = auth.uid() (só o próprio vê a sua).
+ * SEGURANÇA (RS9): além de `indicacao_select_propria`, a tabela tem `indicacao_select_coord`
+ * (coordenador-do-curso/admin lê indicações de terceiros). Filtra `pessoa_id = auth.uid()`
+ * EXPLICITAMENTE; sem isso a bancada de um coordenador listaria as indicações dos alunos do curso.
  * Degrada para [] em erro.
  */
 export async function listarMinhasIndicacoes(): Promise<MinhaIndicacao[]> {
   try {
     const supabase = await createSupabaseServerClient()
+    const { data: { user } } = await supabase.auth.getUser()
+    if (!user) return []
     const { data, error } = await supabase
       .from('indicacao')
       .select('id, projeto_id, papel_pretendido, created_at')
+      .eq('pessoa_id', user.id)
       .is('deleted_at', null)
       .order('created_at', { ascending: false })
       .limit(50)
@@ -371,6 +396,9 @@ export interface ContagemDoresPorStatus {
 
 /**
  * Conta as dores do representante logado agrupadas por status_dor.
+ * SEGURANÇA (RS9): `dor_select_publica` deixa QUALQUER um ler dores publicadas — sem filtro, a
+ * contagem somaria as publicadas de toda a plataforma. Filtra `autor_id = auth.uid()` EXPLICITAMENTE
+ * para contar só as MINHAS (a policy `dor_select_autor` libera o autor a ver as próprias em qualquer status).
  * NUNCA faz select de `perfil` (só lê os dados da própria dor — RS9).
  * Degrada para contagens zero em erro.
  */
@@ -384,9 +412,12 @@ export async function contarMinhasDoresPorStatus(): Promise<ContagemDoresPorStat
   }
   try {
     const supabase = await createSupabaseServerClient()
+    const { data: { user } } = await supabase.auth.getUser()
+    if (!user) return zero
     const { data, error } = await supabase
       .from('dor')
       .select('status_dor')
+      .eq('autor_id', user.id)
       .is('deleted_at', null)
       .order('created_at', { ascending: false })
       .limit(200)

@@ -1,10 +1,12 @@
 /**
  * ADR-0002 Q2 — Bancada: adapters cross-projeto (leitura RSC sob RLS do usuário autenticado).
  * Garantias:
- *  - RLS é o controle central: os adapters leem tabelas diretamente; o banco filtra pelo usuário.
+ *  - Filtro de DONO explícito (.eq(coluna, auth.uid())): RLS é defesa em profundidade, NÃO o
+ *    isolamento do "meu" — várias tabelas têm policy de SELECT mais ampla (coord/pública). Ver
+ *    tests/lib/data/rbac-owner-filter.test.ts (invariante anti-vazamento).
  *  - NUNCA select direto de `perfil` de terceiros (PII — RS9); PII de equipe só via RPCs DEFINER.
  *  - Cada adapter degrada para [] / {} em erro (fail-soft): bancada não quebra se um widget falhar.
- *  - contarMinhasDoresPorStatus: lê dor.autor_id filtrado por RLS "dono lê a própria" (dor_update_owner).
+ *  - contarMinhasDoresPorStatus: filtra dor.autor_id = auth.uid() (dor_select_publica deixaria contar publicadas alheias).
  */
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 
@@ -31,7 +33,7 @@ const {
   mockLimit.mockResolvedValue({ data: [], error: null })
   mockIs.mockReturnValue({ order: mockOrder })
   mockOrder.mockReturnValue({ limit: mockLimit })
-  mockEq.mockReturnValue({ is: mockIs, order: mockOrder })
+  mockEq.mockReturnValue({ eq: mockEq, is: mockIs, order: mockOrder })
   mockSelect.mockReturnValue({ eq: mockEq, is: mockIs, order: mockOrder, limit: mockLimit })
   mockFrom.mockReturnValue({ select: mockSelect })
 
@@ -41,6 +43,8 @@ const {
 vi.mock('@/lib/supabase/server', () => ({
   createSupabaseServerClient: vi.fn().mockResolvedValue({
     from: mockFrom,
+    // adapters "do meu" agora resolvem o uid e filtram o dono explicitamente (anti-vazamento RS9).
+    auth: { getUser: vi.fn().mockResolvedValue({ data: { user: { id: 'uid-bancada' } }, error: null }) },
   }),
 }))
 
@@ -60,7 +64,7 @@ function resetChain() {
   mockLimit.mockResolvedValue({ data: [], error: null })
   mockIs.mockReturnValue({ order: mockOrder })
   mockOrder.mockReturnValue({ limit: mockLimit })
-  mockEq.mockReturnValue({ is: mockIs, order: mockOrder })
+  mockEq.mockReturnValue({ eq: mockEq, is: mockIs, order: mockOrder })
   mockSelect.mockReturnValue({ eq: mockEq, is: mockIs, order: mockOrder, limit: mockLimit })
   mockFrom.mockReturnValue({ select: mockSelect })
 }
@@ -171,7 +175,7 @@ describe('listarMinhasIndicacoes', () => {
     expect(Array.isArray(result)).toBe(true)
   })
 
-  it('lê de indicacao (RLS indicacao_select_propria — só o próprio)', async () => {
+  it('lê de indicacao filtrando o dono (pessoa_id = uid; não confia só no RLS)', async () => {
     await listarMinhasIndicacoes()
     const tabelas = mockFrom.mock.calls.map((c) => c[0])
     expect(tabelas).toContain('indicacao')
@@ -225,7 +229,7 @@ describe('contarMinhasDoresPorStatus', () => {
     expect(result.total).toBeGreaterThanOrEqual(0)
   })
 
-  it('lê de dor (RLS dor_update_owner — autor_id = uid() filtra automaticamente)', async () => {
+  it('lê de dor filtrando o dono (autor_id = uid; dor_select_publica é pública)', async () => {
     await contarMinhasDoresPorStatus()
     const tabelas = mockFrom.mock.calls.map((c) => c[0])
     expect(tabelas).toContain('dor')
