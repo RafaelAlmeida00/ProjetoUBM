@@ -18,6 +18,7 @@ import {
 } from '@/lib/data/projetos'
 import { UbmTimeline } from '@/components/ubm-timeline'
 import { UbmTeam } from '@/components/ubm-team'
+import { rotuloProjeto } from '@/lib/format/projeto'
 import { ProjetoDetalheClient } from './projeto-detalhe-client'
 
 interface Props {
@@ -77,6 +78,7 @@ export default async function ProjetoDetalhePage({ params }: Props) {
   const papelAtual = isAdmin ? 'admin' : isHost ? 'host' : isMembro ? 'aluno' : null
 
   const statusLabel = projeto.status.replace(/_/g, ' ').toUpperCase()
+  const rotulo = rotuloProjeto(projeto.titulo, projeto.empresa_nome)
 
   return (
     <main className="ubm-shell-main">
@@ -96,8 +98,8 @@ export default async function ProjetoDetalhePage({ params }: Props) {
 
         {/* Cabeçalho institucional do projeto */}
         <header className="ubm-page-header">
-          <span className="ubm-cota ubm-section-kicker">PROJETO · {statusLabel}</span>
-          <h1 className="ubm-page-title">Sala da <em>equipe</em></h1>
+          <span className="ubm-cota ubm-section-kicker">SALA DA EQUIPE · {statusLabel}</span>
+          <h1 className="ubm-page-title">{rotulo}</h1>
           <p className="ubm-page-lead">
             Aqui a equipe se organiza: quem está dentro, o que cada um faz e como
             o trabalho avança — etapa por etapa.

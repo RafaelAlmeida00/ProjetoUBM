@@ -22,7 +22,7 @@ export default async function DoresRoutePage() {
   // projeto(status) via FK dor_id — uq_projeto_dor garante 0 ou 1 linha por dor (ADR-0002 Q1)
   const { data: publicadas } = await supabase
     .from('dor')
-    .select('id, empresa_id, descricao, status_dor, publicada_em, aprovado_por, projeto(id, status)')
+    .select('id, empresa_id, descricao, titulo, status_dor, publicada_em, aprovado_por, projeto(id, status)')
     .eq('status_dor', 'publicada')
     .order('publicada_em', { ascending: false })
     .limit(50)
@@ -71,7 +71,7 @@ export default async function DoresRoutePage() {
     if (isRepresentante) {
       const { data: minhas } = await supabase
         .from('dor')
-        .select('id, empresa_id, descricao, status_dor, publicada_em, created_at, aprovado_por')
+        .select('id, empresa_id, descricao, titulo, status_dor, publicada_em, created_at, aprovado_por')
         .eq('autor_id', user.id)
         .order('created_at', { ascending: false })
         .limit(50)
@@ -104,6 +104,7 @@ export default async function DoresRoutePage() {
 
       minhasDores = (minhas ?? []).map((d) => ({
         id: d.id,
+        titulo: (d as { titulo?: string | null }).titulo ?? null,
         empresa_nome: empresaMap[d.empresa_id] ?? 'Empresa',
         descricao: d.descricao,
         status: d.status_dor,
@@ -142,7 +143,7 @@ export default async function DoresRoutePage() {
   }
 
   const doresPublicadas: DorCard[] = (publicadas ?? []).map((d: {
-    id: string; empresa_id: string; descricao: string; status_dor: 'publicada'
+    id: string; empresa_id: string; descricao: string; titulo: string | null; status_dor: 'publicada'
     publicada_em: string | null; aprovado_por: string | null
     projeto: { id: string; status: string } | { id: string; status: string }[] | null
   }) => {
@@ -152,6 +153,7 @@ export default async function DoresRoutePage() {
     const projetoAtivo = projetoArr.find((p) => p?.id)
     return {
       id: d.id,
+      titulo: d.titulo,
       empresa_nome: pubEmpMap[d.empresa_id] ?? 'Empresa',
       descricao: d.descricao,
       status: d.status_dor,

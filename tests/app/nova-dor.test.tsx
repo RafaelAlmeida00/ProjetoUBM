@@ -35,7 +35,10 @@ const EMPRESA_UNICA = { id: 'emp-1', nome: 'Acme S.A.' }
 const EMPRESA_OUTRA = { id: 'emp-2', nome: 'Beta Ltda.' }
 const DESCRICAO_VALIDA = 'Precisamos de ajuda com automação de processos.'
 
+const TITULO_VALIDO = 'Automação da linha'
+
 async function preencherValido(user: ReturnType<typeof userEvent.setup>) {
+  await user.type(screen.getByLabelText(/título do projeto/i), TITULO_VALIDO)
   await user.type(screen.getByLabelText(/descrição/i), DESCRICAO_VALIDA)
   await user.click(screen.getByRole('checkbox', { name: /concordo/i }))
 }
@@ -126,6 +129,7 @@ describe('NovaDorForm — dois caminhos: enviar vs. salvar rascunho (fix-fluxo)'
     await waitFor(() => {
       expect(criarDorMock).toHaveBeenCalledWith(expect.objectContaining({
         empresaId: 'emp-1',
+        titulo: TITULO_VALIDO,
         descricao: DESCRICAO_VALIDA,
         consentimento: true,
       }))

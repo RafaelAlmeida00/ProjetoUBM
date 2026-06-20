@@ -6,10 +6,12 @@
  */
 import { MeIndicarSlot, type EstadoIndicacao } from '@/components/dores/MeIndicarSlot'
 import { CURSOS_UBM } from '@/lib/courses'
+import { rotuloProjeto } from '@/lib/format/projeto'
 
 interface ProjetoIndicacaoCardProps {
   projetoId: string
   dorId: string
+  titulo?: string | null
   empresaNome: string
   descricao: string
   cursos: string[]
@@ -26,6 +28,7 @@ function labelCurso(value: string): string {
 export function ProjetoIndicacaoCard({
   projetoId,
   dorId,
+  titulo,
   empresaNome,
   descricao,
   cursos,
@@ -34,6 +37,7 @@ export function ProjetoIndicacaoCard({
   onIndicar,
   onRetirar,
 }: ProjetoIndicacaoCardProps) {
+  const rotulo = rotuloProjeto(titulo, empresaNome)
   return (
     <article className="ubm-dor-card ubm-dor-card--linkable">
       <div className="ubm-dor-card-head">
@@ -41,9 +45,9 @@ export function ProjetoIndicacaoCard({
           <a
             href={`/app/dores/${dorId}`}
             className="ubm-dor-card-link"
-            aria-label={`Ver dor de ${empresaNome}`}
+            aria-label={`Ver ${rotulo}`}
           >
-            {empresaNome}
+            {rotulo}
           </a>
         </h3>
       </div>

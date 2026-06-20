@@ -29,6 +29,7 @@ export function NovaDorForm({ empresas }: NovaDorFormProps) {
   const router = useRouter()
 
   const [empresaId, setEmpresaId] = useState<string>(empresas[0]?.id ?? '')
+  const [titulo, setTitulo] = useState('')
   const [descricao, setDescricao] = useState('')
   const [cursos, setCursos] = useState<CursoUbm[]>([])
   const [consentimento, setConsentimento] = useState(false)
@@ -54,9 +55,10 @@ export function NovaDorForm({ empresas }: NovaDorFormProps) {
     )
   }
 
+  const tituloValido = titulo.trim().length >= 3
   const descricaoValida = descricao.trim().length >= 10
   const ocupado = acao !== null
-  const podeCriar = descricaoValida && consentimento && !ocupado && !!empresaId
+  const podeCriar = tituloValido && descricaoValida && consentimento && !ocupado && !!empresaId
 
   // Cria a dor e, no modo 'enviar', já a submete à moderação (criar = enviar ao admin).
   // No modo 'rascunho', apenas salva — o autor envia depois pela tela da dor.
@@ -66,6 +68,7 @@ export function NovaDorForm({ empresas }: NovaDorFormProps) {
     setErro('')
     const result = await criarDor({
       empresaId,
+      titulo: titulo.trim(),
       descricao: descricao.trim(),
       cursos: cursos.length > 0 ? cursos : undefined,
       consentimento: true,
@@ -123,6 +126,28 @@ export function NovaDorForm({ empresas }: NovaDorFormProps) {
           </label>
         )}
       </div>
+
+      {/* ── Título do projeto ── */}
+      <label htmlFor="titulo" style={{ display: 'flex', flexDirection: 'column', gap: '0.25rem' }}>
+        <span className="ubm-cota">
+          Título do projeto <span aria-hidden style={{ color: 'hsl(var(--destructive))' }}>*</span>
+        </span>
+        <input
+          id="titulo"
+          type="text"
+          aria-label="Título do projeto"
+          value={titulo}
+          onChange={(e) => setTitulo(e.target.value)}
+          placeholder="Ex.: Automação da linha de montagem"
+          className="ubm-input"
+          minLength={3}
+          maxLength={160}
+          required
+        />
+        <span className="ubm-cota ubm-cota--muted" style={{ fontSize: '0.82rem' }}>
+          Identidade do projeto na plataforma (aparece como “Título — Empresa”).
+        </span>
+      </label>
 
       {/* ── Descrição ── */}
       <label htmlFor="descricao" style={{ display: 'flex', flexDirection: 'column', gap: '0.25rem' }}>

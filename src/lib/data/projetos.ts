@@ -8,6 +8,10 @@ export interface ProjetoVitrine {
   id: string
   status: string
   dor_id: string
+  /** Título do projeto (vem da dor; pode ser null em projetos legados → UI cai no fallback). */
+  titulo: string | null
+  empresa_nome: string
+  host_coordenador_id: string | null
   [key: string]: unknown
 }
 
@@ -70,6 +74,7 @@ export interface FuncaoTarefa {
 export interface ProjetoEnriquecido {
   projetoId: string
   dorId: string
+  titulo: string | null
   empresa_nome: string
   descricao: string
   cursos: string[]
@@ -78,6 +83,7 @@ export interface ProjetoEnriquecido {
 
 interface DorResumida {
   id: string
+  titulo?: string | null
   empresa_nome: string
   descricao: string
   cursos: string[]
@@ -98,6 +104,7 @@ export function enriquecerProjetosComDor(
     return {
       projetoId: p.id,
       dorId: p.dor_id,
+      titulo: dor?.titulo ?? null,
       empresa_nome: dor?.empresa_nome ?? '',
       descricao: dor?.descricao ?? '',
       cursos: dor?.cursos ?? [],
@@ -120,11 +127,25 @@ export async function listarProjetosVitrine(): Promise<ProjetoVitrine[]> {
     const supabase = await createSupabaseServerClient()
     const { data, error } = await supabase
       .from('projeto')
-      .select('id, status, dor_id, aprovado_em, created_at')
+      .select('id, status, dor_id, aprovado_em, created_at, host_coordenador_id, dor:dor(titulo, empresa:empresa(nome_canonico))')
       .order('created_at', { ascending: false })
       .limit(50)
     if (error || !data) return []
-    return data as ProjetoVitrine[]
+    return (data as unknown as Array<{
+      id: string; status: string; dor_id: string; host_coordenador_id: string | null
+      dor: { titulo: string | null; empresa: { nome_canonico: string } | { nome_canonico: string }[] | null } | { titulo: string | null; empresa: { nome_canonico: string } | null }[] | null
+    }>).map((row) => {
+      const dor = Array.isArray(row.dor) ? row.dor[0] : row.dor
+      const emp = dor ? (Array.isArray(dor.empresa) ? dor.empresa[0] : dor.empresa) : null
+      return {
+        id: row.id,
+        status: row.status,
+        dor_id: row.dor_id,
+        titulo: dor?.titulo ?? null,
+        empresa_nome: emp?.nome_canonico ?? '',
+        host_coordenador_id: row.host_coordenador_id ?? null,
+      }
+    })
   } catch {
     return []
   }

@@ -7,10 +7,12 @@ import { EstagioSelo, derivarEstagioSelo } from './EstagioSelo'
 import { MeIndicarSlot, type EstadoIndicacao } from './MeIndicarSlot'
 import { indicarSe, retirarIndicacao } from '@/lib/actions/indicacao'
 import { CURSOS_UBM } from '@/lib/courses'
+import { rotuloProjeto } from '@/lib/format/projeto'
 import type { MeusVinculosProjeto } from '@/lib/data/projetos'
 
 export interface DorCard {
   id: string
+  titulo?: string | null
   empresa_nome: string
   descricao: string
   status: 'rascunho' | 'em_moderacao' | 'publicada' | 'rejeitada'
@@ -90,9 +92,9 @@ function DorCardItem({
           <a
             href={`/app/dores/${dor.id}`}
             className="ubm-dor-card-link"
-            aria-label={`Ver dor de ${dor.empresa_nome}`}
+            aria-label={`Ver ${rotuloProjeto(dor.titulo, dor.empresa_nome)}`}
           >
-            {dor.empresa_nome}
+            {rotuloProjeto(dor.titulo, dor.empresa_nome)}
           </a>
         </h3>
         <StatusDor

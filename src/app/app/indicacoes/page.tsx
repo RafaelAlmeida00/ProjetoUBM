@@ -7,6 +7,7 @@
 import React from 'react'
 import { createSupabaseServerClient } from '@/lib/supabase/server'
 import { listarProjetosVitrine, listarIndicacoes, enriquecerProjetosComDor } from '@/lib/data/projetos'
+import { rotuloProjeto } from '@/lib/format/projeto'
 import { indicarSe, retirarIndicacao } from '@/lib/actions/indicacao'
 import { CoordPendentePeca } from '@/components/indicacoes/CoordPendentePeca'
 import { ProjetoIndicacaoCard } from '@/components/indicacoes/ProjetoIndicacaoCard'
@@ -53,11 +54,11 @@ export default async function IndicacoesPage() {
   // B5 — enriquecer projetos com dados de dor (empresa, descrição, cursos)
   // Busca as dores dos projetos abertos e o join empresa em paralelo.
   const dorIds = [...new Set(projetosAbertos.map((p) => p.dor_id).filter(Boolean))]
-  let doresEnriquecidas: Array<{ id: string; empresa_nome: string; descricao: string; cursos: string[] }> = []
+  let doresEnriquecidas: Array<{ id: string; titulo: string | null; empresa_nome: string; descricao: string; cursos: string[] }> = []
   if (dorIds.length > 0) {
     const { data: doresRaw } = await supabase
       .from('dor')
-      .select('id, empresa_id, descricao')
+      .select('id, empresa_id, descricao, titulo')
       .in('id', dorIds)
 
     const empresaIds = [...new Set((doresRaw ?? []).map((d: { empresa_id: string }) => d.empresa_id).filter(Boolean))]
@@ -80,8 +81,9 @@ export default async function IndicacoesPage() {
       {}
     )
 
-    doresEnriquecidas = (doresRaw ?? []).map((d: { id: string; empresa_id: string; descricao: string }) => ({
+    doresEnriquecidas = (doresRaw ?? []).map((d: { id: string; empresa_id: string; descricao: string; titulo: string | null }) => ({
       id: d.id,
+      titulo: d.titulo ?? null,
       empresa_nome: empresaMap[d.empresa_id] ?? '',
       descricao: d.descricao ?? '',
       cursos: cursosMap[d.id] ?? [],
@@ -166,6 +168,7 @@ export default async function IndicacoesPage() {
                     key={projeto.projetoId}
                     projetoId={projeto.projetoId}
                     dorId={projeto.dorId}
+                    titulo={projeto.titulo}
                     empresaNome={projeto.empresa_nome || 'Projeto'}
                     descricao={projeto.descricao}
                     cursos={projeto.cursos}
@@ -206,7 +209,7 @@ export default async function IndicacoesPage() {
                   <div key={projeto.id} className="ubm-indicacoes-projeto">
                     <div className="ubm-indicacoes-projeto-head">
                       <span className="ubm-cota ubm-cota--muted">
-                        PROJETO {projeto.id.slice(0, 8).toUpperCase()}
+                        {rotuloProjeto(projeto.titulo, projeto.empresa_nome)}
                       </span>
                       <span className="ubm-indicacoes-projeto-contagem">
                         {inds.length} {inds.length === 1 ? 'indicação' : 'indicações'}
@@ -218,7 +221,7 @@ export default async function IndicacoesPage() {
                         <p className="ubm-empty-msg">Nenhuma indicação ainda neste projeto.</p>
                       </div>
                     ) : (
-                      <ul className="ubm-indication-list" aria-label={`Indicações do projeto ${projeto.id.slice(0, 8)}`}>
+                      <ul className="ubm-indication-list" aria-label={`Indicações de ${rotuloProjeto(projeto.titulo, projeto.empresa_nome)}`}>
                         {inds.map((ind) => (
                           <li key={ind.id} className="ubm-indication-row ubm-machined">
                             <span className="ubm-indication-avatar ubm-clip-node" aria-hidden="true">
