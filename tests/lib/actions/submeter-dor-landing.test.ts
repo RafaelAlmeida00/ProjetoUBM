@@ -63,6 +63,7 @@ describe('submeterDorLanding', () => {
       p_consent_version: '1.0',
       p_consent_at: '2026-06-07T00:00:00Z',
       p_cursos: null, // I3: sem cursos → null (RPC usa o default)
+      p_titulo: null, // Fase 2: título opcional na landing → null quando ausente
     })
   })
 
