@@ -15,10 +15,11 @@ vi.mock('@/components/feedback/ToastProvider', () => ({
   useToast: () => ({ sucesso: vi.fn(), erro: vi.fn(), info: vi.fn(), dispensar: vi.fn() }),
 }))
 
-const { elegerHostMock, trocarHostMock, fecharEquipeMock, reabrirMock, removerMock, avancarMock } = vi.hoisted(() => ({
+const { elegerHostMock, trocarHostMock, fecharEquipeMock, editarEquipeMock, reabrirMock, removerMock, avancarMock } = vi.hoisted(() => ({
   elegerHostMock: vi.fn(),
   trocarHostMock: vi.fn(),
   fecharEquipeMock: vi.fn(),
+  editarEquipeMock: vi.fn(),
   reabrirMock: vi.fn(),
   removerMock: vi.fn(),
   avancarMock: vi.fn(),
@@ -28,6 +29,7 @@ vi.mock('@/lib/actions/equipe', () => ({
   elegerHost: (...a: unknown[]) => elegerHostMock(...a),
   trocarHost: (...a: unknown[]) => trocarHostMock(...a),
   fecharEquipe: (...a: unknown[]) => fecharEquipeMock(...a),
+  editarEquipe: (...a: unknown[]) => editarEquipeMock(...a),
   reabrirIndicacoes: (...a: unknown[]) => reabrirMock(...a),
   removerMembro: (...a: unknown[]) => removerMock(...a),
 }))
@@ -41,6 +43,7 @@ import { ProjetoDetalheClient } from '@/components/dores/ProjetoDetalheClient'
 beforeEach(() => {
   elegerHostMock.mockResolvedValue({ ok: true })
   trocarHostMock.mockResolvedValue({ ok: true })
+  editarEquipeMock.mockResolvedValue({ ok: true })
   reabrirMock.mockResolvedValue({ ok: true })
   removerMock.mockResolvedValue({ ok: true })
 })
@@ -67,6 +70,25 @@ describe('ProjetoDetalheClient — fluxo de host (0060)', () => {
     render(<ProjetoDetalheClient projetoId="p1" indicacoes={[]} papelAtual="admin" projetoStatus="aprovado" hostElected />)
     fireEvent.click(screen.getByRole('button', { name: /reabrir indicações/i }))
     await waitFor(() => expect(reabrirMock).toHaveBeenCalledWith('p1'))
+  })
+
+  // ── Gestão de equipe em estágios >= Equipe Aprovada, SEM reverter status (decisão 2026-06-21) ──
+  it('admin em aguardando_proposta: mostra "Editar equipe" E "Trocar host"', () => {
+    render(<ProjetoDetalheClient projetoId="p1" indicacoes={[]} papelAtual="admin" projetoStatus="aguardando_proposta" hostElected hostPessoaId="p-host" />)
+    expect(screen.getByRole('button', { name: /editar equipe/i })).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: /trocar host/i })).toBeInTheDocument()
+  })
+
+  it('host em aguardando_proposta: mostra "Editar equipe" (sem "Trocar host" — admin-only)', () => {
+    render(<ProjetoDetalheClient projetoId="p1" indicacoes={[]} papelAtual="host" projetoStatus="aguardando_proposta" hostElected hostPessoaId="p-host" />)
+    expect(screen.getByRole('button', { name: /editar equipe/i })).toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: /trocar host/i })).toBeNull()
+  })
+
+  it('em_execucao: admin ainda edita equipe e troca host (gestão disponível em qualquer etapa >= aprovado)', () => {
+    render(<ProjetoDetalheClient projetoId="p1" indicacoes={[]} papelAtual="admin" projetoStatus="em_execucao" hostElected hostPessoaId="p-host" />)
+    expect(screen.getByRole('button', { name: /editar equipe/i })).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: /trocar host/i })).toBeInTheDocument()
   })
 
   it('gestão de membros: "Remover" chama removerMembro com o pessoa_id; host e o próprio NÃO aparecem', async () => {

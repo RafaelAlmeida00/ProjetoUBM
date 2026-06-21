@@ -43,6 +43,34 @@ export async function fecharEquipe(
 }
 
 /**
+ * Server Action: editar equipe IN-PLACE (admin ou host) em qualquer estágio >= aprovado,
+ * SEM reverter o status do projeto. Aditivo: adiciona quem já tem indicação ativa (RN11/RN13).
+ * Troca de host é exclusiva do admin (trocarHost); remoção via removerMembro. RPC editar_equipe (0062).
+ */
+export async function editarEquipe(
+  projetoId: string,
+  membros: MembroInput[],
+): Promise<ActionResult> {
+  try {
+    const supabase = await createSupabaseServerClient()
+    const pMembros = membros.map((m) => ({
+      pessoa_id: m.pessoaId,
+      papel_projeto: m.papelProjeto,
+      indicacao_id: m.indicacaoId ?? null,
+    }))
+    const { error } = await supabase.rpc('editar_equipe', {
+      p_projeto_id: projetoId,
+      p_membros: pMembros,
+    })
+    if (error) return { ok: false, error: mapDbError(error.message) }
+    return { ok: true }
+  } catch (e) {
+    const msg = e instanceof Error ? e.message : String(e)
+    return { ok: false, error: mapDbError(msg) }
+  }
+}
+
+/**
  * T-O2.2 — Server Action: trocar host do projeto (admin).
  * Chama RPC trocar_host — rebaixa host atual a co_coordenador,
  * promove novo host; mantém uq_um_host_por_projeto (RS5).
@@ -130,8 +158,12 @@ function mapDbError(msg: string): string {
     return 'O host não pode ser removido — troque o host antes.'
   if (/remover a si|a si mesmo/i.test(msg))
     return 'Você não pode remover a si mesmo da equipe.'
-  if (/remover_membro exige|fechar_equipe exige o host/i.test(msg))
+  if (/remover_membro exige|fechar_equipe exige o host|editar_equipe exige/i.test(msg))
     return 'Apenas o host do projeto ou um administrador podem alterar a equipe.'
+  if (/troca de host não é feita|troca de host nao e feita|use trocar_host/i.test(msg))
+    return 'Para trocar o host, use a opção "Trocar host" (apenas administradores).'
+  if (/só após a equipe aprovada|so apos a equipe aprovada|antes de finalizado/i.test(msg))
+    return 'A equipe só pode ser editada após estar aprovada e antes de finalizada.'
   if (/só em projeto em_analise|so em projeto em_analise|aberto a indica/i.test(msg))
     return 'Só é possível eleger host enquanto o projeto está aberto a indicações.'
   if (/exatamente.*host|host.*obrigatorio|escolha.*host/i.test(msg))

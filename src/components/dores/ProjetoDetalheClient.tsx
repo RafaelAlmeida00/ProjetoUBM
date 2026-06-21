@@ -10,7 +10,7 @@
 
 import React, { useState, useTransition } from 'react'
 import type { Indicacao, FuncaoTarefa, MembroPublico, MembroGestao } from '@/lib/data/projetos'
-import { fecharEquipe, trocarHost, elegerHost, reabrirIndicacoes, removerMembro } from '@/lib/actions/equipe'
+import { fecharEquipe, trocarHost, elegerHost, reabrirIndicacoes, removerMembro, editarEquipe } from '@/lib/actions/equipe'
 import { avancarProjeto } from '@/lib/actions/projeto'
 import { criarTarefa, editarTarefa, concluirTarefa, reatribuirTarefa } from '@/lib/actions/tarefa'
 import { UbmTeamBuilder } from '@/components/ubm-team-builder'
@@ -40,7 +40,7 @@ export interface ProjetoDetalheClientProps {
   modoTarefas?: boolean
 }
 
-type Modal = null | 'eleger' | 'trocar' | 'fechar'
+type Modal = null | 'eleger' | 'trocar' | 'fechar' | 'editar'
 
 export function ProjetoDetalheClient({
   projetoId,
@@ -132,6 +132,23 @@ export function ProjetoDetalheClient({
     return res
   }
 
+  // Edição in-place da equipe (>= Equipe Aprovada), SEM reverter status. Host inalterado
+  // (troca de host é só admin via trocar_host). Aditivo: adiciona quem já tem indicação ativa.
+  const handleEditarEquipe = async (
+    pid: string,
+    _hostFinal: string,
+    membros: Array<{ pessoaId: string; papelProjeto: 'host' | 'co_coordenador' | 'aluno'; indicacaoId?: string }>,
+  ) => {
+    const res = await editarEquipe(pid, membros)
+    if (res.ok) {
+      toast.sucesso('Equipe atualizada.')
+      setModal(null)
+    } else {
+      toast.erro(res.error || 'Não foi possível atualizar a equipe. Tente novamente.')
+    }
+    return res
+  }
+
   // P0.2: admin age como host para tarefas
   const papelParaTarefa: 'host' | 'co_coordenador' | 'aluno' | null =
     papelAtual === 'host' || papelAtual === 'admin' ? 'host' :
@@ -164,6 +181,9 @@ export function ProjetoDetalheClient({
   const isHost = papelAtual === 'host'
   const emAnalise = projetoStatus === 'em_analise'
   const aprovado = projetoStatus === 'aprovado'
+  // "Equipe formada" = qualquer estágio >= Equipe Aprovada (e antes de finalizado): a gestão
+  // de equipe (editar/recompor + trocar host) fica disponível SEM reverter o status (decisão 2026-06-21).
+  const equipeFormada = ['aprovado', 'aguardando_proposta', 'proposta_em_analise', 'proposta_aprovada', 'em_execucao'].includes(projetoStatus)
 
   // membros removíveis: não o próprio usuário, não o host (troca via eleger/trocar host)
   const removiveis = gestao.filter((m) => m.pessoa_id !== currentUserId && m.papel_projeto !== 'host')
@@ -201,12 +221,24 @@ export function ProjetoDetalheClient({
           </button>
         )}
 
-        {/* ── aprovado ── */}
-        {aprovado && isAdmin && (
+        {/* ── equipe formada (>= Equipe Aprovada): gestão in-place SEM reverter status ── */}
+        {equipeFormada && (isAdmin || isHost) && (
+          <button
+            type="button"
+            className="ubm-btn ubm-btn-primary"
+            onClick={() => setModal('editar')}
+            aria-label="Editar equipe (adicionar ou recompor membros)"
+          >
+            Editar equipe
+          </button>
+        )}
+        {equipeFormada && isAdmin && (
           <button type="button" className="ubm-btn ubm-btn-secondary" onClick={() => setModal('trocar')}>
             Trocar host
           </button>
         )}
+
+        {/* ── aprovado: reabertura (reverte → em_analise) e avanço do host ── */}
         {aprovado && isAdmin && (
           <button type="button" className="ubm-btn ubm-btn-ghost" onClick={handleReabrir} disabled={isPending}>
             Reabrir indicações
@@ -270,8 +302,8 @@ export function ProjetoDetalheClient({
           titulo="Trocar host"
           nomesIndicados={nomesIndicados}
           onFechar={() => setModal(null)}
-          // em_analise: re-elege (mantém aberto). aprovado: troca host (pós-fechamento).
-          onConfirmar={aprovado ? handleTrocarHost : handleElegerHost}
+          // em_analise: re-elege (mantém aberto). >= aprovado: troca host real (trocar_host).
+          onConfirmar={emAnalise ? handleElegerHost : handleTrocarHost}
         />
       )}
       {modal === 'fechar' && (
@@ -283,6 +315,17 @@ export function ProjetoDetalheClient({
           membrosExistentes={gestao.map((m) => m.pessoa_id)}
           onFechar={() => setModal(null)}
           onConfirmar={handleFecharEquipe}
+        />
+      )}
+      {modal === 'editar' && (
+        <UbmTeamBuilder
+          projetoId={projetoId}
+          indicacoes={indicacoes}
+          nomesIndicados={nomesIndicados}
+          hostPessoaId={hostPessoaId}
+          membrosExistentes={gestao.map((m) => m.pessoa_id)}
+          onFechar={() => setModal(null)}
+          onConfirmar={handleEditarEquipe}
         />
       )}
     </div>
