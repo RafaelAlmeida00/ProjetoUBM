@@ -363,3 +363,57 @@ describe('ADR-0002 Q1 — EstagioSelo no card da vitrine (selo × botão = mutua
     expect(screen.queryByRole('button', { name: /me indicar/i })).toBeNull()
   })
 })
+
+// ── (4) 009 T19 — guarda de não-regressão: indicar-se inline p/ COORDENADOR + avançado ──
+// A cobertura de aluno/representante já existe acima; T19 fecha CA8/CA10/CA11 estendendo ao
+// coordenador (aprovado) e blindando o par card×papel×status na vitrine consolidada.
+
+describe('009 T19 — guarda: indicar-se inline (coordenador / avançado)', () => {
+  const DOR_EM_INDICACAO = {
+    ...DOR_PUBLICADA, id: 'dor-coord-1', projeto_id: 'proj-c', projeto_status: 'em_analise',
+  }
+
+  it('coordenador (aprovado) + projeto aberto → card mostra "Me indicar"', () => {
+    render(
+      <DoresPage
+        doresPublicadas={[DOR_EM_INDICACAO]}
+        minhasDores={[]}
+        isRepresentante={false}
+        isVerificado={true}
+        papelUsuario="coordenador"
+        vinculosUsuario={{ indicadoProjetoIds: [], membroProjetoIds: [] }}
+      />
+    )
+    expect(screen.getByRole('button', { name: /me indicar/i })).toBeInTheDocument()
+  })
+
+  it('coordenador já indicado → chip "VOCÊ JÁ SE INDICOU" + botão "Retirar"', () => {
+    render(
+      <DoresPage
+        doresPublicadas={[DOR_EM_INDICACAO]}
+        minhasDores={[]}
+        isRepresentante={false}
+        isVerificado={true}
+        papelUsuario="coordenador"
+        vinculosUsuario={{ indicadoProjetoIds: ['proj-c'], membroProjetoIds: [] }}
+      />
+    )
+    expect(screen.getByText(/você já se indicou/i)).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: /retirar/i })).toBeInTheDocument()
+  })
+
+  it('coordenador + projeto avançado (aprovado) → SEM "Me indicar", COM selo "VIROU CASO"', () => {
+    render(
+      <DoresPage
+        doresPublicadas={[{ ...DOR_PUBLICADA, id: 'dor-coord-2', projeto_id: 'proj-c2', projeto_status: 'aprovado' }]}
+        minhasDores={[]}
+        isRepresentante={false}
+        isVerificado={true}
+        papelUsuario="coordenador"
+        vinculosUsuario={{ indicadoProjetoIds: [], membroProjetoIds: [] }}
+      />
+    )
+    expect(screen.queryByRole('button', { name: /me indicar/i })).toBeNull()
+    expect(screen.getByText(/virou caso/i)).toBeInTheDocument()
+  })
+})

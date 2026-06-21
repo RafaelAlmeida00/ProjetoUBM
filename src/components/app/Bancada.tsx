@@ -98,7 +98,7 @@ export function BancadaRepresentante({ meusProjetos, contagemDores, nome }: Banc
             {meusProjetos.slice(0, 5).map((p) => (
               <li key={p.projeto_id} className="ubm-bancada-lista-item">
                 <Link
-                  href={`/dores/${p.dor_id}`}
+                  href={`/app/dores/${p.dor_id}`}
                   className="ubm-bancada-lista-link ubm-link"
                   aria-label={`Ver dor de ${p.empresa_nome}`}
                 >
@@ -220,13 +220,13 @@ export function BancadaAluno({ indicacoes, tarefas, nome }: BancadaAlunoProps) {
       <div className="ubm-bancada-atalhos" aria-label="Atalhos rápidos">
         <span className="ubm-cota">ATALHOS</span>
         <div className="ubm-bancada-atalhos-grid">
-          <Link href="/app/indicacoes" className="ubm-card ubm-card--interactive ubm-bancada-atalho">
+          <Link href="/app/dores" className="ubm-card ubm-card--interactive ubm-bancada-atalho">
             <span className="ubm-bancada-atalho-label">
               Minhas indicações
               {temIndicacoes && <BadgePendencia n={indicacoes.length} label="indicações ativas" />}
             </span>
           </Link>
-          <Link href="/app/projetos" className="ubm-card ubm-card--interactive ubm-bancada-atalho">
+          <Link href="/app/dores" className="ubm-card ubm-card--interactive ubm-bancada-atalho">
             <span className="ubm-bancada-atalho-label">
               Minhas tarefas
               {temTarefas && <BadgePendencia n={tarefas.length} label="tarefas abertas" />}
@@ -248,8 +248,12 @@ export function BancadaAluno({ indicacoes, tarefas, nome }: BancadaAlunoProps) {
 export interface BancadaCoordenadorProps {
   indicacoes: Indicacao[]
   nome: string | null
-  /** Projeto (em_analise) onde o coordenador é HOST — habilita o CTA "Compor equipe". */
-  hostProjetoId?: string
+  /**
+   * 009 T15: dor (em_analise) onde o coordenador é HOST — habilita o CTA "Compor equipe".
+   * Navega para o detalhe consolidado /app/dores/<dor_id> (a "Sala da equipe" virou a zona de
+   * gestão do detalhe da dor). Derivado de listarMeusProjetos.dor_id no RSC pai.
+   */
+  hostDorId?: string
 }
 
 /**
@@ -258,13 +262,13 @@ export interface BancadaCoordenadorProps {
  * CTA dominante: Revisar indicações.
  * Badge marsala na contagem — única licença de marsala fora do selo "Finalizado".
  */
-export function BancadaCoordenador({ indicacoes, nome, hostProjetoId }: BancadaCoordenadorProps) {
+export function BancadaCoordenador({ indicacoes, nome, hostDorId }: BancadaCoordenadorProps) {
   const pendentes = indicacoes.filter((i) => !i.deleted_at)
   const temPendencias = pendentes.length > 0
 
   function metrica(): string {
     if (!temPendencias) return 'Sua fila está em dia.'
-    return `${pendentes.length} indicaç${pendentes.length > 1 ? 'ões' : 'ão'} ${hostProjetoId ? 'para compor sua equipe' : 'no(s) seu(s) projeto(s)'}.`
+    return `${pendentes.length} indicaç${pendentes.length > 1 ? 'ões' : 'ão'} ${hostDorId ? 'para compor sua equipe' : 'no(s) seu(s) projeto(s)'}.`
   }
 
   return (
@@ -310,12 +314,12 @@ export function BancadaCoordenador({ indicacoes, nome, hostProjetoId }: BancadaC
 
         {/* CTA dominante */}
         <div className="ubm-bancada-bloco-actions">
-          {hostProjetoId ? (
-            <Link href={`/app/projetos/${hostProjetoId}`} className="ubm-btn ubm-btn-primary" aria-label="Compor equipe">
+          {hostDorId ? (
+            <Link href={`/app/dores/${hostDorId}`} className="ubm-btn ubm-btn-primary" aria-label="Compor equipe">
               Compor equipe →
             </Link>
           ) : (
-            <Link href="/app/indicacoes" className="ubm-btn ubm-btn-primary" aria-label="Ver indicações">
+            <Link href="/app/dores" className="ubm-btn ubm-btn-primary" aria-label="Ver indicações">
               Ver indicações →
             </Link>
           )}
@@ -326,7 +330,7 @@ export function BancadaCoordenador({ indicacoes, nome, hostProjetoId }: BancadaC
       <div className="ubm-bancada-atalhos" aria-label="Atalhos rápidos">
         <span className="ubm-cota">ATALHOS</span>
         <div className="ubm-bancada-atalhos-grid">
-          <Link href="/app/projetos" className="ubm-card ubm-card--interactive ubm-bancada-atalho">
+          <Link href="/app/dores" className="ubm-card ubm-card--interactive ubm-bancada-atalho">
             <span className="ubm-bancada-atalho-label">Projetos em execução</span>
           </Link>
           <Link href="/app/dores" className="ubm-card ubm-card--interactive ubm-bancada-atalho">
@@ -422,7 +426,7 @@ export function BancadaAdmin({ qtdDoresPendentes, qtdProjetosPendentes, nome }: 
             Moderar dores →
           </Link>
           {qtdProjetosPendentes > 0 && (
-            <Link href="/app/indicacoes" className="ubm-btn ubm-btn-secondary" aria-label="Compor equipes">
+            <Link href="/app/dores" className="ubm-btn ubm-btn-secondary" aria-label="Compor equipes">
               Compor equipes →
             </Link>
           )}

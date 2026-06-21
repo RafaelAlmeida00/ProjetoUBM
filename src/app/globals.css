@@ -1649,6 +1649,38 @@
   }
   .ubm-section-kicker { margin-bottom: -0.35rem; }
 
+  /* 009 — Zona gated colapsável (gestão da equipe / indicações recebidas). Accordion nativo
+     <details>, colapsada por padrão. Light: card branco destacado por SOMBRA sobre o fundo frio;
+     dark: card mais claro que o fundo (luminosidade). Separa a leitura pública da operação interna. */
+  .ubm-gestao-zona {
+    border: 1px solid hsl(var(--border));
+    border-radius: var(--radius);
+    background: hsl(var(--card));
+    box-shadow: var(--shadow-sm);
+    padding: 0;
+    gap: 0;
+    overflow: hidden;
+  }
+  .ubm-gestao-summary {
+    display: flex; align-items: center; justify-content: space-between; gap: 0.75rem;
+    cursor: pointer; list-style: none; padding: 1rem 1.25rem; user-select: none;
+    transition: background-color 150ms ease;
+  }
+  .ubm-gestao-summary::-webkit-details-marker { display: none; }
+  .ubm-gestao-summary::after {
+    content: ""; width: 0.5rem; height: 0.5rem; flex-shrink: 0;
+    border-right: 2px solid hsl(var(--muted-foreground));
+    border-bottom: 2px solid hsl(var(--muted-foreground));
+    transform: rotate(45deg); transition: transform 200ms ease;
+  }
+  .ubm-gestao-zona[open] > .ubm-gestao-summary::after { transform: rotate(-135deg); }
+  .ubm-gestao-summary:hover { background: hsl(var(--muted) / 0.4); }
+  .ubm-gestao-summary:focus-visible { outline: 2px solid hsl(var(--ring)); outline-offset: -2px; }
+  .ubm-gestao-zona > :not(summary) { padding: 0 1.25rem 1.25rem; }
+  @media (prefers-reduced-motion: reduce) {
+    .ubm-gestao-summary, .ubm-gestao-summary::after { transition: none; }
+  }
+
   /* Bloco de prosa legível (descrição da dor etc.) */
   .ubm-prose { max-width: 65ch; line-height: 1.7; color: hsl(var(--foreground)); margin: 0; }
 

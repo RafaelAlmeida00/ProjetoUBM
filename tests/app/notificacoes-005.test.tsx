@@ -1,22 +1,21 @@
 /**
  * T-O3.9 — S5 gatilhos da 005 em /app/notificacoes
- * TDD RED: 3 tipos (abertura→/app/indicacoes, equipe/host→/app/projetos/[id],
- * avancou→timeline); aria-live p/ Realtime; opt-out não renderiza tipo (CA28);
- * copy sem PII excedente (RS12).
+ * 009 T16: deep-links consolidados em /app/dores (projeto_id resolvido p/ dor_id no RSC).
+ * aria-live p/ Realtime; opt-out não renderiza tipo (CA28); copy sem PII excedente (RS12).
+ *
+ * NÃO reimplementa mais deepLink inline — importa a função PURA real do módulo
+ * (@/lib/notificacoes/deep-link), eliminando a duplicação/drift (Art. VII).
  */
 import { describe, it, expect, vi } from 'vitest'
 import { render, screen } from '@testing-library/react'
 import React from 'react'
+import { resolverDeepLink } from '@/lib/notificacoes/deep-link'
 
 vi.mock('next/navigation', () => ({
   useRouter: () => ({ push: vi.fn() }),
   usePathname: () => '/app/notificacoes',
 }))
 
-// Testa a lógica de deep-link e copy — extrai as funções utilitárias em módulo testável
-// Como a página é RSC, testamos os utilitários diretamente
-
-// Reimplementa deepLink e copyNotif inline para teste (espelham o código da página)
 interface NotificacaoRow {
   id: string
   tipo: string
@@ -27,21 +26,10 @@ interface NotificacaoRow {
 
 const TIPOS_005 = new Set(['projeto_aberto', 'equipe_fechada', 'eleito_host', 'projeto_avancou'])
 
+// Mapa projeto→dor que o RSC resolveria em lote (proj-1 → dor-1).
+const MAPA_PROJ_DOR = new Map<string, string>([['proj-1', 'dor-1']])
 function deepLink(notif: NotificacaoRow): string {
-  const payload = notif.payload as Record<string, string> | null
-  const tipo = payload?.evento ?? notif.tipo
-  if (tipo === 'projeto_aberto') return '/app/indicacoes'
-  if (tipo === 'equipe_fechada' || tipo === 'eleito_host') {
-    return payload?.projeto_id ? `/app/projetos/${payload.projeto_id}` : '/app/projetos'
-  }
-  if (tipo === 'projeto_avancou') {
-    return payload?.projeto_id ? `/app/projetos/${payload.projeto_id}` : '/app/projetos'
-  }
-  if (notif.tipo === 'dor_aprovada_curso') return '/app/indicacoes'
-  if (notif.tipo === 'status_mudou') {
-    return payload?.projeto_id ? `/app/projetos/${payload.projeto_id}` : '/app/projetos'
-  }
-  return '/app'
+  return resolverDeepLink(notif.tipo, notif.payload as Record<string, string> | null, MAPA_PROJ_DOR)
 }
 
 function copyNotif(notif: NotificacaoRow): string {
@@ -131,20 +119,20 @@ const NOTIF_AVANCOU: NotificacaoRow = {
 
 describe('Notificacoes 005 — T-O3.9', () => {
   describe('deep-links corretos por tipo', () => {
-    it('projeto_aberto → deep-link /app/indicacoes', () => {
-      expect(deepLink(NOTIF_ABERTURA)).toBe('/app/indicacoes')
+    it('projeto_aberto → deep-link /app/dores (indicar-se inline na vitrine)', () => {
+      expect(deepLink(NOTIF_ABERTURA)).toBe('/app/dores')
     })
 
-    it('equipe_fechada → deep-link /app/projetos/[id]', () => {
-      expect(deepLink(NOTIF_EQUIPE)).toBe('/app/projetos/proj-1')
+    it('equipe_fechada → deep-link /app/dores/<dor_id>', () => {
+      expect(deepLink(NOTIF_EQUIPE)).toBe('/app/dores/dor-1')
     })
 
-    it('eleito_host → deep-link /app/projetos/[id]', () => {
-      expect(deepLink(NOTIF_HOST)).toBe('/app/projetos/proj-1')
+    it('eleito_host → deep-link /app/dores/<dor_id>', () => {
+      expect(deepLink(NOTIF_HOST)).toBe('/app/dores/dor-1')
     })
 
-    it('projeto_avancou → deep-link /app/projetos/[id] (timeline via projeto)', () => {
-      expect(deepLink(NOTIF_AVANCOU)).toBe('/app/projetos/proj-1')
+    it('projeto_avancou → deep-link /app/dores/<dor_id> (andamento na dor)', () => {
+      expect(deepLink(NOTIF_AVANCOU)).toBe('/app/dores/dor-1')
     })
   })
 
@@ -188,22 +176,22 @@ describe('Notificacoes 005 — T-O3.9', () => {
       expect(screen.getByText(/nada por aqui/i)).toBeInTheDocument()
     })
 
-    it('tipo projeto_aberto renderiza com link /app/indicacoes', () => {
+    it('tipo projeto_aberto renderiza com link /app/dores', () => {
       render(<NotifList notifs={[NOTIF_ABERTURA]} />)
       const link = screen.getByRole('link')
-      expect(link).toHaveAttribute('href', '/app/indicacoes')
+      expect(link).toHaveAttribute('href', '/app/dores')
     })
 
-    it('tipo equipe_fechada renderiza com link /app/projetos/proj-1', () => {
+    it('tipo equipe_fechada renderiza com link /app/dores/dor-1', () => {
       render(<NotifList notifs={[NOTIF_EQUIPE]} />)
       const link = screen.getByRole('link')
-      expect(link).toHaveAttribute('href', '/app/projetos/proj-1')
+      expect(link).toHaveAttribute('href', '/app/dores/dor-1')
     })
 
-    it('tipo projeto_avancou renderiza com link /app/projetos/proj-1', () => {
+    it('tipo projeto_avancou renderiza com link /app/dores/dor-1', () => {
       render(<NotifList notifs={[NOTIF_AVANCOU]} />)
       const link = screen.getByRole('link')
-      expect(link).toHaveAttribute('href', '/app/projetos/proj-1')
+      expect(link).toHaveAttribute('href', '/app/dores/dor-1')
     })
 
     it('opt-out: notificação não renderiza se não está na lista', () => {

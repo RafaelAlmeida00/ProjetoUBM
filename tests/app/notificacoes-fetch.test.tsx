@@ -7,13 +7,14 @@ import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { render, screen } from '@testing-library/react'
 import React from 'react'
 
-const { mockFrom, mockSelect, mockEq, mockOrder, mockLimit, getUserMock } = vi.hoisted(() => ({
+const { mockFrom, mockSelect, mockEq, mockOrder, mockLimit, getUserMock, projetoSelect } = vi.hoisted(() => ({
   mockFrom: vi.fn(),
   mockSelect: vi.fn(),
   mockEq: vi.fn(),
   mockOrder: vi.fn(),
   mockLimit: vi.fn(),
   getUserMock: vi.fn(),
+  projetoSelect: vi.fn(),
 }))
 
 vi.mock('@/lib/supabase/server', () => ({
@@ -47,7 +48,13 @@ beforeEach(() => {
   mockOrder.mockReturnValue({ limit: mockLimit })
   mockEq.mockReturnValue({ order: mockOrder, limit: mockLimit })
   mockSelect.mockReturnValue({ eq: mockEq, order: mockOrder, limit: mockLimit })
-  mockFrom.mockReturnValue({ select: mockSelect })
+  // 009 T16 — lookup em lote projeto→dor: from('projeto').select('id, dor_id').in().is()
+  projetoSelect.mockReturnValue({
+    in: () => ({ is: async () => ({ data: [{ id: 'proj-1', dor_id: 'dor-1' }], error: null }) }),
+  })
+  mockFrom.mockImplementation((table: string) =>
+    table === 'projeto' ? { select: projetoSelect } : { select: mockSelect },
+  )
 })
 
 describe('NotificacoesPage — fetch usa a coluna real lida_em (não "lida")', () => {
@@ -72,5 +79,14 @@ describe('NotificacoesPage — fetch usa a coluna real lida_em (não "lida")', (
     const jsx = await NotificacoesPage()
     const { container } = render(jsx as React.ReactElement)
     expect(container.querySelectorAll('.ubm-notif-item--lida').length).toBe(1)
+  })
+
+  it('009 T16 — resolve projeto_id→dor_id em lote: deep-link aponta para /app/dores/dor-1', async () => {
+    const jsx = await NotificacoesPage()
+    const { container } = render(jsx as React.ReactElement)
+    const hrefs = [...container.querySelectorAll('a.ubm-notif-link')].map((a) => a.getAttribute('href'))
+    expect(hrefs).toContain('/app/dores/dor-1') // ROW_LIDA (equipe_fechada, proj-1)
+    // nenhum link para rota morta
+    expect(hrefs.some((h) => h?.startsWith('/app/projetos') || h?.startsWith('/app/indicacoes'))).toBe(false)
   })
 })

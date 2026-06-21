@@ -7,29 +7,10 @@
 
 import React from 'react'
 import { createSupabaseServerClient } from '@/lib/supabase/server'
+import { resolverDeepLink } from '@/lib/notificacoes/deep-link'
 
 /** Tipos de notificação da 005 (RN28) */
 const TIPOS_005 = new Set(['projeto_aberto', 'equipe_fechada', 'eleito_host', 'projeto_avancou'])
-
-/** Deep-link por tipo de evento (RN28 a/b/c) */
-function deepLink(notif: NotificacaoRow): string {
-  const payload = notif.payload as Record<string, string> | null
-  const tipo = payload?.evento ?? notif.tipo
-
-  if (tipo === 'projeto_aberto') return '/app/indicacoes'
-  if (tipo === 'equipe_fechada' || tipo === 'eleito_host') {
-    return payload?.projeto_id ? `/app/projetos/${payload.projeto_id}` : '/app/projetos'
-  }
-  if (tipo === 'projeto_avancou') {
-    return payload?.projeto_id ? `/app/projetos/${payload.projeto_id}` : '/app/projetos'
-  }
-  // fallback: usa deep-link base da 002
-  if (notif.tipo === 'dor_aprovada_curso') return '/app/indicacoes'
-  if (notif.tipo === 'status_mudou') {
-    return payload?.projeto_id ? `/app/projetos/${payload.projeto_id}` : '/app/projetos'
-  }
-  return '/app'
-}
 
 /** Copy humanizado por tipo (sem PII excedente — RS12) */
 function copyNotif(notif: NotificacaoRow): string {
@@ -104,6 +85,31 @@ export default async function NotificacoesPage() {
     notificacoes = []
   }
 
+  // 009 T16 — resolve projeto_id → dor_id em LOTE (um único select) para os deep-links.
+  // Os payloads que carregam projeto_id passam a navegar para /app/dores/<dor_id>.
+  const projetoIds = [
+    ...new Set(
+      notificacoes
+        .map((n) => (n.payload as Record<string, string> | null)?.projeto_id)
+        .filter((v): v is string => !!v),
+    ),
+  ]
+  const projetoParaDor = new Map<string, string>()
+  if (projetoIds.length > 0) {
+    try {
+      const { data: projs } = await supabase
+        .from('projeto')
+        .select('id, dor_id')
+        .in('id', projetoIds)
+        .is('deleted_at', null)
+      for (const r of (projs ?? []) as Array<{ id: string; dor_id: string }>) {
+        if (r.dor_id) projetoParaDor.set(r.id, r.dor_id)
+      }
+    } catch {
+      /* fail-soft: sem mapa, deep-links caem para a vitrine /app/dores */
+    }
+  }
+
   // Filtra notificações com opt-out (CA28) — tipos 005 respeitam preferências
   // (opt-out é controlado pela 002; aqui apenas não renderizamos se a notif
   //  não deve aparecer — o dado já vem filtrado pela RLS/procedure da 002)
@@ -152,7 +158,11 @@ export default async function NotificacoesPage() {
         ) : (
           <ul className="ubm-notif-list" aria-label="Lista de notificações">
             {todasOrdenadas.map((notif) => {
-              const link = deepLink(notif)
+              const link = resolverDeepLink(
+                notif.tipo,
+                notif.payload as Record<string, string> | null,
+                projetoParaDor,
+              )
               const copy = copyNotif(notif)
               const payload = notif.payload as Record<string, string> | null
               const tipo = payload?.evento ?? notif.tipo

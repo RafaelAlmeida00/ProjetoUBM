@@ -1,7 +1,9 @@
 import { createSupabaseServerClient } from '@/lib/supabase/server'
 import { DoresPage } from '@/components/dores/DoresPage'
 import type { DorCard } from '@/components/dores/DoresPage'
-import { obterMeusVinculosProjeto } from '@/lib/data/projetos'
+import { obterMeusVinculosProjeto, listarProjetosVitrine, listarIndicacoes } from '@/lib/data/projetos'
+import { rotuloProjeto } from '@/lib/format/projeto'
+import type { GrupoIndicacoes } from '@/components/indicacoes/IndicacoesRecebidas'
 
 /**
  * T7 — /app/dores (RSC): vitrine de dores publicadas + minhas dores.
@@ -165,6 +167,27 @@ export default async function DoresRoutePage() {
     }
   })
 
+  // 009 T18 — seção agregada "Indicações recebidas" (RN6/CA12/CA15).
+  // Gate-de-fetch: só admin/coord-aprovado disparam o fetch (PII só dentro deste branch — espelha
+  // T4/T5). Display por RETORNO, não por claim: a RLS de listarIndicacoes filtra por curso, então
+  // um coord de OUTRO curso recebe [] e o grupo some — não precisa de checagem extra de visibilidade.
+  let indicacoesAgregadas: GrupoIndicacoes[] = []
+  const isAdminVitrine = !!user?.app_metadata?.is_admin
+  const coordAprovadoVitrine = papelUsuario === 'coordenador' && !!user?.app_metadata?.coord_aprovado
+  if (user && (isAdminVitrine || coordAprovadoVitrine)) {
+    const projetosVit = await listarProjetosVitrine()
+    const abertos = projetosVit.filter((p) => p.status === 'em_analise')
+    const grupos = await Promise.all(
+      abertos.slice(0, 20).map(async (p) => {
+        const inds = await listarIndicacoes(p.id)
+        return inds.length > 0
+          ? { projetoId: p.id, rotulo: rotuloProjeto(p.titulo, p.empresa_nome), indicacoes: inds }
+          : null
+      }),
+    )
+    indicacoesAgregadas = grupos.filter((g): g is GrupoIndicacoes => g !== null)
+  }
+
   return (
     <DoresPage
       doresPublicadas={doresPublicadas}
@@ -175,6 +198,7 @@ export default async function DoresRoutePage() {
       temPapel={temPapel}
       papelUsuario={papelUsuario}
       vinculosUsuario={vinculosUsuario}
+      indicacoesAgregadas={indicacoesAgregadas}
     />
   )
 }

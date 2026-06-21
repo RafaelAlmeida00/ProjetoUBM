@@ -5,6 +5,7 @@ import { Lock } from 'lucide-react'
 import { StatusDor } from './StatusDor'
 import { EstagioSelo, derivarEstagioSelo } from './EstagioSelo'
 import { MeIndicarSlot, type EstadoIndicacao } from './MeIndicarSlot'
+import { IndicacoesRecebidas, type GrupoIndicacoes } from '@/components/indicacoes/IndicacoesRecebidas'
 import { indicarSe, retirarIndicacao } from '@/lib/actions/indicacao'
 import { CURSOS_UBM } from '@/lib/courses'
 import { rotuloProjeto } from '@/lib/format/projeto'
@@ -55,6 +56,12 @@ interface DoresPageProps {
    * Onda 2 — B6.
    */
   vinculosUsuario?: MeusVinculosProjeto
+  /**
+   * 009 T18 — grupos de "Indicações recebidas" AGREGADOS dos projetos abertos, JÁ buscados e
+   * gated pelo RSC (admin/coord-aprovado; PII só chega aqui se autorizado). Vazio/undefined →
+   * a seção não aparece (display por retorno, CA15). Renderizada colapsada acima da vitrine.
+   */
+  indicacoesAgregadas?: GrupoIndicacoes[]
 }
 
 function labelCurso(value: string): string {
@@ -174,6 +181,7 @@ export function DoresPage({
   temPapel = true,
   papelUsuario,
   vinculosUsuario,
+  indicacoesAgregadas,
 }: DoresPageProps) {
   const tabsId = useId()
   const [abaAtiva, setAbaAtiva] = useState<'vitrine' | 'minhas'>('vitrine')
@@ -230,6 +238,16 @@ export function DoresPage({
           )}
         </div>
       </div>
+
+      {/* 009 T18 — seção agregada "Indicações recebidas" (coord-do-curso/admin), colapsada por
+          padrão (accordion ubm-gestao-zona, igual à zona de gestão do detalhe). Só renderiza com
+          ≥1 grupo (display por retorno). PII já autorizada pelo RSC. */}
+      {indicacoesAgregadas && indicacoesAgregadas.length > 0 && (
+        <details className="ubm-section-block ubm-gestao-zona" style={{ marginBottom: '1.5rem' }}>
+          <summary className="ubm-section-title ubm-gestao-summary">Indicações recebidas</summary>
+          <IndicacoesRecebidas grupos={indicacoesAgregadas} />
+        </details>
+      )}
 
       {/* Tabs WAI-ARIA */}
       <div role="tablist" aria-label="Visualização de dores" className="ubm-tablist">

@@ -4,7 +4,6 @@ import { usePathname } from 'next/navigation'
 import {
   LayoutDashboard,
   FileQuestion,
-  FolderKanban,
   Building2,
   Users,
   ClipboardList,
@@ -13,7 +12,6 @@ import {
   ShieldAlert,
   UserCircle,
   LogOut,
-  Star,
   Bell,
   Palette,
 } from 'lucide-react'
@@ -30,16 +28,9 @@ interface NavItem {
 const NAV_ITEMS: NavItem[] = [
   { href: '/app', label: 'Bancada', icon: <LayoutDashboard aria-hidden /> },
   { href: '/app/dores', label: 'Dores', icon: <FileQuestion aria-hidden /> },
-  // Lista de projetos → Sala da equipe (eleger host, compor/fechar, reabrir indicações)
-  { href: '/app/projetos', label: 'Projetos', icon: <FolderKanban aria-hidden /> },
-  // ADR-0002: /casos unificado em /dores — item "Casos" removido do NavRail
-  // 005: auto-indicação — só aluno e coordenador (representante não se indica)
-  {
-    href: '/app/indicacoes',
-    label: 'Indicações',
-    icon: <Star aria-hidden />,
-    roles: ['aluno', 'coordenador'],
-  },
+  // 009 T14 (RN15/CA2): "Projetos" e "Indicações" deixaram de ser itens de menu —
+  // tudo consolidado em /app/dores e /app/dores/[id]; "indicar-se" virou ação inline.
+  // ADR-0002: /casos unificado em /dores — item "Casos" removido do NavRail.
   // 005: central de notificações — todos os logados
   { href: '/app/notificacoes', label: 'Notificações', icon: <Bell aria-hidden /> },
   {

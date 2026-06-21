@@ -31,16 +31,17 @@ describe('NavRail — itens 005/007', () => {
   // ADR-0002: item "Casos" foi removido do NavRail — vitrine unificada em /dores.
   // Os testes de ausência de "Casos" estão em adr0002-vitrine-unificada.test.tsx (T7).
 
-  // ── Indicações (/app/indicacoes) ─────────────────────────────────────────
+  // ── 009 T14 (RN15/CA2): menu enxuto — "Indicações" e "Projetos" NÃO são mais ───
+  //    itens de navegação (consolidados em /app/dores; "indicar-se" virou ação inline).
 
-  it('aluno vê "Indicações"', () => {
+  it('aluno NÃO vê "Indicações" (consolidado em /app/dores)', () => {
     render(<NavRail role="aluno" isAdmin={false} />)
-    expect(screen.getByRole('link', { name: /indica[çc][õo]es/i })).toBeInTheDocument()
+    expect(screen.queryByRole('link', { name: /indica[çc][õo]es/i })).toBeNull()
   })
 
-  it('coordenador vê "Indicações"', () => {
+  it('coordenador NÃO vê "Indicações"', () => {
     render(<NavRail role="coordenador" isAdmin={false} />)
-    expect(screen.getByRole('link', { name: /indica[çc][õo]es/i })).toBeInTheDocument()
+    expect(screen.queryByRole('link', { name: /indica[çc][õo]es/i })).toBeNull()
   })
 
   it('representante NÃO vê "Indicações"', () => {
@@ -48,12 +49,16 @@ describe('NavRail — itens 005/007', () => {
     expect(screen.queryByRole('link', { name: /indica[çc][õo]es/i })).toBeNull()
   })
 
-  it('"Indicações" aponta para /app/indicacoes', () => {
-    render(<NavRail role="aluno" isAdmin={false} />)
-    expect(screen.getByRole('link', { name: /indica[çc][õo]es/i })).toHaveAttribute(
-      'href',
-      '/app/indicacoes',
-    )
+  it('nenhum papel vê "Projetos" (consolidado em /app/dores)', () => {
+    render(<NavRail role="coordenador" isAdmin={true} />)
+    expect(screen.queryByRole('link', { name: /^projetos$/i })).toBeNull()
+  })
+
+  it('nenhum href da NavRail aponta para /app/projetos ou /app/indicacoes', () => {
+    render(<NavRail role="coordenador" isAdmin={true} />)
+    const hrefs = screen.getAllByRole('link').map((a) => a.getAttribute('href'))
+    expect(hrefs.some((h) => h?.startsWith('/app/projetos'))).toBe(false)
+    expect(hrefs.some((h) => h?.startsWith('/app/indicacoes'))).toBe(false)
   })
 
   // ── Notificações (/app/notificacoes) ──────────────────────────────────────
@@ -102,14 +107,15 @@ describe('NavRail — itens 005/007', () => {
 // role=undefined (JWT claim vazio) + papeis=['coordenador'] → deve ver Indicações.
 
 describe('NavRail — BUG D1: prop papeis[] substitui role string', () => {
-  it('coordenador via papeis=["coordenador"] vê "Indicações"', () => {
+  // 009 T14: "Indicações" deixou de ser item de menu para todos os papéis.
+  it('coordenador via papeis=["coordenador"] NÃO vê "Indicações"', () => {
     render(<NavRail papeis={['coordenador']} isAdmin={false} />)
-    expect(screen.getByRole('link', { name: /indica[çc][õo]es/i })).toBeInTheDocument()
+    expect(screen.queryByRole('link', { name: /indica[çc][õo]es/i })).toBeNull()
   })
 
-  it('aluno via papeis=["aluno"] vê "Indicações"', () => {
+  it('aluno via papeis=["aluno"] NÃO vê "Indicações"', () => {
     render(<NavRail papeis={['aluno']} isAdmin={false} />)
-    expect(screen.getByRole('link', { name: /indica[çc][õo]es/i })).toBeInTheDocument()
+    expect(screen.queryByRole('link', { name: /indica[çc][õo]es/i })).toBeNull()
   })
 
   it('representante via papeis=["representante"] NÃO vê "Indicações"', () => {
@@ -135,8 +141,11 @@ describe('NavRail — BUG D1: prop papeis[] substitui role string', () => {
     )
   })
 
-  it('role=undefined + papeis=["coordenador"] → coordenador vê Indicações (fix do JWT vazio)', () => {
+  it('role=undefined + papeis=["coordenador"] → papeis[] ainda governa visibilidade (Propor dor ausente)', () => {
+    // O fix do JWT vazio (papeis[] manda) continua válido; só mudou o alvo: "Indicações"
+    // não é mais item — verificamos o mecanismo por outro item gated.
     render(<NavRail papeis={['coordenador']} isAdmin={false} />)
-    expect(screen.getByRole('link', { name: /indica[çc][õo]es/i })).toBeInTheDocument()
+    expect(screen.queryByRole('link', { name: /indica[çc][õo]es/i })).toBeNull()
+    expect(screen.queryByRole('link', { name: /propor dor/i })).toBeNull()
   })
 })

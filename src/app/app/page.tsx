@@ -112,8 +112,9 @@ export default async function AppDashboardPage() {
     const projetosAbertos = meusProjetos.filter(
       (p) => (p.papel_projeto === 'host' || p.papel_projeto === 'co_coordenador') && p.status === 'em_analise',
     )
-    // Projeto onde o coord é HOST: ele pode compor a equipe (Fase 3) → CTA leva direto a compor.
-    const hostProjetoId = projetosAbertos.find((p) => p.papel_projeto === 'host')?.projeto_id
+    // Projeto onde o coord é HOST: ele pode compor a equipe → CTA leva direto ao detalhe da dor.
+    // 009 T15: navega por dor_id (a gestão vive em /app/dores/<dor_id>), não mais por projeto_id.
+    const hostDorId = projetosAbertos.find((p) => p.papel_projeto === 'host')?.dor_id
 
     const indicacoesPorProjeto = await Promise.all(
       projetosAbertos.slice(0, 5).map((p) =>
@@ -128,7 +129,7 @@ export default async function AppDashboardPage() {
         <BancadaCoordenador
           nome={nome}
           indicacoes={todasIndicacoes}
-          hostProjetoId={hostProjetoId}
+          hostDorId={hostDorId}
         />
       </div>
     )
