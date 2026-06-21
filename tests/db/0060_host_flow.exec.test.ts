@@ -120,14 +120,14 @@ describe('0060 fluxo de host', () => {
     expect(n).toBeGreaterThanOrEqual(2)
   })
 
-  it('equipe_gestao: admin vê membros com pessoa_id; anon não vê nada', async () => {
+  it('equipe_gestao: admin vê membros com pessoa_id; anon recebe permission denied', async () => {
     await comoUsuario(db, { uid: ADM, appMeta: { is_admin: true } })
     await db.query(`select public.fechar_equipe('${pid}','${COORD}',${MEMBROS_FULL()})`)
     const rows = (await db.query<{ pessoa_id: string; papel_projeto: string }>(`select * from public.equipe_gestao('${pid}')`)).rows
     expect(rows.length).toBe(2)
     expect(rows.some((r) => r.pessoa_id === COORD && r.papel_projeto === 'host')).toBe(true)
+    // anon não tem grant execute em equipe_gestao (0060 faz revoke from anon) → permission denied
     await comoAnon(db)
-    const anon = (await db.query(`select * from public.equipe_gestao('${pid}')`)).rows
-    expect(anon.length).toBe(0)
+    expect(await negado(db.query(`select * from public.equipe_gestao('${pid}')`))).toBe(true)
   })
 })

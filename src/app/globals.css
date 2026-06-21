@@ -2049,6 +2049,99 @@
     .ubm-toast-fechar { width: 2.75rem; height: 2.75rem; }
   }
 
+  /* ════════════════════════════════════════════════════════════
+     006 — Proposta/assinatura "Selar a Costura" (T5.0)
+     Derivam de HSL existentes — zero cor/hex nova.
+     ════════════════════════════════════════════════════════════ */
+
+  /* ── .ubm-btn-accent — botão de DECISÃO (marsala: assinar, contrapropor, override) ── */
+  .ubm-btn-accent { background-color: hsl(var(--accent)); color: hsl(var(--accent-foreground)); box-shadow: var(--shadow-sm); }
+  .ubm-btn-accent:hover:not(:disabled) { box-shadow: var(--shadow-md); filter: brightness(1.03); }
+  .ubm-btn-accent:active:not(:disabled) { transform: translateY(1px); }
+  .ubm-btn-accent:focus-visible { outline: 2px solid hsl(var(--ring)); outline-offset: 2px; }
+
+  /* ── .ubm-proposta — peça-dossiê (chanfro + micro-solda marsala) ── */
+  .ubm-proposta {
+    --chamfer: 16px; position: relative;
+    display: flex; flex-direction: column; gap: 1rem;
+    padding: clamp(1.1rem, 4vw, 1.6rem);
+    background-color: hsl(var(--card)); color: hsl(var(--card-foreground));
+    border: 1px solid hsl(var(--border)); box-shadow: var(--shadow-sm);
+    clip-path: polygon(0 0, calc(100% - var(--chamfer)) 0, 100% var(--chamfer), 100% 100%, 0 100%);
+  }
+  .ubm-proposta::after {
+    content: ""; position: absolute; top: 0; right: 0;
+    width: calc(var(--chamfer) * 1.42); height: 1.5px;
+    background: hsl(var(--accent)); box-shadow: var(--weld-glow);
+    transform-origin: top right; transform: rotate(-45deg) scaleX(var(--weld-scale, 0));
+    transition: transform 0.18s ease;
+  }
+  .ubm-proposta:focus-within::after { --weld-scale: 1; }
+  .ubm-proposta-head { display: flex; align-items: flex-start; justify-content: space-between; gap: 0.75rem; flex-wrap: wrap; }
+  .ubm-proposta-titulo { font-family: var(--font-display), Georgia, serif; font-weight: 600; font-size: 1.15rem; line-height: 1.25; color: hsl(var(--foreground)); }
+  .ubm-proposta-doc { display: flex; flex-direction: column; gap: 0.5rem; }
+  .ubm-proposta-acoes { display: flex; flex-direction: column; gap: 0.6rem; }
+  @media (min-width: 640px) { .ubm-proposta-acoes { flex-direction: row; flex-wrap: wrap; align-items: center; } }
+  .ubm-proposta-foot { border-top: 1px dashed hsl(var(--border)); padding-top: 0.75rem; }
+  @media (prefers-reduced-motion: reduce) { .ubm-proposta::after { transition: none; } }
+
+  /* ── .ubm-proposta-estado — chip de estado (8 estados, nunca cor sozinha) ── */
+  .ubm-proposta-estado {
+    display: inline-flex; align-items: center; gap: 0.45rem;
+    padding: 0.3rem 0.7rem; font-family: var(--font-mono), monospace;
+    text-transform: uppercase; letter-spacing: 0.1em; font-size: 0.7rem; font-weight: 600; line-height: 1.2;
+    color: hsl(var(--st, var(--muted-foreground)));
+    background-color: hsl(var(--st, var(--muted-foreground)) / 0.12);
+    border: 1px solid hsl(var(--st, var(--muted-foreground)) / 0.4); border-radius: 999px;
+  }
+  .ubm-proposta-estado > svg { width: 0.9rem; height: 0.9rem; flex: none; }
+  .ubm-proposta-estado::before { content:""; width:0.5rem; height:0.5rem; flex:none; border-radius:999px; background-color: hsl(var(--st, var(--muted-foreground))); }
+  .ubm-proposta-estado--aguardando { --st: var(--muted-foreground); }
+  .ubm-proposta-estado--pendente   { --st: var(--warning); }
+  .ubm-proposta-estado--selando    { --st: var(--info); }
+  .ubm-proposta-estado--selada     { --st: var(--success); }
+  .ubm-proposta-estado--recusada   { --st: var(--destructive); }
+  .ubm-proposta-estado--expirada   { --st: var(--warning); }
+  .ubm-proposta-estado--execucao   { --st: var(--accent); }
+  .ubm-proposta-estado--finalizado { --st: var(--success); }
+  .ubm-proposta-estado--pendente::before { animation: ubm-pulse 2s ease-in-out infinite; }
+  @media (prefers-reduced-motion: reduce) { .ubm-proposta-estado--pendente::before { animation: none; } }
+
+  /* ── .ubm-caminhos / .ubm-caminho — dois caminhos de assinatura (RN7b) ── */
+  .ubm-caminhos { display: grid; gap: 0.85rem; grid-template-columns: 1fr; }
+  @media (min-width: 720px) { .ubm-caminhos { grid-template-columns: 1fr 1fr; } }
+  .ubm-caminho {
+    --chamfer: 12px; position: relative; display: flex; flex-direction: column; gap: 0.55rem;
+    padding: 1rem 1.1rem; background-color: hsl(var(--card));
+    border: 1.5px solid hsl(var(--border));
+    clip-path: polygon(0 0, calc(100% - var(--chamfer)) 0, 100% var(--chamfer), 100% 100%, 0 100%);
+    transition: border-color 0.15s ease, box-shadow 0.15s ease, transform 0.15s ease;
+  }
+  .ubm-caminho:hover { border-color: hsl(var(--primary) / 0.5); box-shadow: var(--shadow-sm); transform: translateY(-1px); }
+  .ubm-caminho-rotulo { font-family: var(--font-mono), monospace; text-transform: uppercase; letter-spacing: 0.12em; font-size: 0.66rem; font-weight: 700; color: hsl(var(--muted-foreground)); }
+  .ubm-caminho-titulo { font-family: var(--font-display), Georgia, serif; font-weight: 600; font-size: 1.02rem; color: hsl(var(--foreground)); }
+  .ubm-caminho-desc { font-size: 0.88rem; line-height: 1.5; color: hsl(var(--muted-foreground)); }
+  @media (prefers-reduced-motion: reduce) { .ubm-caminho { transition: none; } .ubm-caminho:hover { transform: none; } }
+
+  /* ── .ubm-govbr-aviso — banner pró-gov.br Caminho B (RN7c, texto+link, sem API) ── */
+  .ubm-govbr-aviso {
+    display: flex; gap: 0.6rem; align-items: flex-start; padding: 0.75rem 0.85rem; margin: 0.25rem 0;
+    font-size: 0.86rem; line-height: 1.5; color: hsl(var(--foreground));
+    background-color: hsl(var(--info) / 0.1); border: 1px solid hsl(var(--info) / 0.35); border-radius: var(--radius);
+  }
+  .ubm-govbr-aviso > svg { width: 1.05rem; height: 1.05rem; flex: none; color: hsl(var(--info)); margin-top: 0.1rem; }
+  .ubm-govbr-aviso a { color: hsl(var(--accent)); font-weight: 600; }
+
+  /* ── .ubm-prova-origem — badge de origem da prova (Autentique vs upload livre) ── */
+  .ubm-prova-origem {
+    display: inline-flex; align-items: center; gap: 0.35rem;
+    font-family: var(--font-mono), monospace; text-transform: uppercase; letter-spacing: 0.08em;
+    font-size: 0.62rem; font-weight: 700; color: hsl(var(--muted-foreground));
+  }
+
+  /* ── .ubm-aviso--loop — alerta suave de loop de negociação (RN16b) ── */
+  .ubm-aviso--loop { border-color: hsl(var(--warning) / 0.6); background: hsl(var(--warning) / 0.07); }
+
 /* ════════════════════════════ KEYFRAMES ════════════════════════════ */
 @keyframes ubm-rotate { to { transform: rotate(360deg); } }
 @keyframes ubm-fade { from { opacity: 0; } to { opacity: 1; } }
@@ -2059,6 +2152,15 @@
 @keyframes ubm-stamp-in { from { opacity: 0; transform: rotate(-3deg) scale(0.8); } to { opacity: 1; transform: rotate(-3deg) scale(1); } }
 @keyframes ubm-sk-sweep  { 100% { transform: translateX(100%); } }
 @keyframes ubm-sk-bounce { 0%,100% { opacity: 0.3; transform: translateY(0); } 50% { opacity: 1; transform: translateY(-0.2rem); } }
+/* 006 — gesto de inversão da contraproposta (a peça "desfaz o encaixe") */
+@keyframes ubm-uncross {
+  0%   { opacity: 1; transform: translateX(0) rotate(0); }
+  55%  { opacity: 0.15; transform: translateX(-28px) rotate(-1.2deg); }
+  56%  { opacity: 0; transform: translateX(36px) rotate(1.2deg); }
+  100% { opacity: 1; transform: translateX(0) rotate(0); }
+}
+.ubm-uncross { animation: ubm-uncross 0.5s cubic-bezier(0.16, 1, 0.3, 1) both; }
+@media (prefers-reduced-motion: reduce) { .ubm-uncross { animation: none; } }
 /* toast motion */
 @keyframes ubm-toast-in {
   from { opacity: 0; transform: translateY(0.75rem) scale(0.98); }

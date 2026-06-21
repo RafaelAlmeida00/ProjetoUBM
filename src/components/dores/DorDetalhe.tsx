@@ -16,11 +16,14 @@ import { UbmTimeline } from '@/components/ubm-timeline'
 import { UbmTeam } from '@/components/ubm-team'
 import { ProjetoDetalheClient } from '@/components/dores/ProjetoDetalheClient'
 import { IndicacoesRecebidas } from '@/components/indicacoes/IndicacoesRecebidas'
+import { SecaoProposta } from '@/components/proposta/SecaoProposta'
 import type { AnexoMeta } from '@/lib/actions/anexo'
 import type { CursoUbm } from '@/lib/courses'
 import type { MembroPublico, EventoTimeline, FuncaoTarefa, MembroGestao } from '@/lib/data/projetos'
 import type { EventoTimelineDor } from '@/lib/data/dores'
 import type { GrupoIndicacoes } from '@/components/indicacoes/IndicacoesRecebidas'
+import type { DadosProposta } from '@/lib/data/proposta'
+import type { PapelProposta } from '@/components/proposta/SecaoProposta'
 
 export interface DorData {
   id: string
@@ -72,6 +75,13 @@ interface DorDetalheProps {
   /** 009 — ação contextual "Me indicar" no detalhe (aluno/coord; só em_analise). */
   papelBaseIndicacao?: 'aluno' | 'coordenador' | null
   estadoIndicacao?: EstadoIndicacao
+  /** T5.4 (006) — dados de proposta/assinatura, lidos pelo RSC sob RLS. Null = sem projeto. */
+  dadosProposta?: DadosProposta | null
+  /** T5.4 (006) — papel do usuário na proposta (gating server-side). */
+  papelProposta?: PapelProposta
+  /** T5.4 (006) — nome/email do representante (para envio Caminho A). */
+  representanteNome?: string
+  representanteEmail?: string
 }
 
 function labelCurso(value: string): string {
@@ -167,6 +177,10 @@ export function DorDetalhe({
   tarefas = [],
   papelBaseIndicacao = null,
   estadoIndicacao,
+  dadosProposta = null,
+  papelProposta,
+  representanteNome,
+  representanteEmail,
 }: DorDetalheProps) {
   const toast = useToast()
 
@@ -674,17 +688,15 @@ export function DorDetalhe({
           </section>
         )}
 
-        {/* ── 009: Proposta e assinatura — peça lacrada 006 (teaser para quem vê a dor com projeto) ── */}
+        {/* ── 006: Proposta e assinatura — SecaoProposta por papel (T5.4) ── */}
         {projetoId && (
-          <section className="ubm-section-block">
-            <div className="ubm-locked" aria-label="Próximas etapas em breve">
-              <span className="ubm-cota ubm-cota--muted">EM BREVE · 006</span>
-              <span className="ubm-locked-title">Proposta e assinatura</span>
-              <p className="ubm-locked-msg">
-                Proposta e assinatura aparecerão aqui quando a equipe avançar.
-              </p>
-            </div>
-          </section>
+          <SecaoProposta
+            projetoId={projetoId}
+            papel={papelProposta ?? null}
+            dados={dadosProposta}
+            representanteNome={representanteNome}
+            representanteEmail={representanteEmail}
+          />
         )}
       </div>
     </article>
