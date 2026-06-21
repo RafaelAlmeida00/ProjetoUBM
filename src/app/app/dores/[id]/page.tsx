@@ -6,11 +6,14 @@ import {
   listarFuncoesTarefas, listarIndicacoes, listarEquipeGestao, obterMeusVinculosProjeto,
 } from '@/lib/data/projetos'
 import { obterTimelineDor } from '@/lib/data/dores'
+import { lerDadosProposta } from '@/lib/data/proposta'
 import { rotuloProjeto } from '@/lib/format/projeto'
 import type { EstadoIndicacao } from '@/components/dores/MeIndicarSlot'
 import type { MembroPublico, EventoTimeline, FuncaoTarefa, MembroGestao } from '@/lib/data/projetos'
 import type { EventoTimelineDor } from '@/lib/data/dores'
 import type { GrupoIndicacoes } from '@/components/indicacoes/IndicacoesRecebidas'
+import type { DadosProposta } from '@/lib/data/proposta'
+import type { PapelProposta } from '@/components/proposta/SecaoProposta'
 
 interface Props {
   params: Promise<{ id: string }>
@@ -151,6 +154,12 @@ export default async function DorDetalhePage({ params }: Props) {
   let papelBaseIndicacao: 'aluno' | 'coordenador' | null = null
   let estadoIndicacao: EstadoIndicacao | undefined = undefined
 
+  // 006 T5.4 — proposta/assinatura (gating server-side por papel — RN18)
+  let papelProposta: PapelProposta = null
+  let dadosProposta: DadosProposta | null = null
+  let representanteNome: string | undefined
+  let representanteEmail: string | undefined
+
   const { data: projetoVinculado } = await supabase
     .from('projeto')
     .select('id, status, host_coordenador_id, indicacoes_abertas')
@@ -206,6 +215,29 @@ export default async function DorDetalhePage({ params }: Props) {
         coordPend ? 'coord_pendente' :
         !verificado ? 'nao_verificado' : 'disponivel'
     }
+
+    // 006 T5.4 — papel na proposta, scoped ao projeto (RN18 / RLS 0065):
+    //   admin > host-do-projeto > representante-da-empresa > coordenação-do-projeto > aluno/null.
+    //   is_project_coordinator cobre host+co_coordenadores (espelha a policy do documento_proposta).
+    if (user) {
+      if (isAdmin) {
+        papelProposta = 'admin'
+      } else if (isHost) {
+        papelProposta = 'host'
+      } else {
+        const { data: ehRep } = await supabase.rpc('is_company_rep', { p_empresa_id: dor.empresa_id })
+        if (ehRep === true) {
+          papelProposta = 'representante'
+        } else {
+          const { data: ehCoord } = await supabase.rpc('is_project_coordinator', { p_projeto_id: projetoId })
+          if (ehCoord === true) papelProposta = 'coordenador'
+          else if (papelAtual === 'aluno') papelProposta = 'aluno'
+        }
+      }
+    }
+
+    // Dados gated pelo papel (lerDadosProposta short-circuita p/ null/aluno → devolve só o estado).
+    dadosProposta = await lerDadosProposta(projetoId, papelProposta)
   }
 
   const dorData: DorData = {
@@ -243,6 +275,10 @@ export default async function DorDetalhePage({ params }: Props) {
       tarefas={tarefas}
       papelBaseIndicacao={papelBaseIndicacao}
       estadoIndicacao={estadoIndicacao}
+      dadosProposta={dadosProposta}
+      papelProposta={papelProposta}
+      representanteNome={representanteNome}
+      representanteEmail={representanteEmail}
     />
   )
 }

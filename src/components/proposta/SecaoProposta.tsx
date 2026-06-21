@@ -896,7 +896,7 @@ function VisaoAluno() {
     >
       <Lock className="ubm-locked-icon" aria-hidden="true" />
       <span className="ubm-cota ubm-cota--muted">DOCUMENTO RESTRITO</span>
-      <span className="ubm-locked-title">Proposta e assinatura</span>
+      <span className="ubm-locked-title">Negociação reservada</span>
       <p className="ubm-locked-msg">
         Esta etapa é confidencial. O documento e a negociação ficam entre a coordenação do
         projeto, o representante da empresa e a UBM. Acompanhe o avanço pela linha do tempo.

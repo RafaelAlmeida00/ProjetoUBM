@@ -57,6 +57,7 @@ function makeClient(user: { id: string; app_metadata?: Record<string, unknown> }
       }
       return b
     },
+    rpc: vi.fn(async () => ({ data: false, error: null })),
     storage: { from: () => ({ createSignedUrl: async () => ({ data: { signedUrl: 'x' }, error: null }) }) },
   }
 }
