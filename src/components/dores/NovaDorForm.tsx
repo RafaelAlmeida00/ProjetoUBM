@@ -6,6 +6,7 @@ import { Lock, AlertCircle } from 'lucide-react'
 import { criarDor, submeterDor } from '@/lib/actions/dor'
 import { CourseMultiSelect } from '@/components/course/CourseMultiSelect'
 import { ConsentGate } from '@/components/consent/ConsentGate'
+import { useToast } from '@/components/feedback/ToastProvider'
 import type { CursoUbm } from '@/lib/courses'
 
 const CONSENT_VERSION = '1.0'
@@ -27,6 +28,7 @@ interface NovaDorFormProps {
  */
 export function NovaDorForm({ empresas }: NovaDorFormProps) {
   const router = useRouter()
+  const toast = useToast()
 
   const [empresaId, setEmpresaId] = useState<string>(empresas[0]?.id ?? '')
   const [titulo, setTitulo] = useState('')
@@ -78,12 +80,20 @@ export function NovaDorForm({ empresas }: NovaDorFormProps) {
     if (!result.ok) {
       setAcao(null)
       setErro(result.error)
+      toast.erro(result.error || 'Não foi possível enviar sua dor. Tente novamente.')
       return
     }
     // Enviar = submete à moderação. Se o submit falhar, a dor já existe como rascunho
     // e pode ser reenviada na própria tela da dor — não recriamos (evita duplicar).
     if (modo === 'enviar') {
-      await submeterDor(result.dorId)
+      const submitResult = await submeterDor(result.dorId)
+      if (submitResult.ok) {
+        toast.sucesso('Dor enviada para análise.')
+      } else {
+        toast.erro(submitResult.error || 'Não foi possível enviar sua dor. Tente novamente.')
+      }
+    } else {
+      toast.sucesso('Rascunho salvo.')
     }
     router.push(`/app/dores/${result.dorId}`)
   }

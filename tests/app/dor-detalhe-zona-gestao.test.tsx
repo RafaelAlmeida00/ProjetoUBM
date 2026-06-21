@@ -7,6 +7,9 @@ import { render, screen } from '@testing-library/react'
 import React from 'react'
 
 vi.mock('next/navigation', () => ({ useRouter: () => ({ push: vi.fn(), replace: vi.fn() }), usePathname: () => '/app/dores/d1' }))
+vi.mock('@/components/feedback/ToastProvider', () => ({
+  useToast: () => ({ sucesso: vi.fn(), erro: vi.fn(), info: vi.fn(), dispensar: vi.fn() }),
+}))
 vi.mock('@/lib/actions/dor', () => ({ submeterDor: vi.fn(), editarDor: vi.fn() }))
 vi.mock('@/lib/actions/anexo', () => ({ removerAnexo: vi.fn() }))
 vi.mock('@/lib/actions/equipe', () => ({

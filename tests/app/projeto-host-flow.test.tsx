@@ -11,6 +11,10 @@ vi.mock('next/navigation', () => ({
   usePathname: () => '/app/projetos/p1',
 }))
 
+vi.mock('@/components/feedback/ToastProvider', () => ({
+  useToast: () => ({ sucesso: vi.fn(), erro: vi.fn(), info: vi.fn(), dispensar: vi.fn() }),
+}))
+
 const { elegerHostMock, trocarHostMock, fecharEquipeMock, reabrirMock, removerMock, avancarMock } = vi.hoisted(() => ({
   elegerHostMock: vi.fn(),
   trocarHostMock: vi.fn(),

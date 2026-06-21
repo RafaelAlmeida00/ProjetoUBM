@@ -54,6 +54,12 @@ vi.mock('@/lib/actions/empresa', () => ({
 import OnboardingPage from '@/app/app/onboarding/page'
 import ContaPage from '@/app/app/conta/page'
 import { DoresPage } from '@/components/dores/DoresPage'
+import { ToastProvider } from '@/components/feedback/ToastProvider'
+
+// ContaPage migrou o feedback de salvar (inline aria-live → snackbar UBM via useToast).
+// Renderizamos com o ToastProvider REAL para exercer o feedback ponta-a-ponta:
+// toast.sucesso('Perfil atualizado.') e toast.erro(...) renderizam o texto que B4/B5 asseguram.
+const renderUI = (ui: React.ReactElement) => render(<ToastProvider>{ui}</ToastProvider>)
 
 // ─── A) Onboarding — campo Nome ───────────────────────────────────────────────
 
@@ -182,7 +188,7 @@ describe('Defeito B — /app/conta: botão Salvar e persistência do nome', () =
   })
 
   it('B1 — exibe botão "Salvar" na tela de conta', async () => {
-    render(<ContaPage />)
+    renderUI(<ContaPage />)
     await waitFor(() =>
       expect(screen.getByDisplayValue('Ana Lima')).toBeInTheDocument(),
     )
@@ -190,7 +196,7 @@ describe('Defeito B — /app/conta: botão Salvar e persistência do nome', () =
   })
 
   it('B2 — ao clicar Salvar, chama atualizarPerfil com o nome atual', async () => {
-    render(<ContaPage />)
+    renderUI(<ContaPage />)
     await waitFor(() =>
       expect(screen.getByDisplayValue('Ana Lima')).toBeInTheDocument(),
     )
@@ -204,7 +210,7 @@ describe('Defeito B — /app/conta: botão Salvar e persistência do nome', () =
 
   it('B3 — após editar nome e salvar, chama atualizarPerfil com o novo nome', async () => {
     const user = userEvent.setup()
-    render(<ContaPage />)
+    renderUI(<ContaPage />)
     await waitFor(() =>
       expect(screen.getByDisplayValue('Ana Lima')).toBeInTheDocument(),
     )
@@ -220,7 +226,7 @@ describe('Defeito B — /app/conta: botão Salvar e persistência do nome', () =
   })
 
   it('B4 — após salvar com sucesso, exibe feedback de sucesso (aria-live)', async () => {
-    render(<ContaPage />)
+    renderUI(<ContaPage />)
     await waitFor(() =>
       expect(screen.getByDisplayValue('Ana Lima')).toBeInTheDocument(),
     )
@@ -234,7 +240,7 @@ describe('Defeito B — /app/conta: botão Salvar e persistência do nome', () =
 
   it('B5 — ao salvar com erro, exibe mensagem de erro (aria-live)', async () => {
     atualizarPerfilMock.mockResolvedValueOnce({ ok: false, error: 'Erro ao salvar' })
-    render(<ContaPage />)
+    renderUI(<ContaPage />)
     await waitFor(() =>
       expect(screen.getByDisplayValue('Ana Lima')).toBeInTheDocument(),
     )
@@ -247,7 +253,7 @@ describe('Defeito B — /app/conta: botão Salvar e persistência do nome', () =
   })
 
   it('B6 — checkbox ranking_optin é funcional (atualiza estado ao clicar)', async () => {
-    render(<ContaPage />)
+    renderUI(<ContaPage />)
     await waitFor(() =>
       expect(screen.getByRole('checkbox')).toBeInTheDocument(),
     )
@@ -258,7 +264,7 @@ describe('Defeito B — /app/conta: botão Salvar e persistência do nome', () =
   })
 
   it('B7 — ao salvar, atualizarPerfil recebe rankingOptin atualizado', async () => {
-    render(<ContaPage />)
+    renderUI(<ContaPage />)
     await waitFor(() =>
       expect(screen.getByRole('checkbox')).toBeInTheDocument(),
     )

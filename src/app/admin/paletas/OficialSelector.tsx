@@ -11,6 +11,7 @@
 import { useState, useEffect, useCallback } from 'react'
 import { CheckCircle, AlertTriangle, Radio } from 'lucide-react'
 import { definirOficialAtiva } from '@/lib/actions/admin-paletas'
+import { useToast } from '@/components/feedback/ToastProvider'
 
 export interface PaletaOficial {
   id: string
@@ -87,14 +88,10 @@ function ModalConfirm({ nome, onConfirmar, onCancelar, carregando }: ModalConfir
 }
 
 export function OficialSelector({ paletas, onAtivada }: OficialSelectorProps) {
+  const toast = useToast()
+
   const [pendente, setPendente] = useState<PaletaOficial | null>(null)
   const [carregando, setCarregando] = useState(false)
-  const [toast, setToast] = useState<string | null>(null)
-
-  const mostrarToast = (msg: string) => {
-    setToast(msg)
-    setTimeout(() => setToast(null), 3500)
-  }
 
   const handleSelecionar = useCallback((paleta: PaletaOficial) => {
     if (paleta.ativa || !paleta.aprovadaAA) return
@@ -106,12 +103,15 @@ export function OficialSelector({ paletas, onAtivada }: OficialSelectorProps) {
     setCarregando(true)
     const result = await definirOficialAtiva(pendente.id)
     setCarregando(false)
+    const pendentId = pendente.id
     setPendente(null)
     if (result.ok) {
-      mostrarToast(`Paleta oficial atualizada — todo o site agora usa ${pendente.nome}.`)
-      onAtivada?.(pendente.id)
+      toast.sucesso('Paleta ativada.')
+      onAtivada?.(pendentId)
+    } else {
+      toast.erro('Não foi possível ativar a paleta. Tente novamente.')
     }
-  }, [pendente, onAtivada])
+  }, [pendente, onAtivada, toast])
 
   const handleCancelar = useCallback(() => {
     setPendente(null)
@@ -237,21 +237,6 @@ export function OficialSelector({ paletas, onAtivada }: OficialSelectorProps) {
         />
       )}
 
-      {/* Toast de sucesso */}
-      {toast && (
-        <div
-          role="status"
-          aria-live="polite"
-          style={{
-            position: 'fixed', bottom: '1.5rem', right: '1.5rem',
-            background: 'hsl(var(--card))', border: '1px solid hsl(var(--border))',
-            padding: '0.75rem 1.25rem', borderRadius: 'var(--radius)',
-            boxShadow: 'var(--shadow-md)', fontSize: '0.92rem', zIndex: 70,
-          }}
-        >
-          {toast}
-        </div>
-      )}
     </>
   )
 }

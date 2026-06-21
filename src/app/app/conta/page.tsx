@@ -1,7 +1,8 @@
 'use client'
 import { useEffect, useState } from 'react'
-import { Loader2, Check, AlertCircle } from 'lucide-react'
+import { Loader2 } from 'lucide-react'
 import { getPerfilAction, atualizarPerfil } from '@/lib/actions/perfil'
+import { useToast } from '@/components/feedback/ToastProvider'
 
 /**
  * T4 — /app/conta: perfil do usuário.
@@ -16,7 +17,7 @@ export default function ContaPage() {
   const [salvando, setSalvando] = useState(false)
   const [nomePub, setNomePub] = useState('')
   const [rankingOptin, setRankingOptin] = useState(false)
-  const [feedback, setFeedback] = useState<{ tipo: 'sucesso' | 'erro'; msg: string } | null>(null)
+  const toast = useToast()
 
   useEffect(() => {
     getPerfilAction().then((p) => {
@@ -28,16 +29,12 @@ export default function ContaPage() {
 
   const handleSalvar = async () => {
     setSalvando(true)
-    setFeedback(null)
     const result = await atualizarPerfil({ nomePublico: nomePub, rankingOptin })
     setSalvando(false)
     if (result.ok) {
-      setFeedback({ tipo: 'sucesso', msg: 'Perfil salvo.' })
+      toast.sucesso('Perfil atualizado.')
     } else {
-      setFeedback({
-        tipo: 'erro',
-        msg: result.error ?? 'Não conseguimos salvar agora. Tente de novo em instantes.',
-      })
+      toast.erro(result.error ?? 'Não foi possível salvar seu perfil. Tente novamente.')
     }
   }
 
@@ -75,8 +72,6 @@ export default function ContaPage() {
             value={nomePub}
             onChange={(e) => {
               setNomePub(e.target.value)
-              // Limpa feedback ao redigitar para não poluir a experiência
-              if (feedback) setFeedback(null)
             }}
             placeholder="Seu nome público na plataforma"
             aria-describedby="nome_publico-help"
@@ -105,20 +100,6 @@ export default function ContaPage() {
           />
           Aparecer com meu nome nos rankings públicos (opcional)
         </label>
-
-        {/* Feedback pós-salvar com ícone + aria semântico (ux-ui 2026-06-12) */}
-        {feedback && feedback.tipo === 'sucesso' && (
-          <div role="status" aria-live="polite" className="ubm-save-feedback ubm-save-feedback--ok">
-            <Check aria-hidden />
-            {feedback.msg}
-          </div>
-        )}
-        {feedback && feedback.tipo === 'erro' && (
-          <div role="alert" className="ubm-save-feedback ubm-save-feedback--err">
-            <AlertCircle aria-hidden />
-            {feedback.msg}
-          </div>
-        )}
 
         {/* Botão Salvar — desabilitado se nome vazio ou salvando */}
         <div style={{ marginTop: '1rem', display: 'flex', justifyContent: 'flex-end' }}>

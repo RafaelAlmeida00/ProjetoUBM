@@ -15,6 +15,11 @@
  * 3. Que criada_em (mapeado de created_at) é exibido sem crash quando presente ou ausente
  */
 import { describe, it, expect, vi } from 'vitest'
+
+// Integracao: componente usa useToast — mock do provider no teste unitario (sem feedback real).
+vi.mock('@/components/feedback/ToastProvider', () => ({
+  useToast: () => ({ sucesso: vi.fn(), erro: vi.fn(), info: vi.fn(), dispensar: vi.fn() }),
+}))
 import { render, screen, fireEvent } from '@testing-library/react'
 import React from 'react'
 
@@ -44,7 +49,9 @@ describe('B-003: DoresPage — mapeamento de colunas (schema real)', () => {
         isVerificado={false}
       />,
     )
-    expect(screen.getByText('Empresa Teste B003')).toBeInTheDocument()
+    // 009 filtros: o nome da empresa aparece no card (link) E na option do filtro EMPRESA.
+    // Escopo no link do card preserva a intenção (o card renderiza a dor) sem ambiguidade.
+    expect(screen.getByRole('link', { name: /Empresa Teste B003/i })).toBeInTheDocument()
     expect(screen.getAllByText(/publicada/i).length).toBeGreaterThan(0)
   })
 

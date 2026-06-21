@@ -1,6 +1,7 @@
 'use client'
 import { useState, useTransition } from 'react'
 import { Loader2 } from 'lucide-react'
+import { useToast } from '@/components/feedback/ToastProvider'
 
 export type EstadoIndicacao =
   | 'disponivel'
@@ -37,6 +38,7 @@ export function MeIndicarSlot({
   const [estado, setEstado] = useState<EstadoIndicacao>(estadoInicial)
   const [erro, setErro] = useState<string | null>(null)
   const [isPending, startTransition] = useTransition()
+  const toast = useToast()
 
   // coord_pendente: silêncio total no card
   if (estado === 'coord_pendente') return null
@@ -65,8 +67,11 @@ export function MeIndicarSlot({
       const res = await onIndicar(projetoId, papelBase)
       if (res.ok) {
         setEstado('ja_indicado')
+        toast.sucesso('Indicação enviada.')
       } else {
-        setErro(res.error ?? 'Não foi possível enviar a indicação. Tente novamente.')
+        const msg = res.error ?? 'Não foi possível enviar a indicação. Tente novamente.'
+        setErro(msg)
+        toast.erro(msg)
       }
     })
   }
@@ -77,8 +82,11 @@ export function MeIndicarSlot({
       const res = await onRetirar(projetoId)
       if (res.ok) {
         setEstado('disponivel')
+        toast.sucesso('Indicação retirada.')
       } else {
-        setErro(res.error ?? 'Não foi possível retirar a indicação. Tente novamente.')
+        const msg = res.error ?? 'Não foi possível retirar a indicação. Tente novamente.'
+        setErro(msg)
+        toast.erro(msg)
       }
     })
   }

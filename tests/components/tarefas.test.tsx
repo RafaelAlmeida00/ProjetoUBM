@@ -12,6 +12,10 @@ vi.mock('next/navigation', () => ({
   usePathname: () => '/app/projetos/1',
 }))
 
+vi.mock('@/components/feedback/ToastProvider', () => ({
+  useToast: () => ({ sucesso: vi.fn(), erro: vi.fn(), info: vi.fn(), dispensar: vi.fn() }),
+}))
+
 import { UbmTask, UbmTaskList } from '@/components/ubm-task'
 import type { FuncaoTarefa } from '@/lib/data/projetos'
 

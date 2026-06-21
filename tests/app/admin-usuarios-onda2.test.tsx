@@ -91,6 +91,7 @@ vi.mock('@/components/course/CourseMultiSelect', () => ({
 }))
 
 import AdminUsuariosPage from '@/app/admin/usuarios/page'
+import { ToastProvider } from '@/components/feedback/ToastProvider'
 
 // Dados de fixture
 const U_ADMIN_LOGADO = {
@@ -125,7 +126,7 @@ const U_COORD = {
 
 function setup(usuarios = [U_ADMIN_LOGADO, U_ADMIN2, U_ALUNO]) {
   listarUsuariosMock.mockResolvedValue(usuarios)
-  return render(<AdminUsuariosPage />)
+  return render(<ToastProvider><AdminUsuariosPage /></ToastProvider>)
 }
 
 // ─── 1. Tabela enriquecida ──────────────────────────────────────────────────
@@ -144,7 +145,7 @@ describe('Tabela enriquecida', () => {
 
   it('exibe chips de papéis com classes corretas (aluno, representante, coordenador)', async () => {
     listarUsuariosMock.mockResolvedValue([U_ALUNO, U_COORD])
-    render(<AdminUsuariosPage />)
+    render(<ToastProvider><AdminUsuariosPage /></ToastProvider>)
     await waitFor(() => expect(screen.getByText('João Aluno')).toBeInTheDocument())
     // chip aluno — classe ubm-member-papel-chip--aluno
     const chipAluno = document.querySelector('.ubm-member-papel-chip--aluno')
@@ -253,7 +254,7 @@ describe('Conceder papel aluno (via concederPapel)', () => {
 
   it('conceder aluno para usuário sem papel chama concederPapel(userId, "aluno")', async () => {
     listarUsuariosMock.mockResolvedValue([U_SEM_PAPEL])
-    render(<AdminUsuariosPage />)
+    render(<ToastProvider><AdminUsuariosPage /></ToastProvider>)
     await waitFor(() => expect(screen.getByRole('button', { name: /gerir/i })).toBeInTheDocument())
     fireEvent.click(screen.getByRole('button', { name: /gerir/i }))
     await waitFor(() => expect(screen.getByRole('combobox', { name: /papel/i })).toBeInTheDocument())
@@ -271,7 +272,7 @@ describe('Conceder papel aluno (via concederPapel)', () => {
 
   it('toast de sucesso exibe o nome após conceder papel aluno', async () => {
     listarUsuariosMock.mockResolvedValue([U_SEM_PAPEL])
-    render(<AdminUsuariosPage />)
+    render(<ToastProvider><AdminUsuariosPage /></ToastProvider>)
     await waitFor(() => expect(screen.getByRole('button', { name: /gerir/i })).toBeInTheDocument())
     fireEvent.click(screen.getByRole('button', { name: /gerir/i }))
     await waitFor(() => expect(screen.getByRole('combobox', { name: /papel/i })).toBeInTheDocument())
@@ -298,7 +299,7 @@ describe('Conceder papel coordenador (0057: multi-curso)', () => {
 
   async function selecionarCoordenador(usuarios = [U_ALUNO]) {
     listarUsuariosMock.mockResolvedValue(usuarios)
-    render(<AdminUsuariosPage />)
+    render(<ToastProvider><AdminUsuariosPage /></ToastProvider>)
     await waitFor(() => expect(screen.getByRole('button', { name: /gerir/i })).toBeInTheDocument())
     fireEvent.click(screen.getByRole('button', { name: /gerir/i }))
     await waitFor(() => expect(screen.getByRole('combobox', { name: /papel/i })).toBeInTheDocument())
@@ -380,7 +381,7 @@ describe('Conceder papel representante (0057: exige empresa)', () => {
 
   async function selecionarRepresentante(usuarios = [U_ALUNO]) {
     listarUsuariosMock.mockResolvedValue(usuarios)
-    render(<AdminUsuariosPage />)
+    render(<ToastProvider><AdminUsuariosPage /></ToastProvider>)
     await waitFor(() => expect(screen.getByRole('button', { name: /gerir/i })).toBeInTheDocument())
     fireEvent.click(screen.getByRole('button', { name: /gerir/i }))
     await waitFor(() => expect(screen.getByRole('combobox', { name: /papel/i })).toBeInTheDocument())
@@ -456,7 +457,7 @@ describe('Revogar papel', () => {
 
   it('clicar × no chip abre ConfirmDialog com variant destructive', async () => {
     listarUsuariosMock.mockResolvedValue([U_ALUNO])
-    render(<AdminUsuariosPage />)
+    render(<ToastProvider><AdminUsuariosPage /></ToastProvider>)
     await waitFor(() => expect(screen.getByRole('button', { name: /gerir/i })).toBeInTheDocument())
     fireEvent.click(screen.getByRole('button', { name: /gerir/i }))
     await waitFor(() =>
@@ -469,7 +470,7 @@ describe('Revogar papel', () => {
 
   it('confirmar revogação chama revogarPapel(userId, role)', async () => {
     listarUsuariosMock.mockResolvedValue([U_ALUNO])
-    render(<AdminUsuariosPage />)
+    render(<ToastProvider><AdminUsuariosPage /></ToastProvider>)
     await waitFor(() => expect(screen.getByRole('button', { name: /gerir/i })).toBeInTheDocument())
     fireEvent.click(screen.getByRole('button', { name: /gerir/i }))
     await waitFor(() =>
@@ -493,7 +494,7 @@ describe('Conceder Admin', () => {
 
   async function abrirPainelAluno() {
     listarUsuariosMock.mockResolvedValue([U_ALUNO, U_ADMIN_LOGADO])
-    render(<AdminUsuariosPage />)
+    render(<ToastProvider><AdminUsuariosPage /></ToastProvider>)
     // O painel do U_ALUNO (não-admin)
     await waitFor(() => {
       const gerirBtns = screen.getAllByRole('button', { name: /gerir/i })
@@ -574,7 +575,7 @@ describe('Revogar Admin — guards visuais', () => {
     // sempre 2 admins para não ser "último"
     const outros = [U_ADMIN_LOGADO, U_ADMIN2].filter((u) => u.id !== usuario.id)
     listarUsuariosMock.mockResolvedValue([usuario, ...outros])
-    render(<AdminUsuariosPage />)
+    render(<ToastProvider><AdminUsuariosPage /></ToastProvider>)
     await waitFor(() => {
       const gerirBtns = screen.getAllByRole('button', { name: /gerir/i })
       expect(gerirBtns.length).toBeGreaterThan(0)
@@ -601,7 +602,7 @@ describe('Revogar Admin — guards visuais', () => {
   it('botão Revogar admin DISABLED quando há apenas 1 admin + motivo visível', async () => {
     // só 1 admin total
     listarUsuariosMock.mockResolvedValue([U_ADMIN_LOGADO, U_ALUNO])
-    render(<AdminUsuariosPage />)
+    render(<ToastProvider><AdminUsuariosPage /></ToastProvider>)
     await waitFor(() => {
       const gerirBtns = screen.getAllByRole('button', { name: /gerir/i })
       expect(gerirBtns.length).toBeGreaterThan(0)
@@ -641,7 +642,8 @@ describe('Revogar Admin — guards visuais', () => {
     await waitFor(() => expect(screen.getByRole('dialog')).toBeInTheDocument())
     fireEvent.click(screen.getByRole('button', { name: /confirmar/i }))
     await waitFor(() =>
-      expect(screen.getByRole('status')).toHaveTextContent(/não foi possível concluir/i)
+      // erros usam role="alert" (aria-live="assertive") no ToastProvider
+      expect(screen.getByRole('alert')).toHaveTextContent(/não foi possível/i)
     )
   })
 })
@@ -657,7 +659,7 @@ describe('Editar nome (Bloco C)', () => {
 
   async function abrirPainelComEditar() {
     listarUsuariosMock.mockResolvedValue([U_ALUNO])
-    render(<AdminUsuariosPage />)
+    render(<ToastProvider><AdminUsuariosPage /></ToastProvider>)
     await waitFor(() => expect(screen.getByRole('button', { name: /gerir/i })).toBeInTheDocument())
     fireEvent.click(screen.getByRole('button', { name: /gerir/i }))
     await waitFor(() =>
@@ -780,7 +782,7 @@ describe('Seção coordenadores pendentes — não quebrar (regressão)', () => 
         aprovado: false,
       },
     ])
-    render(<AdminUsuariosPage />)
+    render(<ToastProvider><AdminUsuariosPage /></ToastProvider>)
     await waitFor(() =>
       expect(screen.getByText(/aprovações pendentes/i)).toBeInTheDocument()
     )
@@ -788,7 +790,7 @@ describe('Seção coordenadores pendentes — não quebrar (regressão)', () => 
 
   it('NÃO exibe seção quando não há pendências', async () => {
     listarCoordenadoresPendentesMock.mockResolvedValue([])
-    render(<AdminUsuariosPage />)
+    render(<ToastProvider><AdminUsuariosPage /></ToastProvider>)
     await waitFor(() => expect(screen.queryByText(/aprovações pendentes/i)).not.toBeInTheDocument())
   })
 })

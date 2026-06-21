@@ -10,6 +10,7 @@ import {
   ChevronUp,
   Pencil,
 } from 'lucide-react'
+import { useToast } from '@/components/feedback/ToastProvider'
 import {
   listarUsuarios,
   revogarAdmin,
@@ -126,7 +127,7 @@ interface PainelGerirProps {
   currentUserId: string | null
   adminCount: number
   onRefresh: (update: (prev: UsuarioAdmin[]) => UsuarioAdmin[]) => void
-  onToast: (msg: string) => void
+  onToast: (msg: string, ok?: boolean) => void
 }
 
 type PendingAction =
@@ -251,9 +252,9 @@ function PainelGerir({
                 : u,
             ),
           )
-          onToast(`Papel de ${PAPEL_LABEL[pendingAction.role] ?? pendingAction.role} removido de ${usuario.nome}.`)
+          onToast(`Papel de ${PAPEL_LABEL[pendingAction.role] ?? pendingAction.role} removido de ${usuario.nome}.`, true)
         } else {
-          onToast('Não foi possível concluir. Tente novamente.')
+          onToast('Não foi possível revogar o papel. Tente novamente.', false)
         }
         break
       }
@@ -281,9 +282,9 @@ function PainelGerir({
               ),
             )
             const cursosLabel = pendingAction.cursoSlugs.map(getCursoLabel).join(', ')
-            onToast(`Papel de coordenador concedido a ${usuario.nome} (${cursosLabel}).`)
+            onToast(`Papel de coordenador concedido a ${usuario.nome} (${cursosLabel}).`, true)
           } else {
-            onToast('Não foi possível concluir. Tente novamente.')
+            onToast('Não foi possível conceder o papel. Tente novamente.', false)
           }
         } else if (pendingAction.role === 'representante' && pendingAction.empresaId) {
           // 0057: representante via concederRepresentante(userId, empresaId)
@@ -296,9 +297,9 @@ function PainelGerir({
                   : u,
               ),
             )
-            onToast(`Papel de representante concedido a ${usuario.nome}.`)
+            onToast(`Papel de representante concedido a ${usuario.nome}.`, true)
           } else {
-            onToast('Não foi possível concluir. Tente novamente.')
+            onToast('Não foi possível conceder o papel. Tente novamente.', false)
           }
         } else {
           // aluno — via concederPapel
@@ -311,9 +312,9 @@ function PainelGerir({
                   : u,
               ),
             )
-            onToast(`Papel de ${PAPEL_LABEL[pendingAction.role] ?? pendingAction.role} concedido a ${usuario.nome}.`)
+            onToast(`Papel de ${PAPEL_LABEL[pendingAction.role] ?? pendingAction.role} concedido a ${usuario.nome}.`, true)
           } else {
-            onToast('Não foi possível concluir. Tente novamente.')
+            onToast('Não foi possível conceder o papel. Tente novamente.', false)
           }
         }
         setSelectedPapel('')
@@ -327,9 +328,9 @@ function PainelGerir({
           onRefresh((prev) =>
             prev.map((u) => (u.id === usuario.id ? { ...u, is_admin: true } : u)),
           )
-          onToast('Acesso de administrador concedido.')
+          onToast('Acesso de administrador concedido.', true)
         } else {
-          onToast('Não foi possível concluir. Tente novamente.')
+          onToast('Não foi possível conceder o acesso. Tente novamente.', false)
         }
         break
       }
@@ -339,9 +340,9 @@ function PainelGerir({
           onRefresh((prev) =>
             prev.map((u) => (u.id === usuario.id ? { ...u, is_admin: false } : u)),
           )
-          onToast('Acesso de administrador revogado.')
+          onToast('Acesso de administrador revogado.', true)
         } else {
-          onToast('Não foi possível concluir. Tente novamente.')
+          onToast('Não foi possível revogar o acesso. Tente novamente.', false)
         }
         break
       }
@@ -361,9 +362,9 @@ function PainelGerir({
         prev.map((u) => (u.id === usuario.id ? { ...u, nome } : u)),
       )
       setEditandoNome(false)
-      onToast(`Nome atualizado para ${nome}.`)
+      onToast(`Perfil atualizado.`, true)
     } else {
-      onToast('Não foi possível concluir. Tente novamente.')
+      onToast('Não foi possível salvar o perfil. Tente novamente.', false)
     }
   }
 
@@ -709,11 +710,12 @@ function PainelGerir({
  * Modo blueprint. Tabela .ubm-machined enriquecida + painel Gerir por linha.
  */
 export default function AdminUsuariosPage() {
+  const toast = useToast()
+
   const [usuarios, setUsuarios] = useState<UsuarioAdmin[]>([])
   const [loading, setLoading] = useState(true)
   const [currentUserId, setCurrentUserId] = useState<string | null>(null)
   const [expandedId, setExpandedId] = useState<string | null>(null)
-  const [toast, setToast] = useState<string | null>(null)
 
   // Coordenadores pendentes
   const [pendentes, setPendentes] = useState<CoordenadorPendente[]>([])
@@ -735,9 +737,9 @@ export default function AdminUsuariosPage() {
     })
   }, [])
 
-  const mostrarToast = (msg: string) => {
-    setToast(msg)
-    setTimeout(() => setToast(null), 3500)
+  const mostrarToast = (msg: string, ok = true) => {
+    if (ok) toast.sucesso(msg)
+    else toast.erro(msg)
   }
 
   const handleAprovarCoordenador = async (pendente: CoordenadorPendente) => {
@@ -749,11 +751,9 @@ export default function AdminUsuariosPage() {
       setPendentes((prev) =>
         prev.filter((p) => !(p.user_id === pendente.user_id && p.curso_id === pendente.curso_id)),
       )
-      mostrarToast(
-        `Coordenador aprovado. ${pendente.nome} já pode acessar as indicações de ${pendente.curso_label}.`,
-      )
+      toast.sucesso(`Coordenador aprovado. ${pendente.nome} já pode acessar as indicações de ${pendente.curso_label}.`)
     } else {
-      mostrarToast('Não foi possível concluir. Tente novamente.')
+      toast.erro('Não foi possível aprovar. Tente novamente.')
     }
   }
 
@@ -765,9 +765,9 @@ export default function AdminUsuariosPage() {
       setPendentes((prev) =>
         prev.filter((p) => !(p.user_id === pendente.user_id && p.curso_id === pendente.curso_id)),
       )
-      mostrarToast('Cadastro de coordenador recusado.')
+      toast.sucesso('Solicitação de coordenação recusada.')
     } else {
-      mostrarToast('Não foi possível concluir. Tente novamente.')
+      toast.erro('Não foi possível recusar. Tente novamente.')
     }
   }
 
@@ -1037,26 +1037,6 @@ export default function AdminUsuariosPage() {
         onCancel={() => setConfirmandoCoord(null)}
       />
 
-      {/* Toast global */}
-      {toast && (
-        <div
-          role="status"
-          aria-live="polite"
-          style={{
-            position: 'fixed',
-            bottom: '1.5rem',
-            right: '1.5rem',
-            background: 'hsl(var(--card))',
-            border: '1px solid hsl(var(--border))',
-            padding: '0.75rem 1.25rem',
-            borderRadius: 'var(--radius)',
-            boxShadow: 'var(--shadow-md)',
-            fontSize: '0.92rem',
-          }}
-        >
-          {toast}
-        </div>
-      )}
     </div>
   )
 }

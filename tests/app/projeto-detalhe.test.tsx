@@ -14,6 +14,10 @@ vi.mock('next/navigation', () => ({
   notFound: () => { throw new Error('NOTFOUND') },
 }))
 
+vi.mock('@/components/feedback/ToastProvider', () => ({
+  useToast: () => ({ sucesso: vi.fn(), erro: vi.fn(), info: vi.fn(), dispensar: vi.fn() }),
+}))
+
 vi.mock('@/lib/actions/equipe', () => ({
   fecharEquipe: vi.fn().mockResolvedValue({ ok: true }),
   trocarHost: vi.fn().mockResolvedValue({ ok: true }),

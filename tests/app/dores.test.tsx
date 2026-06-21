@@ -4,6 +4,11 @@
  * aba "Minhas" oculta a não-autor, status com rótulo+ícone, CTA locked sem verificação.
  */
 import { describe, it, expect, vi } from 'vitest'
+
+// Integracao: componente usa useToast — mock do provider no teste unitario (sem feedback real).
+vi.mock('@/components/feedback/ToastProvider', () => ({
+  useToast: () => ({ sucesso: vi.fn(), erro: vi.fn(), info: vi.fn(), dispensar: vi.fn() }),
+}))
 import { render, screen, fireEvent } from '@testing-library/react'
 import React from 'react'
 
@@ -64,7 +69,8 @@ describe('DoresPage — T7 (vitrine + minhas dores)', () => {
         isVerificado={false}
       />
     )
-    expect(screen.getByText('Nissan do Brasil')).toBeInTheDocument()
+    // 009 filtros: empresa aparece no card (link) E como option do filtro EMPRESA → escopo no link do card.
+    expect(screen.getByRole('link', { name: /Nissan do Brasil/i })).toBeInTheDocument()
   })
 
   it('status sempre tem rótulo textual (não só cor — a11y)', () => {
@@ -76,7 +82,8 @@ describe('DoresPage — T7 (vitrine + minhas dores)', () => {
         isVerificado={false}
       />
     )
-    expect(screen.getByText(/publicada/i)).toBeInTheDocument()
+    // a11y: existe rótulo textual de status (não só cor). 009 filtros repete "publicada" → ≥1.
+    expect(screen.getAllByText(/publicada/i).length).toBeGreaterThan(0)
   })
 
   it('aba "Minhas dores" é visível para representante', () => {

@@ -6,6 +6,7 @@ import {
   fixarGrupo,
   type GrupoBackfill,
 } from '@/lib/actions/admin-backfill'
+import { useToast } from '@/components/feedback/ToastProvider'
 
 function ConfirmDialog({
   open,
@@ -45,10 +46,11 @@ function ConfirmDialog({
  * Prepara o terreno para o backfill proposal→dor (migr. 0021).
  */
 export default function AdminBackfillPage() {
+  const toast = useToast()
+
   const [grupos, setGrupos] = useState<GrupoBackfill[]>([])
   const [loading, setLoading] = useState(true)
   const [confirmandoId, setConfirmandoId] = useState<string | null>(null)
-  const [toast, setToast] = useState<string | null>(null)
 
   useEffect(() => {
     proposeBackfillEmpresas().then((g) => {
@@ -57,17 +59,14 @@ export default function AdminBackfillPage() {
     })
   }, [])
 
-  const mostrarToast = (msg: string) => {
-    setToast(msg)
-    setTimeout(() => setToast(null), 3500)
-  }
-
   const handleFixar = async (grupoId: string) => {
     setConfirmandoId(null)
     const res = await fixarGrupo(grupoId)
     if (res.ok) {
       setGrupos((prev) => prev.filter((g) => g.grupo_id !== grupoId))
-      mostrarToast('Grupo fixado.')
+      toast.sucesso('Grupo fixado.')
+    } else {
+      toast.erro('Não foi possível fixar o grupo. Tente novamente.')
     }
   }
 
@@ -139,20 +138,6 @@ export default function AdminBackfillPage() {
         onCancel={() => setConfirmandoId(null)}
       />
 
-      {toast && (
-        <div
-          role="status"
-          aria-live="polite"
-          style={{
-            position: 'fixed', bottom: '1.5rem', right: '1.5rem',
-            background: 'hsl(var(--card))', border: '1px solid hsl(var(--border))',
-            padding: '0.75rem 1.25rem', borderRadius: 'var(--radius)',
-            boxShadow: 'var(--shadow-md)', fontSize: '0.92rem',
-          }}
-        >
-          {toast}
-        </div>
-      )}
     </div>
   )
 }

@@ -193,6 +193,12 @@ import { OficialSelector } from '@/app/admin/paletas/OficialSelector'
 import { PaletaEditor } from '@/app/admin/paletas/PaletaEditor'
 import { PalettePreview } from '@/app/admin/paletas/PalettePreview'
 import { ListaPaletas } from '@/app/admin/paletas/ListaPaletas'
+import { ToastProvider } from '@/components/feedback/ToastProvider'
+
+// Wrapper helper: envolve qualquer UI no ToastProvider (necessário após migração do toast inline)
+function renderWithToast(ui: React.ReactElement) {
+  return render(<ToastProvider>{ui}</ToastProvider>)
+}
 
 // ═══════════════════════════════════════════════════════════════════════════════
 // T18 — Zona A: OficialSelector
@@ -208,20 +214,20 @@ describe('T18 — OficialSelector (Zona A — oficial ativa site-wide)', () => {
   })
 
   it('renderiza as 2 paletas oficiais com nome visível', () => {
-    render(<OficialSelector {...defaultProps} />)
+    renderWithToast(<OficialSelector {...defaultProps} />)
     expect(screen.getByText('Azul ENCAIXE')).toBeTruthy()
     expect(screen.getByText('Vermelho')).toBeTruthy()
   })
 
   it('a paleta ativa tem selo "NO AR" acessível', () => {
-    render(<OficialSelector {...defaultProps} />)
+    renderWithToast(<OficialSelector {...defaultProps} />)
     // Selo "NO AR" via aria-label ou texto
     const noAr = screen.getByLabelText(/no ar/i) || screen.queryByText(/no ar/i)
     expect(noAr).toBeTruthy()
   })
 
   it('tem role="radiogroup" e cada opção tem role="radio"', () => {
-    render(<OficialSelector {...defaultProps} />)
+    renderWithToast(<OficialSelector {...defaultProps} />)
     const group = screen.getByRole('radiogroup')
     expect(group).toBeTruthy()
     const radios = within(group).getAllByRole('radio')
@@ -229,7 +235,7 @@ describe('T18 — OficialSelector (Zona A — oficial ativa site-wide)', () => {
   })
 
   it('a opção ativa tem aria-checked="true"', () => {
-    render(<OficialSelector {...defaultProps} />)
+    renderWithToast(<OficialSelector {...defaultProps} />)
     const group = screen.getByRole('radiogroup')
     const checkedRadios = within(group)
       .getAllByRole('radio')
@@ -239,7 +245,7 @@ describe('T18 — OficialSelector (Zona A — oficial ativa site-wide)', () => {
 
   it('selecionar uma opção diferente da ativa abre modal de confirmação', async () => {
     const user = userEvent.setup()
-    render(<OficialSelector {...defaultProps} />)
+    renderWithToast(<OficialSelector {...defaultProps} />)
 
     // Vermelho não está ativa — clicar deve abrir modal
     const radios = screen.getAllByRole('radio')
@@ -253,7 +259,7 @@ describe('T18 — OficialSelector (Zona A — oficial ativa site-wide)', () => {
 
   it('modal de confirmação informa o impacto site-wide e que é reversível', async () => {
     const user = userEvent.setup()
-    render(<OficialSelector {...defaultProps} />)
+    renderWithToast(<OficialSelector {...defaultProps} />)
 
     const radios = screen.getAllByRole('radio')
     const naoAtiva = radios.find((r) => r.getAttribute('aria-checked') === 'false')
@@ -267,7 +273,7 @@ describe('T18 — OficialSelector (Zona A — oficial ativa site-wide)', () => {
   it('confirmar no modal chama definirOficialAtiva com o id correto', async () => {
     vi.mocked(definirOficialAtiva).mockResolvedValue({ ok: true })
     const user = userEvent.setup()
-    render(<OficialSelector {...defaultProps} />)
+    renderWithToast(<OficialSelector {...defaultProps} />)
 
     const radios = screen.getAllByRole('radio')
     const naoAtiva = radios.find((r) => r.getAttribute('aria-checked') === 'false')
@@ -284,7 +290,7 @@ describe('T18 — OficialSelector (Zona A — oficial ativa site-wide)', () => {
 
   it('ESC fecha o modal sem chamar a action', async () => {
     const user = userEvent.setup()
-    render(<OficialSelector {...defaultProps} />)
+    renderWithToast(<OficialSelector {...defaultProps} />)
 
     const radios = screen.getAllByRole('radio')
     const naoAtiva = radios.find((r) => r.getAttribute('aria-checked') === 'false')
@@ -312,7 +318,7 @@ describe('T18 — OficialSelector (Zona A — oficial ativa site-wide)', () => {
         ativa: false,
       },
     ]
-    render(<OficialSelector paletas={paletasComReprovada} onAtivada={vi.fn()} />)
+    renderWithToast(<OficialSelector paletas={paletasComReprovada} onAtivada={vi.fn()} />)
 
     const radios = screen.getAllByRole('radio')
     const reprovada = radios.find((r) => {
@@ -327,7 +333,7 @@ describe('T18 — OficialSelector (Zona A — oficial ativa site-wide)', () => {
   })
 
   it('cada paleta exibe badge AA', () => {
-    render(<OficialSelector {...defaultProps} />)
+    renderWithToast(<OficialSelector {...defaultProps} />)
     const badges = screen.getAllByText(/aprovad|aa/i)
     expect(badges.length).toBeGreaterThanOrEqual(1)
   })
@@ -349,27 +355,27 @@ describe('T19 — PaletaEditor (Zona B — cor-semente → tríade + gate AA)', 
   })
 
   it('renderiza o campo de cor-semente (.ubm-seed-input)', () => {
-    render(<PaletaEditor empresas={EMPRESAS} onSalva={vi.fn()} />)
+    renderWithToast(<PaletaEditor empresas={EMPRESAS} onSalva={vi.fn()} />)
     // campo de semente presente
     const seedInput = document.querySelector('.ubm-seed-input') || screen.queryByLabelText(/semente|cor/i)
     expect(seedInput).toBeTruthy()
   })
 
   it('renderiza o combobox de empresa', () => {
-    render(<PaletaEditor empresas={EMPRESAS} onSalva={vi.fn()} />)
+    renderWithToast(<PaletaEditor empresas={EMPRESAS} onSalva={vi.fn()} />)
     const combo = screen.getByRole('combobox') || document.querySelector('.ubm-combobox-input')
     expect(combo).toBeTruthy()
   })
 
   it('toggle "Manter acento marsala" está ligado por padrão', () => {
-    render(<PaletaEditor empresas={EMPRESAS} onSalva={vi.fn()} />)
+    renderWithToast(<PaletaEditor empresas={EMPRESAS} onSalva={vi.fn()} />)
     const toggle = screen.getByRole('checkbox', { name: /marsala/i })
     expect((toggle as HTMLInputElement).checked).toBe(true)
   })
 
   it('ao mudar a cor-semente, gerarTriade é chamado', async () => {
     const user = userEvent.setup()
-    render(<PaletaEditor empresas={EMPRESAS} onSalva={vi.fn()} />)
+    renderWithToast(<PaletaEditor empresas={EMPRESAS} onSalva={vi.fn()} />)
 
     const textInput = screen.getByRole('textbox', { name: /hsl|semente|cor/i })
     await user.clear(textInput)
@@ -381,14 +387,14 @@ describe('T19 — PaletaEditor (Zona B — cor-semente → tríade + gate AA)', 
   })
 
   it('tríade deriva ao vivo: exibe swatches (.ubm-swatch-trio)', async () => {
-    render(<PaletaEditor empresas={EMPRESAS} onSalva={vi.fn()} />)
+    renderWithToast(<PaletaEditor empresas={EMPRESAS} onSalva={vi.fn()} />)
     const trio = document.querySelector('.ubm-swatch-trio')
     expect(trio).toBeTruthy()
   })
 
   it('badge AA "APROVADA EM AA" quando validarAA retorna ok:true', async () => {
     vi.mocked(validarAA).mockReturnValue({ ok: true, falhas: [] })
-    render(<PaletaEditor empresas={EMPRESAS} onSalva={vi.fn()} />)
+    renderWithToast(<PaletaEditor empresas={EMPRESAS} onSalva={vi.fn()} />)
 
     // Digitar uma semente para triggar avaliação
     const textInput = screen.getByRole('textbox', { name: /hsl|semente|cor/i })
@@ -405,7 +411,7 @@ describe('T19 — PaletaEditor (Zona B — cor-semente → tríade + gate AA)', 
       ok: false,
       falhas: ['TEXTO SOBRE PRIMÁRIA 3.9:1 < 4.5 (claro)', 'ANEL DE FOCO 2.4:1 < 3.0 (escuro)'],
     })
-    render(<PaletaEditor empresas={EMPRESAS} onSalva={vi.fn()} />)
+    renderWithToast(<PaletaEditor empresas={EMPRESAS} onSalva={vi.fn()} />)
 
     const textInput = screen.getByRole('textbox', { name: /hsl|semente|cor/i })
     fireEvent.change(textInput, { target: { value: '50 100% 60%' } })
@@ -425,7 +431,7 @@ describe('T19 — PaletaEditor (Zona B — cor-semente → tríade + gate AA)', 
       ok: false,
       falhas: ['TEXTO SOBRE PRIMÁRIA 3.9:1 < 4.5 (claro)'],
     })
-    render(<PaletaEditor empresas={EMPRESAS} onSalva={vi.fn()} />)
+    renderWithToast(<PaletaEditor empresas={EMPRESAS} onSalva={vi.fn()} />)
 
     const textInput = screen.getByRole('textbox', { name: /hsl|semente|cor/i })
     fireEvent.change(textInput, { target: { value: '50 100% 60%' } })
@@ -443,7 +449,7 @@ describe('T19 — PaletaEditor (Zona B — cor-semente → tríade + gate AA)', 
 
   it('CTA "Salvar" habilitado quando AA aprovado', async () => {
     vi.mocked(validarAA).mockReturnValue({ ok: true, falhas: [] })
-    render(<PaletaEditor empresas={EMPRESAS} onSalva={vi.fn()} />)
+    renderWithToast(<PaletaEditor empresas={EMPRESAS} onSalva={vi.fn()} />)
 
     const textInput = screen.getByRole('textbox', { name: /hsl|semente|cor/i })
     fireEvent.change(textInput, { target: { value: '205 68% 33%' } })
@@ -460,7 +466,7 @@ describe('T19 — PaletaEditor (Zona B — cor-semente → tríade + gate AA)', 
   })
 
   it('resultado AA tem aria-live="polite" (acessível por leitor de tela)', () => {
-    render(<PaletaEditor empresas={EMPRESAS} onSalva={vi.fn()} />)
+    renderWithToast(<PaletaEditor empresas={EMPRESAS} onSalva={vi.fn()} />)
     const liveRegion = document.querySelector('[aria-live="polite"]')
     expect(liveRegion).toBeTruthy()
   })
@@ -471,7 +477,7 @@ describe('T19 — PaletaEditor (Zona B — cor-semente → tríade + gate AA)', 
     const user = userEvent.setup()
     const onSalva = vi.fn()
 
-    render(<PaletaEditor empresas={EMPRESAS} onSalva={onSalva} />)
+    renderWithToast(<PaletaEditor empresas={EMPRESAS} onSalva={onSalva} />)
 
     // Preenche semente
     const textInput = screen.getByRole('textbox', { name: /hsl|semente|cor/i })
@@ -569,7 +575,7 @@ describe('T21 — ListaPaletas (Zona C — soft-delete/restore + status)', () =>
   })
 
   it('renderiza oficiais e paletas de empresa', () => {
-    render(
+    renderWithToast(
       <ListaPaletas
         oficiais={PALETAS_OFICIAIS}
         empresa={PALETAS_EMPRESA}
@@ -582,7 +588,7 @@ describe('T21 — ListaPaletas (Zona C — soft-delete/restore + status)', () =>
   })
 
   it('status "NO AR" para paleta ativa', () => {
-    render(
+    renderWithToast(
       <ListaPaletas
         oficiais={PALETAS_OFICIAIS}
         empresa={PALETAS_EMPRESA}
@@ -595,7 +601,7 @@ describe('T21 — ListaPaletas (Zona C — soft-delete/restore + status)', () =>
   })
 
   it('status "EXCLUÍDA" para paleta com deletedAt', () => {
-    render(
+    renderWithToast(
       <ListaPaletas
         oficiais={PALETAS_OFICIAIS}
         empresa={PALETAS_EMPRESA}
@@ -608,7 +614,7 @@ describe('T21 — ListaPaletas (Zona C — soft-delete/restore + status)', () =>
   })
 
   it('status "DESATIVADA" + informação de empresa ausente para paleta órfã (CA9b)', () => {
-    render(
+    renderWithToast(
       <ListaPaletas
         oficiais={PALETAS_OFICIAIS}
         empresa={PALETAS_EMPRESA}
@@ -624,7 +630,7 @@ describe('T21 — ListaPaletas (Zona C — soft-delete/restore + status)', () =>
     const user = userEvent.setup()
     // Usa paleta não-ativa e não-excluída para que o botão Excluir apareça
     const paletaNaoAtiva = { ...PALETAS_EMPRESA[0], ativa: false, id: 'paleta-nao-ativa' }
-    render(
+    renderWithToast(
       <ListaPaletas
         oficiais={[]}
         empresa={[paletaNaoAtiva]}
@@ -647,7 +653,7 @@ describe('T21 — ListaPaletas (Zona C — soft-delete/restore + status)', () =>
 
     // Usa paleta não-ativa e não-excluída
     const paletaNaoAtiva = { ...PALETAS_EMPRESA[0], ativa: false, id: 'paleta-nao-ativa' }
-    render(
+    renderWithToast(
       <ListaPaletas
         oficiais={[]}
         empresa={[paletaNaoAtiva]}
@@ -674,7 +680,7 @@ describe('T21 — ListaPaletas (Zona C — soft-delete/restore + status)', () =>
     const user = userEvent.setup()
     const onRestaurada = vi.fn()
 
-    render(
+    renderWithToast(
       <ListaPaletas
         oficiais={[]}
         empresa={[PALETAS_EMPRESA[1]]} // paleta excluída
@@ -692,7 +698,7 @@ describe('T21 — ListaPaletas (Zona C — soft-delete/restore + status)', () =>
   })
 
   it('cota de auditoria visível (por <admin> · <data> — CA17)', () => {
-    render(
+    renderWithToast(
       <ListaPaletas
         oficiais={PALETAS_OFICIAIS}
         empresa={PALETAS_EMPRESA}
@@ -706,7 +712,7 @@ describe('T21 — ListaPaletas (Zona C — soft-delete/restore + status)', () =>
   })
 
   it('lista tem role="list" e itens com role="listitem" (a11y — design §5.4)', () => {
-    render(
+    renderWithToast(
       <ListaPaletas
         oficiais={PALETAS_OFICIAIS}
         empresa={PALETAS_EMPRESA}
@@ -719,7 +725,7 @@ describe('T21 — ListaPaletas (Zona C — soft-delete/restore + status)', () =>
   })
 
   it('estado vazio empresa: exibe mensagem humanizada', () => {
-    render(
+    renderWithToast(
       <ListaPaletas
         oficiais={PALETAS_OFICIAIS}
         empresa={[]}
@@ -839,7 +845,7 @@ describe('T22b — PaletasView (client orquestrador com dados reais como props)'
 
   it('renderiza heading "Gestão de Paletas"', async () => {
     const { PaletasView } = await import('@/app/admin/paletas/PaletasView')
-    render(
+    renderWithToast(
       <PaletasView
         paletasOficiais={PALETAS_OFICIAIS}
         paletasEmpresa={PALETAS_EMPRESA}
@@ -851,7 +857,7 @@ describe('T22b — PaletasView (client orquestrador com dados reais como props)'
 
   it('renderiza as 3 zonas (Oficial do site, Cor de empresa, Todas as paletas)', async () => {
     const { PaletasView } = await import('@/app/admin/paletas/PaletasView')
-    render(
+    renderWithToast(
       <PaletasView
         paletasOficiais={PALETAS_OFICIAIS}
         paletasEmpresa={PALETAS_EMPRESA}
@@ -866,7 +872,7 @@ describe('T22b — PaletasView (client orquestrador com dados reais como props)'
 
   it('passa paletasOficiais para OficialSelector (renderiza nomes)', async () => {
     const { PaletasView } = await import('@/app/admin/paletas/PaletasView')
-    render(
+    renderWithToast(
       <PaletasView
         paletasOficiais={PALETAS_OFICIAIS}
         paletasEmpresa={PALETAS_EMPRESA}
@@ -880,7 +886,7 @@ describe('T22b — PaletasView (client orquestrador com dados reais como props)'
 
   it('passa paletasEmpresa para ListaPaletas (renderiza empresa ABC)', async () => {
     const { PaletasView } = await import('@/app/admin/paletas/PaletasView')
-    render(
+    renderWithToast(
       <PaletasView
         paletasOficiais={PALETAS_OFICIAIS}
         paletasEmpresa={PALETAS_EMPRESA}
@@ -893,7 +899,7 @@ describe('T22b — PaletasView (client orquestrador com dados reais como props)'
 
   it('passa empresas para PaletaEditor (combobox de empresa aparece)', async () => {
     const { PaletasView } = await import('@/app/admin/paletas/PaletasView')
-    render(
+    renderWithToast(
       <PaletasView
         paletasOficiais={PALETAS_OFICIAIS}
         paletasEmpresa={PALETAS_EMPRESA}
@@ -906,7 +912,7 @@ describe('T22b — PaletasView (client orquestrador com dados reais como props)'
 
   it('sem props (listas vazias) renderiza estados vazios sem crash', async () => {
     const { PaletasView } = await import('@/app/admin/paletas/PaletasView')
-    render(
+    renderWithToast(
       <PaletasView
         paletasOficiais={[]}
         paletasEmpresa={[]}

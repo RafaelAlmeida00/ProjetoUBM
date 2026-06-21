@@ -5,6 +5,11 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { render, screen, fireEvent, waitFor } from '@testing-library/react'
 import React from 'react'
+import { ToastProvider } from '@/components/feedback/ToastProvider'
+
+// AdminUsuariosPage migrou o feedback de aprovar/recusar coordenador (inline → snackbar UBM).
+// Provider REAL: toast.sucesso('Coordenador aprovado. …') renderiza o texto que o teste assegura.
+const renderUI = (ui: React.ReactElement) => render(<ToastProvider>{ui}</ToastProvider>)
 
 vi.mock('next/navigation', () => ({
   useRouter: () => ({ push: vi.fn(), replace: vi.fn() }),
@@ -74,14 +79,14 @@ describe('A3 — /admin/usuarios: seção coordenadores pendentes', () => {
   })
 
   it('exibe seção "APROVAÇÕES PENDENTES" quando há pendências', async () => {
-    render(<AdminUsuariosPage />)
+    renderUI(<AdminUsuariosPage />)
     await waitFor(() => {
       expect(screen.getByText(/aprovações pendentes/i)).toBeInTheDocument()
     })
   })
 
   it('exibe o nome e email do coordenador pendente', async () => {
-    render(<AdminUsuariosPage />)
+    renderUI(<AdminUsuariosPage />)
     await waitFor(() => {
       expect(screen.getByText('Prof. Carla')).toBeInTheDocument()
       expect(screen.getByText(/carla@ubm.br/i)).toBeInTheDocument()
@@ -89,14 +94,14 @@ describe('A3 — /admin/usuarios: seção coordenadores pendentes', () => {
   })
 
   it('exibe o curso pedido no chip', async () => {
-    render(<AdminUsuariosPage />)
+    renderUI(<AdminUsuariosPage />)
     await waitFor(() => {
       expect(screen.getByText(/engenharia de software/i)).toBeInTheDocument()
     })
   })
 
   it('botões Aprovar e Recusar estão presentes para cada pendência', async () => {
-    render(<AdminUsuariosPage />)
+    renderUI(<AdminUsuariosPage />)
     await waitFor(() => {
       expect(screen.getByRole('button', { name: /aprovar/i })).toBeInTheDocument()
       expect(screen.getByRole('button', { name: /recusar/i })).toBeInTheDocument()
@@ -104,7 +109,7 @@ describe('A3 — /admin/usuarios: seção coordenadores pendentes', () => {
   })
 
   it('clicar Aprovar abre ConfirmDialog com variant primário', async () => {
-    render(<AdminUsuariosPage />)
+    renderUI(<AdminUsuariosPage />)
     await waitFor(() => expect(screen.getByRole('button', { name: /aprovar/i })).toBeInTheDocument())
     fireEvent.click(screen.getByRole('button', { name: /aprovar/i }))
     await waitFor(() => {
@@ -114,7 +119,7 @@ describe('A3 — /admin/usuarios: seção coordenadores pendentes', () => {
   })
 
   it('clicar Recusar abre ConfirmDialog com texto de recusa', async () => {
-    render(<AdminUsuariosPage />)
+    renderUI(<AdminUsuariosPage />)
     await waitFor(() => expect(screen.getByRole('button', { name: /recusar/i })).toBeInTheDocument())
     fireEvent.click(screen.getByRole('button', { name: /recusar/i }))
     await waitFor(() => {
@@ -124,7 +129,7 @@ describe('A3 — /admin/usuarios: seção coordenadores pendentes', () => {
   })
 
   it('confirmar aprovação chama aprovarCoordenador com userId E cursoId e remove o card otimisticamente', async () => {
-    render(<AdminUsuariosPage />)
+    renderUI(<AdminUsuariosPage />)
     await waitFor(() => expect(screen.getByRole('button', { name: /aprovar/i })).toBeInTheDocument())
     fireEvent.click(screen.getByRole('button', { name: /aprovar/i }))
     await waitFor(() => expect(screen.getByRole('dialog')).toBeInTheDocument())
@@ -142,7 +147,7 @@ describe('A3 — /admin/usuarios: seção coordenadores pendentes', () => {
   })
 
   it('confirmar recusa chama recusarCoordenador com userId E cursoId e remove o card otimisticamente', async () => {
-    render(<AdminUsuariosPage />)
+    renderUI(<AdminUsuariosPage />)
     await waitFor(() => expect(screen.getByRole('button', { name: /recusar/i })).toBeInTheDocument())
     fireEvent.click(screen.getByRole('button', { name: /recusar/i }))
     await waitFor(() => expect(screen.getByRole('dialog')).toBeInTheDocument())
@@ -158,7 +163,7 @@ describe('A3 — /admin/usuarios: seção coordenadores pendentes', () => {
   })
 
   it('toast aparece após aprovar', async () => {
-    render(<AdminUsuariosPage />)
+    renderUI(<AdminUsuariosPage />)
     await waitFor(() => expect(screen.getByRole('button', { name: /aprovar/i })).toBeInTheDocument())
     fireEvent.click(screen.getByRole('button', { name: /aprovar/i }))
     await waitFor(() => expect(screen.getByRole('dialog')).toBeInTheDocument())
@@ -171,7 +176,7 @@ describe('A3 — /admin/usuarios: seção coordenadores pendentes', () => {
 
   it('seção pendências NÃO aparece quando não há pendências', async () => {
     listarCoordenadoresPendentesMock.mockResolvedValue([])
-    render(<AdminUsuariosPage />)
+    renderUI(<AdminUsuariosPage />)
     await waitFor(() => {
       expect(screen.queryByText(/aprovações pendentes/i)).not.toBeInTheDocument()
     })

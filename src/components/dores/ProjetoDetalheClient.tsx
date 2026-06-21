@@ -16,6 +16,7 @@ import { criarTarefa, editarTarefa, concluirTarefa, reatribuirTarefa } from '@/l
 import { UbmTeamBuilder } from '@/components/ubm-team-builder'
 import { ElegerHostModal } from '@/components/indicacoes/ElegerHostModal'
 import { UbmTaskList } from '@/components/ubm-task'
+import { useToast } from '@/components/feedback/ToastProvider'
 
 export interface ProjetoDetalheClientProps {
   projetoId: string
@@ -55,8 +56,8 @@ export function ProjetoDetalheClient({
   modoTarefas = false,
 }: ProjetoDetalheClientProps) {
   const [modal, setModal] = useState<Modal>(null)
-  const [erro, setErro] = useState<string | null>(null)
   const [isPending, startTransition] = useTransition()
+  const toast = useToast()
 
   const nomesIndicados = Object.fromEntries(
     indicacoes.map((i) => [i.pessoa_id, i.aluno_nome || i.aluno_email || `Indicado (${i.papel_pretendido})`]),
@@ -64,24 +65,71 @@ export function ProjetoDetalheClient({
 
   const handleAvancar = () => {
     startTransition(async () => {
-      setErro(null)
       const res = await avancarProjeto(projetoId)
-      if (!res.ok) setErro(res.error)
+      if (res.ok) {
+        toast.sucesso('Projeto avançou de estágio.')
+      } else {
+        toast.erro(res.error || 'Não foi possível avançar o projeto. Tente novamente.')
+      }
     })
   }
   const handleReabrir = () => {
     startTransition(async () => {
-      setErro(null)
       const res = await reabrirIndicacoes(projetoId)
-      if (!res.ok) setErro(res.error)
+      if (res.ok) {
+        toast.sucesso('Indicações reabertas.')
+      } else {
+        toast.erro(res.error || 'Não foi possível reabrir as indicações. Tente novamente.')
+      }
     })
   }
   const handleRemover = (pessoaId: string) => {
     startTransition(async () => {
-      setErro(null)
       const res = await removerMembro(projetoId, pessoaId)
-      if (!res.ok) setErro(res.error)
+      if (res.ok) {
+        toast.sucesso('Membro removido da equipe.')
+      } else {
+        toast.erro(res.error || 'Não foi possível remover o membro. Tente novamente.')
+      }
     })
+  }
+
+  /** Handlers de modal que recebem o ActionResult e disparam toast. */
+  const handleElegerHost = async (pid: string, hostPessoaId: string) => {
+    const res = await elegerHost(pid, hostPessoaId)
+    if (res.ok) {
+      toast.sucesso('Host definido.')
+      setModal(null)
+    } else {
+      toast.erro(res.error || 'Não foi possível definir o host. Tente novamente.')
+    }
+    return res
+  }
+
+  const handleTrocarHost = async (pid: string, hostPessoaId: string) => {
+    const res = await trocarHost(pid, hostPessoaId)
+    if (res.ok) {
+      toast.sucesso('Host atualizado.')
+      setModal(null)
+    } else {
+      toast.erro(res.error || 'Não foi possível trocar o host. Tente novamente.')
+    }
+    return res
+  }
+
+  const handleFecharEquipe = async (
+    pid: string,
+    hostFinal: string,
+    membros: Array<{ pessoaId: string; papelProjeto: 'host' | 'co_coordenador' | 'aluno'; indicacaoId?: string }>,
+  ) => {
+    const res = await fecharEquipe(pid, hostFinal, membros)
+    if (res.ok) {
+      toast.sucesso('Equipe fechada.')
+      setModal(null)
+    } else {
+      toast.erro(res.error || 'Não foi possível fechar a equipe. Tente novamente.')
+    }
+    return res
   }
 
   // P0.2: admin age como host para tarefas
@@ -205,12 +253,6 @@ export function ProjetoDetalheClient({
         </div>
       )}
 
-      {erro && (
-        <p role="alert" style={{ color: 'hsl(var(--destructive))', fontSize: '0.9rem', width: '100%' }}>
-          {erro}
-        </p>
-      )}
-
       {/* ── Modais ── */}
       {modal === 'eleger' && (
         <ElegerHostModal
@@ -218,7 +260,7 @@ export function ProjetoDetalheClient({
           indicacoes={indicacoes}
           nomesIndicados={nomesIndicados}
           onFechar={() => setModal(null)}
-          onConfirmar={elegerHost}
+          onConfirmar={handleElegerHost}
         />
       )}
       {modal === 'trocar' && (
@@ -229,7 +271,7 @@ export function ProjetoDetalheClient({
           nomesIndicados={nomesIndicados}
           onFechar={() => setModal(null)}
           // em_analise: re-elege (mantém aberto). aprovado: troca host (pós-fechamento).
-          onConfirmar={aprovado ? trocarHost : elegerHost}
+          onConfirmar={aprovado ? handleTrocarHost : handleElegerHost}
         />
       )}
       {modal === 'fechar' && (
@@ -240,7 +282,7 @@ export function ProjetoDetalheClient({
           hostPessoaId={hostPessoaId}
           membrosExistentes={gestao.map((m) => m.pessoa_id)}
           onFechar={() => setModal(null)}
-          onConfirmar={fecharEquipe}
+          onConfirmar={handleFecharEquipe}
         />
       )}
     </div>

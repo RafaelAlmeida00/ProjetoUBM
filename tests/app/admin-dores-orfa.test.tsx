@@ -7,6 +7,12 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { render, screen, fireEvent, waitFor } from '@testing-library/react'
 import React from 'react'
+import { ToastProvider } from '@/components/feedback/ToastProvider'
+
+// AdminDoresPage migrou o feedback de moderação (inline → snackbar UBM via useToast).
+// Provider REAL para exercer o feedback ponta-a-ponta: toast.sucesso('Aprovada. Publicará…')
+// renderiza o texto que AN15-4 assegura (getByText /aprovada.*verificar/i).
+const renderUI = (ui: React.ReactElement) => render(<ToastProvider>{ui}</ToastProvider>)
 
 const moderarDorMock = vi.fn()
 
@@ -53,24 +59,24 @@ describe('AdminDoresPage — T-AN15 (dor órfã na fila)', () => {
 
   it('AN15-1: renderiza sem quebrar com autor_id null (sem erro de coluna fantasma)', () => {
     expect(() =>
-      render(<AdminDoresPage doresEmModeracao={[DOR_ORFA]} isAdmin={true} />),
+      renderUI(<AdminDoresPage doresEmModeracao={[DOR_ORFA]} isAdmin={true} />),
     ).not.toThrow()
   })
 
   it('AN15-2: dor órfã aparece na fila com rótulo "lead não reclamado"', () => {
-    render(<AdminDoresPage doresEmModeracao={[DOR_ORFA]} isAdmin={true} />)
+    renderUI(<AdminDoresPage doresEmModeracao={[DOR_ORFA]} isAdmin={true} />)
     expect(screen.getByText(/lead não reclamado/i)).toBeInTheDocument()
   })
 
   it('AN15-3: dor órfã aparece na fila junto com dor normal sem quebrar', () => {
-    render(<AdminDoresPage doresEmModeracao={[DOR_ORFA, DOR_NORMAL]} isAdmin={true} />)
+    renderUI(<AdminDoresPage doresEmModeracao={[DOR_ORFA, DOR_NORMAL]} isAdmin={true} />)
     expect(screen.getByText(/lead não reclamado/i)).toBeInTheDocument()
     expect(screen.getByText('Acme Ltda')).toBeInTheDocument()
   })
 
   it('AN15-4: aprovar dor órfã exibe toast "Aprovada. Vai ao ar assim que o autor verificar" (A1 — NÃO publica imediatamente)', async () => {
     moderarDorMock.mockResolvedValue({ ok: true })
-    render(<AdminDoresPage doresEmModeracao={[DOR_ORFA]} isAdmin={true} />)
+    renderUI(<AdminDoresPage doresEmModeracao={[DOR_ORFA]} isAdmin={true} />)
     // clica na dor para abrir o detalhe
     fireEvent.click(screen.getByText(/Descrição da dor/i))
     // clica em Aprovar
@@ -89,7 +95,7 @@ describe('AdminDoresPage — T-AN15 (dor órfã na fila)', () => {
       ...DOR_ORFA,
       empresa_nome: 'Empresa desconhecida',
     }
-    render(<AdminDoresPage doresEmModeracao={[dorSemEmpresa]} isAdmin={true} />)
+    renderUI(<AdminDoresPage doresEmModeracao={[dorSemEmpresa]} isAdmin={true} />)
     // não deve rebentar; exibe empresa_nome padrão
     expect(screen.getByText('Empresa desconhecida')).toBeInTheDocument()
   })

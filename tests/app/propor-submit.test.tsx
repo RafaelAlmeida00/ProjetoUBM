@@ -41,6 +41,10 @@ const { signInWithOAuthMock, getUserMock } = vi.hoisted(() => ({
   getUserMock: vi.fn(),
 }))
 
+vi.mock('@/components/feedback/ToastProvider', () => ({
+  useToast: () => ({ sucesso: vi.fn(), erro: vi.fn(), info: vi.fn(), dispensar: vi.fn() }),
+}))
+
 vi.mock('@/lib/supabase/client', () => ({
   createSupabaseBrowserClient: () => ({
     auth: {

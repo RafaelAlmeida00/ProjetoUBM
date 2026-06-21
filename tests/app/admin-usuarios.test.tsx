@@ -35,21 +35,26 @@ vi.mock('@/lib/actions/admin-usuarios', () => ({
 }))
 
 import AdminUsuariosPage from '@/app/admin/usuarios/page'
+import { ToastProvider } from '@/components/feedback/ToastProvider'
+
+function renderPage() {
+  return render(<ToastProvider><AdminUsuariosPage /></ToastProvider>)
+}
 
 describe('AdminUsuariosPage — T10 (regressão base)', () => {
   it('lista usuários com seus e-mails', async () => {
-    render(<AdminUsuariosPage />)
+    renderPage()
     await waitFor(() => expect(screen.getByText('a@ubm.br')).toBeInTheDocument())
     expect(screen.getByText('b@ubm.br')).toBeInTheDocument()
   })
 
   it('admin é indicado visualmente', async () => {
-    render(<AdminUsuariosPage />)
+    renderPage()
     await waitFor(() => expect(screen.getAllByText(/admin/i).length).toBeGreaterThan(0))
   })
 
   it('revogar admin pede confirmação antes de executar', async () => {
-    render(<AdminUsuariosPage />)
+    renderPage()
     await waitFor(() => expect(screen.getByText('b@ubm.br')).toBeInTheDocument())
     // Abre o painel do usuário B (admin)
     const gerirBtns = screen.getAllByRole('button', { name: /gerir/i })

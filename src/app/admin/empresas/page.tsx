@@ -1,12 +1,13 @@
 'use client'
 import { useEffect, useState } from 'react'
-import { GitMerge, Undo2, Loader2 } from 'lucide-react'
+import { GitMerge, Loader2 } from 'lucide-react'
 import {
   listarDuplicatasPosiveis,
   mergeEmpresa,
   desfazerMerge,
   type DuplicataPar,
 } from '@/lib/actions/admin-empresas'
+import { useToast } from '@/components/feedback/ToastProvider'
 
 function ConfirmDialog({
   open,
@@ -47,11 +48,12 @@ function ConfirmDialog({
  * Animação de entrelaçamento (peças a 45°) é narrativa — reduz para troca direta.
  */
 export default function AdminEmpresasPage() {
+  const toast = useToast()
+
   const [duplicatas, setDuplicatas] = useState<DuplicataPar[]>([])
   const [loading, setLoading] = useState(true)
   const [confirmando, setConfirmando] = useState<DuplicataPar | null>(null)
   const [ultimoLogId, setUltimoLogId] = useState<string | null>(null)
-  const [toast, setToast] = useState<string | null>(null)
 
   useEffect(() => {
     listarDuplicatasPosiveis().then((d) => {
@@ -60,9 +62,17 @@ export default function AdminEmpresasPage() {
     })
   }, [])
 
-  const mostrarToast = (msg: string) => {
-    setToast(msg)
-    setTimeout(() => setToast(null), 5000)
+  const handleDesfazer = async () => {
+    if (!ultimoLogId) return
+    const res = await desfazerMerge(ultimoLogId)
+    if (res.ok) {
+      setUltimoLogId(null)
+      toast.sucesso('Unificação desfeita.')
+      // recarregar lista
+      listarDuplicatasPosiveis().then(setDuplicatas)
+    } else {
+      toast.erro('Não foi possível desfazer a unificação. Tente novamente.')
+    }
   }
 
   const handleMerge = async (par: DuplicataPar) => {
@@ -70,19 +80,14 @@ export default function AdminEmpresasPage() {
     const res = await mergeEmpresa(par.a, par.b)
     if (res.ok) {
       setDuplicatas((prev) => prev.filter((p) => p.a !== par.a || p.b !== par.b))
-      setUltimoLogId(res.log_id ?? null)
-      mostrarToast('Empresas unidas.')
-    }
-  }
-
-  const handleDesfazer = async () => {
-    if (!ultimoLogId) return
-    const res = await desfazerMerge(ultimoLogId)
-    if (res.ok) {
-      setUltimoLogId(null)
-      mostrarToast('União desfeita.')
-      // recarregar lista
-      listarDuplicatasPosiveis().then(setDuplicatas)
+      const logId = res.log_id ?? null
+      setUltimoLogId(logId)
+      toast.sucesso('Empresas unificadas.', {
+        duracao: 6000,
+        acao: logId ? { rotulo: 'Desfazer', onClick: handleDesfazer } : undefined,
+      })
+    } else {
+      toast.erro('Não foi possível unificar as empresas. Tente novamente.')
     }
   }
 
@@ -147,32 +152,6 @@ export default function AdminEmpresasPage() {
         onCancel={() => setConfirmando(null)}
       />
 
-      {toast && (
-        <div
-          role="status"
-          aria-live="polite"
-          style={{
-            position: 'fixed', bottom: '1.5rem', right: '1.5rem',
-            background: 'hsl(var(--card))', border: '1px solid hsl(var(--border))',
-            padding: '0.75rem 1.25rem', borderRadius: 'var(--radius)',
-            boxShadow: 'var(--shadow-md)', fontSize: '0.92rem',
-            display: 'flex', alignItems: 'center', gap: '0.75rem',
-          }}
-        >
-          {toast}
-          {ultimoLogId && (
-            <button
-              type="button"
-              className="ubm-btn-ghost ubm-btn"
-              style={{ height: '2rem', fontSize: '0.82rem', gap: '0.35rem' }}
-              onClick={handleDesfazer}
-            >
-              <Undo2 size={13} aria-hidden />
-              Desfazer
-            </button>
-          )}
-        </div>
-      )}
     </div>
   )
 }

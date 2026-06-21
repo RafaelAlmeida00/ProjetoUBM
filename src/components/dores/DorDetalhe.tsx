@@ -7,6 +7,7 @@ import { MeIndicarSlot, type EstadoIndicacao } from '@/components/dores/MeIndica
 import { indicarSe, retirarIndicacao } from '@/lib/actions/indicacao'
 import { submeterDor, editarDor } from '@/lib/actions/dor'
 import { removerAnexo } from '@/lib/actions/anexo'
+import { useToast } from '@/components/feedback/ToastProvider'
 import { AnexoUploader } from '@/components/anexos/AnexoUploader'
 import { CourseMultiSelect } from '@/components/course/CourseMultiSelect'
 import { CURSOS_UBM } from '@/lib/courses'
@@ -164,6 +165,8 @@ export function DorDetalhe({
   papelBaseIndicacao = null,
   estadoIndicacao,
 }: DorDetalheProps) {
+  const toast = useToast()
+
   const [enviando, setEnviando] = useState(false)
   const [enviado, setEnviado] = useState(false)
   const [erroEnvio, setErroEnvio] = useState('')
@@ -209,8 +212,10 @@ export function DorDetalhe({
     setEnviando(false)
     if (result.ok) {
       setEnviado(true)
+      toast.sucesso('Dor enviada para análise.')
     } else {
       setErroEnvio(result.error)
+      toast.erro(result.error || 'Não foi possível enviar sua dor. Tente novamente.')
     }
   }
 
@@ -227,8 +232,10 @@ export function DorDetalhe({
     setSalvando(false)
     if (result.ok) {
       setSalvoOk(true)
+      toast.sucesso('Alterações salvas.')
     } else {
       setErroEdicao(result.error)
+      toast.erro(result.error || 'Não foi possível salvar as alterações. Tente novamente.')
     }
   }
 
@@ -240,8 +247,10 @@ export function DorDetalhe({
     const result = await removerAnexo(anexoId)
     if (result.ok) {
       setAnexosList((prev) => prev.filter((a) => a.id !== anexoId))
+      toast.sucesso('Anexo removido.')
     } else {
       setErroAnexo(result.error)
+      toast.erro(result.error || 'Não foi possível remover o anexo. Tente novamente.')
     }
   }
 

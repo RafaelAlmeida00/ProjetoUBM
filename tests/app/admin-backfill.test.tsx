@@ -27,17 +27,22 @@ vi.mock('@/lib/actions/admin-backfill', () => ({
 }))
 
 import AdminBackfillPage from '@/app/admin/backfill/page'
+import { ToastProvider } from '@/components/feedback/ToastProvider'
+
+function renderPage() {
+  return render(<ToastProvider><AdminBackfillPage /></ToastProvider>)
+}
 
 describe('AdminBackfillPage — T13', () => {
   it('lista grupos com grafias e empresa canônica sugerida', async () => {
-    render(<AdminBackfillPage />)
+    renderPage()
     // "Nissan" aparece no canônico e nas grafias — getAllByText garante ao menos um
     await waitFor(() => expect(screen.getAllByText('Nissan').length).toBeGreaterThan(0))
     expect(screen.getByText('NISSAN')).toBeInTheDocument()
   })
 
   it('botão "Fixar grupo" pede confirmação (ação semi-irreversível)', async () => {
-    render(<AdminBackfillPage />)
+    renderPage()
     await waitFor(() =>
       expect(screen.getByRole('button', { name: /fixar grupo/i })).toBeInTheDocument(),
     )
@@ -46,7 +51,7 @@ describe('AdminBackfillPage — T13', () => {
   })
 
   it('confirmar fixação chama fixarGrupo e remove o grupo da lista', async () => {
-    render(<AdminBackfillPage />)
+    renderPage()
     await waitFor(() =>
       expect(screen.getByRole('button', { name: /fixar grupo/i })).toBeInTheDocument(),
     )

@@ -11,6 +11,10 @@ vi.mock('next/navigation', () => ({
   useRouter: () => ({ push: vi.fn(), replace: vi.fn() }),
 }))
 
+vi.mock('@/components/feedback/ToastProvider', () => ({
+  useToast: () => ({ sucesso: vi.fn(), erro: vi.fn(), info: vi.fn(), dispensar: vi.fn() }),
+}))
+
 const submeterDorMock = vi.fn()
 vi.mock('@/lib/actions/dor', () => ({
   submeterDor: (...args: unknown[]) => submeterDorMock(...args),

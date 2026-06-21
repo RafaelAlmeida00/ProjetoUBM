@@ -12,6 +12,10 @@ vi.mock('next/navigation', () => ({
   useSearchParams: () => ({ get: () => null }),
 }))
 
+vi.mock('@/components/feedback/ToastProvider', () => ({
+  useToast: () => ({ sucesso: vi.fn(), erro: vi.fn(), info: vi.fn(), dispensar: vi.fn() }),
+}))
+
 vi.mock('@/lib/actions/dor', () => ({
   submeterDorLanding: vi.fn().mockResolvedValue({ ok: true, dorId: 'dor-1' }),
   submeterDor: vi.fn(),

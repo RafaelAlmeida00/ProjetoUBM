@@ -11,6 +11,7 @@ import { CheckCircle, AlertTriangle, Save } from 'lucide-react'
 import { gerarTriade, validarAA } from '@/lib/theming/paleta-core'
 import { salvarPaleta } from '@/lib/actions/admin-paletas'
 import type { TriadeResult } from '@/lib/theming/paleta-core'
+import { useToast } from '@/components/feedback/ToastProvider'
 
 export interface Empresa {
   id: string
@@ -24,6 +25,8 @@ interface PaletaEditorProps {
 }
 
 export function PaletaEditor({ empresas, onSalva, onPreview }: PaletaEditorProps) {
+  const toast = useToast()
+
   const seedId = useId()
   const colorId = useId()
   const marsalaId = useId()
@@ -37,7 +40,6 @@ export function PaletaEditor({ empresas, onSalva, onPreview }: PaletaEditorProps
   const [aaOk, setAaOk] = useState<boolean | null>(null)
   const [aaFalhas, setAaFalhas] = useState<string[]>([])
   const [salvando, setSalvando] = useState(false)
-  const [toast, setToast] = useState<string | null>(null)
   const [erro, setErro] = useState<string | null>(null)
 
   // Converte "H S% L%" para valor hex aproximado para o color picker nativo
@@ -108,11 +110,11 @@ export function PaletaEditor({ empresas, onSalva, onPreview }: PaletaEditorProps
         manterMarsala,
       })
       if (result.ok) {
-        setToast(`Paleta salva. Aprovada em AA.`)
+        toast.sucesso('Paleta salva.')
         onSalva?.(triade)
-        setTimeout(() => setToast(null), 3500)
       } else {
-        setErro(result.error ?? 'Erro ao salvar. Tente novamente.')
+        setErro(result.error ?? 'Não foi possível salvar a paleta. Tente novamente.')
+        toast.erro(result.error ?? 'Não foi possível salvar a paleta. Tente novamente.')
       }
     } finally {
       setSalvando(false)
@@ -306,21 +308,6 @@ export function PaletaEditor({ empresas, onSalva, onPreview }: PaletaEditorProps
         )}
       </div>
 
-      {/* Toast de sucesso */}
-      {toast && (
-        <div
-          role="status"
-          aria-live="polite"
-          style={{
-            position: 'fixed', bottom: '1.5rem', right: '1.5rem',
-            background: 'hsl(var(--card))', border: '1px solid hsl(var(--border))',
-            padding: '0.75rem 1.25rem', borderRadius: 'var(--radius)',
-            boxShadow: 'var(--shadow-md)', fontSize: '0.92rem', zIndex: 70,
-          }}
-        >
-          {toast}
-        </div>
-      )}
     </div>
   )
 }

@@ -79,7 +79,9 @@ describe('RBAC owner-filter — adapters "do meu" filtram pelo dono (não confia
     const r = await obterMeusVinculosProjeto()
     expect(state.fromCalls['indicacao']).toBeUndefined()
     expect(state.fromCalls['membro_equipe']).toBeUndefined()
-    expect(r).toEqual({ indicadoProjetoIds: [], membroProjetoIds: [] })
+    // 009 filtros role-aware: o adapter passou a expor hostProjetoIds (filtro "participação").
+    // Sem sessão segue vazio (3 arrays vazios) e sem consultar tabelas — intenção preservada.
+    expect(r).toEqual({ indicadoProjetoIds: [], membroProjetoIds: [], hostProjetoIds: [] })
   })
 
   it('listarMeusProjetos: filtra membro_equipe por pessoa_id = uid', async () => {

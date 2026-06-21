@@ -3,6 +3,7 @@ import { useState, useRef, useId } from 'react'
 import { Paperclip, X, TriangleAlert, Upload } from 'lucide-react'
 import { removerAnexo, uploadAnexo } from '@/lib/actions/anexo'
 import { createSupabaseBrowserClient } from '@/lib/supabase/client'
+import { useToast } from '@/components/feedback/ToastProvider'
 
 export interface AnexoMeta {
   id: string
@@ -64,6 +65,7 @@ export function AnexoUploader({
 }: AnexoUploaderProps) {
   const id = useId()
   const inputRef = useRef<HTMLInputElement>(null)
+  const toast = useToast()
 
   const [anexos, setAnexos] = useState<AnexoMeta[]>(anexosIniciais)
   const [erro, setErro] = useState('')
@@ -101,7 +103,9 @@ export function AnexoUploader({
         .upload(path, arquivo, { upsert: false })
 
       if (storageErr) {
-        setErro('Não foi possível enviar o arquivo. Tente novamente.')
+        const msg = 'Não foi possível enviar o anexo. Verifique o arquivo e tente novamente.'
+        setErro(msg)
+        toast.erro(msg)
         return
       }
 
@@ -114,12 +118,16 @@ export function AnexoUploader({
 
       if (!result.ok) {
         setErro(result.error)
+        toast.erro(result.error || 'Não foi possível enviar o anexo. Verifique o arquivo e tente novamente.')
         return
       }
 
       emitChange([...anexos, result.anexo])
+      toast.sucesso('Anexo enviado.')
     } catch {
-      setErro('Erro inesperado ao enviar o arquivo.')
+      const msg = 'Erro inesperado ao enviar o arquivo.'
+      setErro(msg)
+      toast.erro(msg)
     } finally {
       setUploading(false)
       if (inputRef.current) inputRef.current.value = ''
@@ -130,8 +138,10 @@ export function AnexoUploader({
     const result = await removerAnexo(anexoId)
     if (result.ok) {
       emitChange(anexos.filter((a) => a.id !== anexoId))
+      toast.sucesso('Anexo removido.')
     } else {
       setErro(result.error)
+      toast.erro(result.error || 'Não foi possível remover o anexo. Tente novamente.')
     }
   }
 

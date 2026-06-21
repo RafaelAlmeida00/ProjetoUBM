@@ -6,6 +6,7 @@ import { CourseMultiSelect } from '@/components/course/CourseMultiSelect'
 import { ConsentGate } from '@/components/consent/ConsentGate'
 import { submeterDorLanding, submeterDorLandingAnon } from '@/lib/actions/dor'
 import { createSupabaseBrowserClient, temSupabaseNoCliente } from '@/lib/supabase/client'
+import { useToast } from '@/components/feedback/ToastProvider'
 import type { EmpresaResult } from '@/lib/actions/empresa'
 import type { CursoUbm } from '@/lib/courses'
 
@@ -50,6 +51,7 @@ export function ProporSubmitForm({
   consentido = false,
 }: ProporSubmitFormProps) {
   const formId = useId()
+  const toast = useToast()
 
   const [step, setStep] = useState<Step>(initialStep)
   const [email, setEmail] = useState('')
@@ -126,6 +128,7 @@ export function ProporSubmitForm({
         if (!result.ok) {
           setLoading(false)
           setErrorMsg(result.error)
+          toast.erro(result.error || 'Não foi possível enviar sua proposta. Tente novamente.')
           return
         }
 
@@ -183,6 +186,7 @@ export function ProporSubmitForm({
         clearInterval(msgTimer)
         setLoading(false)
         setErrorMsg(resolvida.error)
+        toast.erro(resolvida.error || 'Não foi possível enviar sua proposta. Tente novamente.')
         return
       }
       empresaId = resolvida.empresa.id
@@ -223,6 +227,7 @@ export function ProporSubmitForm({
       setStep('confirmacao')
     } else {
       setErrorMsg(result.error)
+      toast.erro(result.error || 'Não foi possível enviar sua proposta. Tente novamente.')
     }
   }
 

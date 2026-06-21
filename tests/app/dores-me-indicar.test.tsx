@@ -1,6 +1,7 @@
 /**
  * Onda 2 — B6: DorCardItem refatorado (article + link overlay) + MeIndicarSlot
  * RED: falha até MeIndicarSlot e a refatoração do card existirem.
+ * Toast: wiring de toast.sucesso/erro para indicarSe e retirarIndicacao (feedback-padrao).
  */
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { render, screen, fireEvent, waitFor } from '@testing-library/react'
@@ -9,6 +10,14 @@ import React from 'react'
 vi.mock('next/navigation', () => ({
   useRouter: () => ({ push: vi.fn(), replace: vi.fn() }),
   usePathname: () => '/app/dores',
+}))
+
+// Mock do ToastProvider: MeIndicarSlot usa useToast() — sem o mock quebraria
+// (useToast exige Provider). Expoe spies para assercoes de toast.
+const toastSucessoSpy = vi.fn()
+const toastErroSpy = vi.fn()
+vi.mock('@/components/feedback/ToastProvider', () => ({
+  useToast: () => ({ sucesso: toastSucessoSpy, erro: toastErroSpy, info: vi.fn(), dispensar: vi.fn() }),
 }))
 
 // ── (1) MeIndicarSlot ────────────────────────────────────────────────────────
@@ -21,6 +30,8 @@ describe('B6 — MeIndicarSlot', () => {
     vi.clearAllMocks()
     indicarSeMock.mockResolvedValue({ ok: true })
     retirarIndicacaoMock.mockResolvedValue({ ok: true })
+    toastSucessoSpy.mockClear()
+    toastErroSpy.mockClear()
   })
 
   it('MeIndicarSlot existe e pode ser importado', async () => {
@@ -164,6 +175,120 @@ describe('B6 — MeIndicarSlot', () => {
     fireEvent.click(screen.getByRole('button', { name: /me indicar/i }))
     await waitFor(() => {
       expect(screen.getByRole('alert')).toBeInTheDocument()
+    })
+  })
+
+  // ── Toast wiring (feedback-padrao matriz 3.3) ──────────────────────────────
+
+  it('toast.sucesso("Indicação enviada.") é chamado após indicarSe com sucesso', async () => {
+    const { MeIndicarSlot } = await import('@/components/dores/MeIndicarSlot')
+    render(
+      <MeIndicarSlot
+        projetoId="proj-1"
+        empresaNome="Nissan"
+        papelBase="aluno"
+        estado="disponivel"
+        onIndicar={indicarSeMock}
+        onRetirar={retirarIndicacaoMock}
+      />
+    )
+    fireEvent.click(screen.getByRole('button', { name: /me indicar/i }))
+    await waitFor(() => {
+      expect(toastSucessoSpy).toHaveBeenCalledWith('Indicação enviada.')
+    })
+  })
+
+  it('toast.erro é chamado quando indicarSe falha', async () => {
+    indicarSeMock.mockResolvedValueOnce({ ok: false, error: 'Servidor indisponível.' })
+    const { MeIndicarSlot } = await import('@/components/dores/MeIndicarSlot')
+    render(
+      <MeIndicarSlot
+        projetoId="proj-1"
+        empresaNome="Nissan"
+        papelBase="aluno"
+        estado="disponivel"
+        onIndicar={indicarSeMock}
+        onRetirar={retirarIndicacaoMock}
+      />
+    )
+    fireEvent.click(screen.getByRole('button', { name: /me indicar/i }))
+    await waitFor(() => {
+      expect(toastErroSpy).toHaveBeenCalledWith('Servidor indisponível.')
+    })
+  })
+
+  it('toast.erro usa copy padrão quando erro é undefined', async () => {
+    indicarSeMock.mockResolvedValueOnce({ ok: false })
+    const { MeIndicarSlot } = await import('@/components/dores/MeIndicarSlot')
+    render(
+      <MeIndicarSlot
+        projetoId="proj-1"
+        empresaNome="Nissan"
+        papelBase="aluno"
+        estado="disponivel"
+        onIndicar={indicarSeMock}
+        onRetirar={retirarIndicacaoMock}
+      />
+    )
+    fireEvent.click(screen.getByRole('button', { name: /me indicar/i }))
+    await waitFor(() => {
+      expect(toastErroSpy).toHaveBeenCalledWith('Não foi possível enviar a indicação. Tente novamente.')
+    })
+  })
+
+  it('toast.sucesso("Indicação retirada.") é chamado após retirarIndicacao com sucesso', async () => {
+    const { MeIndicarSlot } = await import('@/components/dores/MeIndicarSlot')
+    render(
+      <MeIndicarSlot
+        projetoId="proj-1"
+        empresaNome="Nissan"
+        papelBase="aluno"
+        estado="ja_indicado"
+        onIndicar={indicarSeMock}
+        onRetirar={retirarIndicacaoMock}
+      />
+    )
+    fireEvent.click(screen.getByRole('button', { name: /retirar/i }))
+    await waitFor(() => {
+      expect(toastSucessoSpy).toHaveBeenCalledWith('Indicação retirada.')
+    })
+  })
+
+  it('toast.erro é chamado quando retirarIndicacao falha', async () => {
+    retirarIndicacaoMock.mockResolvedValueOnce({ ok: false, error: 'Falha ao retirar.' })
+    const { MeIndicarSlot } = await import('@/components/dores/MeIndicarSlot')
+    render(
+      <MeIndicarSlot
+        projetoId="proj-1"
+        empresaNome="Nissan"
+        papelBase="aluno"
+        estado="ja_indicado"
+        onIndicar={indicarSeMock}
+        onRetirar={retirarIndicacaoMock}
+      />
+    )
+    fireEvent.click(screen.getByRole('button', { name: /retirar/i }))
+    await waitFor(() => {
+      expect(toastErroSpy).toHaveBeenCalledWith('Falha ao retirar.')
+    })
+  })
+
+  it('toast.erro usa copy padrão quando retirar falha sem mensagem', async () => {
+    retirarIndicacaoMock.mockResolvedValueOnce({ ok: false })
+    const { MeIndicarSlot } = await import('@/components/dores/MeIndicarSlot')
+    render(
+      <MeIndicarSlot
+        projetoId="proj-1"
+        empresaNome="Nissan"
+        papelBase="aluno"
+        estado="ja_indicado"
+        onIndicar={indicarSeMock}
+        onRetirar={retirarIndicacaoMock}
+      />
+    )
+    fireEvent.click(screen.getByRole('button', { name: /retirar/i }))
+    await waitFor(() => {
+      expect(toastErroSpy).toHaveBeenCalledWith('Não foi possível retirar a indicação. Tente novamente.')
     })
   })
 })

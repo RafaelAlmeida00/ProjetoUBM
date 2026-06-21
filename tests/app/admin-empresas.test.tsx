@@ -26,10 +26,15 @@ vi.mock('@/lib/actions/admin-empresas', () => ({
 }))
 
 import AdminEmpresasPage from '@/app/admin/empresas/page'
+import { ToastProvider } from '@/components/feedback/ToastProvider'
+
+function renderPage() {
+  return render(<ToastProvider><AdminEmpresasPage /></ToastProvider>)
+}
 
 describe('AdminEmpresasPage — T12', () => {
   it('lista possíveis duplicatas com similaridade em texto', async () => {
-    render(<AdminEmpresasPage />)
+    renderPage()
     await waitFor(() => expect(screen.getByText('Nissan')).toBeInTheDocument())
     expect(screen.getByText('Nissan Ltda')).toBeInTheDocument()
     // similaridade como texto (não só cor)
@@ -37,20 +42,21 @@ describe('AdminEmpresasPage — T12', () => {
   })
 
   it('botão merge abre modal de confirmação', async () => {
-    render(<AdminEmpresasPage />)
+    renderPage()
     await waitFor(() => expect(screen.getByText('Nissan')).toBeInTheDocument())
     const mergeBtn = screen.getByRole('button', { name: /unir/i })
     fireEvent.click(mergeBtn)
     await waitFor(() => expect(screen.getByRole('dialog')).toBeInTheDocument())
   })
 
-  it('confirmar merge chama mergeEmpresa e oferece opção de desfazer', async () => {
-    render(<AdminEmpresasPage />)
+  it('confirmar merge chama mergeEmpresa e oferece opção de desfazer via toast', async () => {
+    renderPage()
     await waitFor(() => expect(screen.getByRole('button', { name: /unir/i })).toBeInTheDocument())
     fireEvent.click(screen.getByRole('button', { name: /unir/i }))
     await waitFor(() => expect(screen.getByRole('dialog')).toBeInTheDocument())
     fireEvent.click(screen.getByRole('button', { name: /confirmar/i }))
     await waitFor(() => expect(mergeEmpresaMock).toHaveBeenCalled())
+    // O botão "Desfazer" agora é a ação do toast global
     await waitFor(() =>
       expect(screen.getByRole('button', { name: /desfazer/i })).toBeInTheDocument(),
     )

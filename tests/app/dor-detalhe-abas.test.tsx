@@ -14,6 +14,10 @@ vi.mock('next/navigation', () => ({
   usePathname: () => '/app/dores/1',
 }))
 
+vi.mock('@/components/feedback/ToastProvider', () => ({
+  useToast: () => ({ sucesso: vi.fn(), erro: vi.fn(), info: vi.fn(), dispensar: vi.fn() }),
+}))
+
 vi.mock('@/lib/actions/dor', () => ({
   submeterDor: vi.fn().mockResolvedValue({ ok: true }),
   editarDor: vi.fn().mockResolvedValue({ ok: true }),

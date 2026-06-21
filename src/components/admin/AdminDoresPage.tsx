@@ -1,9 +1,10 @@
 'use client'
 import { useState, useId, useRef, useEffect } from 'react'
-import { Lock, Check, X, AlertCircle, CheckCircle2 } from 'lucide-react'
+import { Lock, Check, X } from 'lucide-react'
 import { StatusDor } from '@/components/dores/StatusDor'
 import { moderarDor } from '@/lib/actions/dor'
 import { CURSOS_UBM } from '@/lib/courses'
+import { useToast } from '@/components/feedback/ToastProvider'
 
 export interface DorModeracaoItem {
   id: string
@@ -44,12 +45,12 @@ export function AdminDoresPage({ doresEmModeracao, isAdmin }: AdminDoresPageProp
   const motivoId = `${dialogId}-motivo`
   const motivoRef = useRef<HTMLTextAreaElement>(null)
 
+  const toast = useToast()
+
   const [selecionada, setSelecionada] = useState<DorModeracaoItem | null>(null)
   const [modal, setModal] = useState<ModalMotivo>({ dorId: '', open: false })
   const [motivo, setMotivo] = useState('')
   const [loading, setLoading] = useState(false)
-  const [toastMsg, setToastMsg] = useState('')
-  const [toastOk, setToastOk] = useState(true)
   // fila local (remove após decisão para dar feedback imediato)
   const [fila, setFila] = useState(doresEmModeracao)
 
@@ -75,12 +76,6 @@ export function AdminDoresPage({ doresEmModeracao, isAdmin }: AdminDoresPageProp
     setMotivo('')
   }
 
-  function mostrarToast(msg: string, ok = true) {
-    setToastMsg(msg)
-    setToastOk(ok)
-    setTimeout(() => setToastMsg(''), 4000)
-  }
-
   async function handleAprovar(dorId: string) {
     setLoading(true)
     const result = await moderarDor(dorId, 'aprovar')
@@ -90,17 +85,17 @@ export function AdminDoresPage({ doresEmModeracao, isAdmin }: AdminDoresPageProp
       if (dor?.autor_verificado) {
         // publicada imediatamente (CA7)
         setFila((f) => f.filter((d) => d.id !== dorId))
-        mostrarToast('Dor publicada. O autor foi avisado.')
+        toast.sucesso('Dor aprovada e publicada.')
       } else {
         // aprovada-aguardando-verificação (CA10)
         setFila((f) =>
           f.map((d) => (d.id === dorId ? { ...d, aprovado_por: 'admin' } : d)),
         )
-        mostrarToast('Aprovada. Publicará quando o autor verificar o e-mail.')
+        toast.sucesso('Aprovada. Publicará quando o autor verificar o e-mail.')
       }
       if (selecionada?.id === dorId) setSelecionada(null)
     } else {
-      mostrarToast('Não foi possível concluir a moderação.', false)
+      toast.erro('Não foi possível aprovar a dor. Tente novamente.')
     }
   }
 
@@ -113,9 +108,9 @@ export function AdminDoresPage({ doresEmModeracao, isAdmin }: AdminDoresPageProp
     if (result.ok) {
       setFila((f) => f.filter((d) => d.id !== modal.dorId))
       if (selecionada?.id === modal.dorId) setSelecionada(null)
-      mostrarToast('Dor rejeitada. O autor foi avisado com o motivo.')
+      toast.sucesso('Dor devolvida para ajustes.')
     } else {
-      mostrarToast('Não foi possível concluir a moderação.', false)
+      toast.erro('Não foi possível registrar a rejeição. Tente novamente.')
     }
   }
 
@@ -273,25 +268,6 @@ export function AdminDoresPage({ doresEmModeracao, isAdmin }: AdminDoresPageProp
               )}
             </div>
           )}
-        </div>
-      )}
-
-      {/* ── Toast ── */}
-      {toastMsg && (
-        <div
-          role="status"
-          aria-live="polite"
-          style={{
-            position: 'fixed', bottom: '1.5rem', right: '1.5rem', zIndex: 80,
-            padding: '0.75rem 1.25rem', borderRadius: 'var(--radius)',
-            background: toastOk ? 'hsl(var(--success))' : 'hsl(var(--destructive))',
-            color: '#fff', fontWeight: 600, fontSize: '0.92rem',
-            display: 'flex', alignItems: 'center', gap: '0.5rem',
-            boxShadow: 'var(--shadow-lg)',
-          }}
-        >
-          {toastOk ? <CheckCircle2 size={16} aria-hidden /> : <AlertCircle size={16} aria-hidden />}
-          {toastMsg}
         </div>
       )}
 

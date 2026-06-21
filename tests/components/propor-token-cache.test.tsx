@@ -13,6 +13,11 @@
  * - O componente grava {dorId, claimToken} no localStorage e redireciona para OAuth
  */
 import { describe, it, expect, vi, beforeEach } from 'vitest'
+
+// Integracao: componente usa useToast — mock do provider no teste unitario (sem feedback real).
+vi.mock('@/components/feedback/ToastProvider', () => ({
+  useToast: () => ({ sucesso: vi.fn(), erro: vi.fn(), info: vi.fn(), dispensar: vi.fn() }),
+}))
 import { render, screen, fireEvent, waitFor } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import React from 'react'

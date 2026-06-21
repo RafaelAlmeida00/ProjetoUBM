@@ -12,6 +12,7 @@
 import { useState, useCallback, useEffect } from 'react'
 import { Radio, Archive, Unlink, ShieldCheck } from 'lucide-react'
 import { excluirPaleta, restaurarPaleta } from '@/lib/actions/admin-paletas'
+import { useToast } from '@/components/feedback/ToastProvider'
 
 export interface PaletaItem {
   id: string
@@ -213,15 +214,11 @@ function PaletaCard({ paleta, onExcluir, onRestaurar, restaurando }: PaletaCardP
 }
 
 export function ListaPaletas({ oficiais, empresa, onExcluida, onRestaurada }: ListaPaletasProps) {
+  const toast = useToast()
+
   const [pendenteExcluir, setPendenteExcluir] = useState<PaletaItem | null>(null)
   const [carregandoExcluir, setCarregandoExcluir] = useState(false)
   const [restaurandoId, setRestaurandoId] = useState<string | null>(null)
-  const [toast, setToast] = useState<string | null>(null)
-
-  const mostrarToast = (msg: string) => {
-    setToast(msg)
-    setTimeout(() => setToast(null), 3500)
-  }
 
   const handleExcluir = useCallback((paleta: PaletaItem) => {
     setPendenteExcluir(paleta)
@@ -232,12 +229,15 @@ export function ListaPaletas({ oficiais, empresa, onExcluida, onRestaurada }: Li
     setCarregandoExcluir(true)
     const result = await excluirPaleta(pendenteExcluir.id)
     setCarregandoExcluir(false)
+    const excluida = pendenteExcluir
     setPendenteExcluir(null)
     if (result.ok) {
-      mostrarToast(`Paleta "${pendenteExcluir.nome}" fora de circulação — restaurável.`)
-      onExcluida?.(pendenteExcluir.id)
+      toast.sucesso('Paleta excluída.')
+      onExcluida?.(excluida.id)
+    } else {
+      toast.erro('Não foi possível excluir a paleta. Tente novamente.')
     }
-  }, [pendenteExcluir, onExcluida])
+  }, [pendenteExcluir, onExcluida, toast])
 
   const handleCancelarExcluir = useCallback(() => {
     setPendenteExcluir(null)
@@ -248,10 +248,12 @@ export function ListaPaletas({ oficiais, empresa, onExcluida, onRestaurada }: Li
     const result = await restaurarPaleta(paleta.id)
     setRestaurandoId(null)
     if (result.ok) {
-      mostrarToast(`Paleta restaurada.`)
+      toast.sucesso('Paleta restaurada.')
       onRestaurada?.(paleta.id)
+    } else {
+      toast.erro('Não foi possível restaurar a paleta. Tente novamente.')
     }
-  }, [onRestaurada])
+  }, [onRestaurada, toast])
 
   return (
     <>
@@ -315,21 +317,6 @@ export function ListaPaletas({ oficiais, empresa, onExcluida, onRestaurada }: Li
         />
       )}
 
-      {/* Toast */}
-      {toast && (
-        <div
-          role="status"
-          aria-live="polite"
-          style={{
-            position: 'fixed', bottom: '1.5rem', right: '1.5rem',
-            background: 'hsl(var(--card))', border: '1px solid hsl(var(--border))',
-            padding: '0.75rem 1.25rem', borderRadius: 'var(--radius)',
-            boxShadow: 'var(--shadow-md)', fontSize: '0.92rem', zIndex: 70,
-          }}
-        >
-          {toast}
-        </div>
-      )}
     </>
   )
 }

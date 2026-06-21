@@ -10,6 +10,7 @@
 import React, { useState, useTransition } from 'react'
 import type { FuncaoTarefa } from '@/lib/data/projetos'
 import type { ActionResult } from '@/lib/actions/tarefa'
+import { useToast } from '@/components/feedback/ToastProvider'
 
 export interface UbmTaskProps {
   tarefa: FuncaoTarefa
@@ -38,13 +39,17 @@ export function UbmTask({
   const [isPending, startTransition] = useTransition()
   const [editando, setEditando] = useState(false)
   const [tituloEdit, setTituloEdit] = useState(tarefa.titulo)
-  const [erro, setErro] = useState<string | null>(null)
+  const toast = useToast()
 
   const handleConcluir = () => {
     if (!onConcluir) return
     startTransition(async () => {
       const res = await onConcluir(tarefa.id)
-      if (!res.ok) setErro(res.error)
+      if (res.ok) {
+        toast.sucesso('Tarefa concluída.')
+      } else {
+        toast.erro(res.error || 'Não foi possível concluir a tarefa. Tente novamente.')
+      }
     })
   }
 
@@ -52,8 +57,12 @@ export function UbmTask({
     if (!onEditar) return
     startTransition(async () => {
       const res = await onEditar(tarefa.id, tituloEdit)
-      if (res.ok) setEditando(false)
-      else setErro(res.error)
+      if (res.ok) {
+        setEditando(false)
+        toast.sucesso('Tarefa atualizada.')
+      } else {
+        toast.erro(res.error || 'Não foi possível salvar a tarefa. Tente novamente.')
+      }
     })
   }
 
@@ -63,7 +72,11 @@ export function UbmTask({
     if (!novoId) return
     startTransition(async () => {
       const res = await onReatribuir(tarefa.id, novoId)
-      if (!res.ok) setErro(res.error)
+      if (res.ok) {
+        toast.sucesso('Tarefa reatribuída.')
+      } else {
+        toast.erro(res.error || 'Não foi possível reatribuir a tarefa. Tente novamente.')
+      }
     })
   }
 
@@ -161,12 +174,6 @@ export function UbmTask({
         </button>
       )}
 
-      {/* Feedback de erro */}
-      {erro && (
-        <p role="alert" className="ubm-task-erro">
-          {erro}
-        </p>
-      )}
     </li>
   )
 }
@@ -196,7 +203,7 @@ export function UbmTaskList({
   const [criando, setCriando] = useState(false)
   const [novoTitulo, setNovoTitulo] = useState('')
   const [isPending, startTransition] = useTransition()
-  const [erroGlobal, setErroGlobal] = useState<string | null>(null)
+  const toast = useToast()
 
   const ativas = tarefas.filter((t) => !t.deleted_at)
 
@@ -207,8 +214,9 @@ export function UbmTaskList({
       if (res.ok) {
         setNovoTitulo('')
         setCriando(false)
+        toast.sucesso('Tarefa criada.')
       } else {
-        setErroGlobal(res.error)
+        toast.erro(res.error || 'Não foi possível criar a tarefa. Tente novamente.')
       }
     })
   }
@@ -287,11 +295,6 @@ export function UbmTaskList({
         </div>
       )}
 
-      {erroGlobal && (
-        <p role="alert" className="ubm-task-erro">
-          {erroGlobal}
-        </p>
-      )}
     </div>
   )
 }

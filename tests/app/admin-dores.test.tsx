@@ -20,6 +20,11 @@ vi.mock('@/lib/actions/dor', () => ({
 }))
 
 import { AdminDoresPage } from '@/components/admin/AdminDoresPage'
+import { ToastProvider } from '@/components/feedback/ToastProvider'
+
+function renderDores(props: React.ComponentProps<typeof AdminDoresPage>) {
+  return render(<ToastProvider><AdminDoresPage {...props} /></ToastProvider>)
+}
 
 const DOR_FILA = {
   id: 'dor-1',
@@ -49,48 +54,36 @@ describe('AdminDoresPage — T9 (fila de moderação)', () => {
   })
 
   it('renderiza a fila com chip "MODO MODERAÇÃO"', () => {
-    render(
-      <AdminDoresPage doresEmModeracao={[DOR_FILA]} isAdmin />
-    )
+    renderDores({ doresEmModeracao: [DOR_FILA], isAdmin: true })
     expect(screen.getByText(/modo moderação/i)).toBeInTheDocument()
   })
 
   it('exibe as dores em moderação na fila', () => {
-    render(
-      <AdminDoresPage doresEmModeracao={[DOR_FILA]} isAdmin />
-    )
+    renderDores({ doresEmModeracao: [DOR_FILA], isAdmin: true })
     expect(screen.getByText('Empresa ABC')).toBeInTheDocument()
   })
 
   it('exibe contador da fila (voz de arquivo)', () => {
-    render(
-      <AdminDoresPage doresEmModeracao={[DOR_FILA, DOR_APROVADA_AGUARDANDO]} isAdmin />
-    )
+    renderDores({ doresEmModeracao: [DOR_FILA, DOR_APROVADA_AGUARDANDO], isAdmin: true })
     // "Em Moderação" aparece no contador (p.ubm-cota) e no StatusDor de cada card
     expect(screen.getAllByText(/em moderação/i).length).toBeGreaterThan(0)
   })
 
   it('não-admin vê peça lacrada "Área restrita" (CA6)', () => {
-    render(
-      <AdminDoresPage doresEmModeracao={[DOR_FILA]} isAdmin={false} />
-    )
+    renderDores({ doresEmModeracao: [DOR_FILA], isAdmin: false })
     expect(screen.getByText(/área restrita/i)).toBeInTheDocument()
     expect(screen.queryByText('Empresa ABC')).toBeNull()
   })
 
   it('admin clica em dor e vê o painel de detalhe', () => {
-    render(
-      <AdminDoresPage doresEmModeracao={[DOR_FILA]} isAdmin />
-    )
+    renderDores({ doresEmModeracao: [DOR_FILA], isAdmin: true })
     fireEvent.click(screen.getByText('Empresa ABC'))
     expect(screen.getByRole('button', { name: /aprovar/i })).toBeInTheDocument()
     expect(screen.getByRole('button', { name: /rejeitar/i })).toBeInTheDocument()
   })
 
   it('aprovar chama moderarDor("dor-1", "aprovar") (CA7)', async () => {
-    render(
-      <AdminDoresPage doresEmModeracao={[DOR_FILA]} isAdmin />
-    )
+    renderDores({ doresEmModeracao: [DOR_FILA], isAdmin: true })
     fireEvent.click(screen.getByText('Empresa ABC'))
     fireEvent.click(screen.getByRole('button', { name: /aprovar/i }))
     await waitFor(() =>
@@ -100,9 +93,7 @@ describe('AdminDoresPage — T9 (fila de moderação)', () => {
   })
 
   it('rejeitar abre modal de motivo (CA8)', () => {
-    render(
-      <AdminDoresPage doresEmModeracao={[DOR_FILA]} isAdmin />
-    )
+    renderDores({ doresEmModeracao: [DOR_FILA], isAdmin: true })
     fireEvent.click(screen.getByText('Empresa ABC'))
     fireEvent.click(screen.getByRole('button', { name: /rejeitar/i }))
     expect(screen.getByRole('dialog')).toBeInTheDocument()
@@ -110,9 +101,7 @@ describe('AdminDoresPage — T9 (fila de moderação)', () => {
   })
 
   it('botão de confirmar rejeição fica desabilitado sem motivo (CA8)', () => {
-    render(
-      <AdminDoresPage doresEmModeracao={[DOR_FILA]} isAdmin />
-    )
+    renderDores({ doresEmModeracao: [DOR_FILA], isAdmin: true })
     fireEvent.click(screen.getByText('Empresa ABC'))
     fireEvent.click(screen.getByRole('button', { name: /rejeitar/i }))
     const confirmBtn = screen.getByRole('button', { name: /confirmar rejeição/i })
@@ -121,9 +110,7 @@ describe('AdminDoresPage — T9 (fila de moderação)', () => {
 
   it('rejeitar com motivo chama moderarDor com o motivo (CA8)', async () => {
     const user = userEvent.setup()
-    render(
-      <AdminDoresPage doresEmModeracao={[DOR_FILA]} isAdmin />
-    )
+    renderDores({ doresEmModeracao: [DOR_FILA], isAdmin: true })
     fireEvent.click(screen.getByText('Empresa ABC'))
     fireEvent.click(screen.getByRole('button', { name: /rejeitar/i }))
     const textarea = screen.getByLabelText(/motivo/i)
@@ -136,9 +123,7 @@ describe('AdminDoresPage — T9 (fila de moderação)', () => {
 
   it('ESC fecha o modal de motivo', async () => {
     const user = userEvent.setup()
-    render(
-      <AdminDoresPage doresEmModeracao={[DOR_FILA]} isAdmin />
-    )
+    renderDores({ doresEmModeracao: [DOR_FILA], isAdmin: true })
     fireEvent.click(screen.getByText('Empresa ABC'))
     fireEvent.click(screen.getByRole('button', { name: /rejeitar/i }))
     expect(screen.getByRole('dialog')).toBeInTheDocument()
@@ -149,25 +134,19 @@ describe('AdminDoresPage — T9 (fila de moderação)', () => {
   })
 
   it('dor aprovada-aguardando mostra status "APROVADA · AGUARDA VERIFICAÇÃO" (A1 CA10)', () => {
-    render(
-      <AdminDoresPage doresEmModeracao={[DOR_APROVADA_AGUARDANDO]} isAdmin />
-    )
+    renderDores({ doresEmModeracao: [DOR_APROVADA_AGUARDANDO], isAdmin: true })
     // "aprovada" e "aguarda verificação" aparecem em múltiplos lugares (contador + badge)
     expect(screen.getAllByText(/aprovada/i).length).toBeGreaterThan(0)
     expect(screen.getAllByText(/aguarda verificação/i).length).toBeGreaterThan(0)
   })
 
   it('fila vazia exibe estado positivo humanizado', () => {
-    render(
-      <AdminDoresPage doresEmModeracao={[]} isAdmin />
-    )
+    renderDores({ doresEmModeracao: [], isAdmin: true })
     expect(screen.getByText(/nenhuma dor aguardando/i)).toBeInTheDocument()
   })
 
   it('modal tem foco preso e aria-required no textarea (a11y)', () => {
-    render(
-      <AdminDoresPage doresEmModeracao={[DOR_FILA]} isAdmin />
-    )
+    renderDores({ doresEmModeracao: [DOR_FILA], isAdmin: true })
     fireEvent.click(screen.getByText('Empresa ABC'))
     fireEvent.click(screen.getByRole('button', { name: /rejeitar/i }))
     const textarea = screen.getByLabelText(/motivo/i)

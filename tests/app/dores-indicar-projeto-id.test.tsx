@@ -15,6 +15,11 @@ vi.mock('next/navigation', () => ({
   usePathname: () => '/app/dores',
 }))
 
+// MeIndicarSlot (via DoresPage) usa useToast() — mock obrigatorio sem provider
+vi.mock('@/components/feedback/ToastProvider', () => ({
+  useToast: () => ({ sucesso: vi.fn(), erro: vi.fn(), info: vi.fn(), dispensar: vi.fn() }),
+}))
+
 const { indicarSeMock, retirarMock } = vi.hoisted(() => ({
   indicarSeMock: vi.fn(),
   retirarMock: vi.fn(),

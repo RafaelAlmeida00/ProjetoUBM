@@ -10,6 +10,10 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { render, screen, fireEvent, waitFor } from '@testing-library/react'
 import React from 'react'
+import { ToastProvider } from '@/components/feedback/ToastProvider'
+
+// AdminUsuariosPage usa useToast (feedback de moderação de coordenador migrado p/ snackbar UBM).
+const renderUI = (ui: React.ReactElement) => render(<ToastProvider>{ui}</ToastProvider>)
 
 vi.mock('next/navigation', () => ({
   useRouter: () => ({ push: vi.fn(), replace: vi.fn() }),
@@ -71,7 +75,7 @@ describe('BUG — coordenador multi-curso: aprovar um não derruba os outros', (
   })
 
   it('mostra as DUAS pendências do mesmo usuário (2 pendente(s))', async () => {
-    render(<AdminUsuariosPage />)
+    renderUI(<AdminUsuariosPage />)
     await waitFor(() => {
       expect(screen.getByText(/2 pendente\(s\)/i)).toBeInTheDocument()
       expect(screen.getByText(/CURSO: Engenharia Civil/i)).toBeInTheDocument()
@@ -80,7 +84,7 @@ describe('BUG — coordenador multi-curso: aprovar um não derruba os outros', (
   })
 
   it('aprovar Eng. Civil remove SÓ a linha do Civil e mantém a de Software', async () => {
-    render(<AdminUsuariosPage />)
+    renderUI(<AdminUsuariosPage />)
     await waitFor(() => expect(screen.getByText(/CURSO: Engenharia Civil/i)).toBeInTheDocument())
 
     // primeira pendência = Eng. Civil (ordem da lista)
