@@ -692,6 +692,174 @@
   @media (min-width: 600px) { .ubm-dor-grid { grid-template-columns: 1fr 1fr; } }
   @media (min-width: 980px) { .ubm-dor-grid { grid-template-columns: 1fr 1fr 1fr; } }
 
+  /* ════════════════════════════════════════════════════════════
+     009 — BARRA DE FILTROS DA VITRINE (/app/dores)
+     "Painel de controle" usinado: 1 peça chanfrada + micro-solda
+     marsala + voz-cota. Filtra Curso · Empresa · Andamento ·
+     Participação (single-select, AND). Tudo via tokens HSL.
+     Light: profundidade por SOMBRA (peça clara sobre fundo frio).
+     Dark : profundidade por LUMINOSIDADE (--card > --background).
+     ════════════════════════════════════════════════════════════ */
+
+  /* A peça-painel (espelha .ubm-dor-card: chanfro + ::after micro-solda) */
+  .ubm-filtros {
+    --chamfer: 14px;
+    position: relative;
+    display: flex; align-items: center; gap: 0.9rem;
+    padding: 0.85rem 1.05rem;
+    margin-bottom: 0.9rem;
+    background-color: hsl(var(--card));
+    border: 1px solid hsl(var(--border));
+    box-shadow: var(--shadow-sm);
+    clip-path: polygon(0 0, calc(100% - var(--chamfer)) 0, 100% var(--chamfer), 100% 100%, 0 100%);
+  }
+  /* micro-solda marsala (acende quando QUALQUER campo está em foco — feedback de "mexendo") */
+  .ubm-filtros::after {
+    content: ""; position: absolute; top: 0; right: 0;
+    width: calc(var(--chamfer) * 1.42); height: 1.5px;
+    background: hsl(var(--accent)); box-shadow: var(--weld-glow);
+    transform-origin: top right;
+    transform: rotate(-45deg) scaleX(var(--weld-scale, 0));
+    transition: transform 0.18s ease;
+  }
+  .ubm-filtros:focus-within::after { --weld-scale: 1; }
+
+  /* cota-título "FILTRAR" à esquerda (voz de arquivo) — somente desktop */
+  .ubm-filtros-titulo {
+    font-family: var(--font-mono), monospace; text-transform: uppercase;
+    letter-spacing: 0.14em; font-size: 0.66rem; font-weight: 700;
+    color: hsl(var(--muted-foreground)); white-space: nowrap; flex: none;
+    padding-right: 0.9rem; border-right: 1px solid hsl(var(--border));
+  }
+
+  /* grade dos 4 campos */
+  .ubm-filtros-campos {
+    flex: 1; min-width: 0;
+    display: grid; gap: 0.7rem;
+    grid-template-columns: repeat(auto-fit, minmax(11rem, 1fr));
+  }
+
+  /* um campo = label(cota) + select empilhados */
+  .ubm-filtro-campo { display: flex; flex-direction: column; gap: 0.3rem; min-width: 0; }
+  .ubm-filtro-cota {
+    font-family: var(--font-mono), monospace; text-transform: uppercase;
+    letter-spacing: 0.1em; font-size: 0.64rem; font-weight: 600;
+    color: hsl(var(--muted-foreground));
+  }
+
+  /* o select — herda o padrão visual de select.ubm-input (mesma seta desenhada,
+     mesmo focus-ring) mas compacto p/ caber 4 lado a lado. */
+  .ubm-filtro-select {
+    width: 100%; appearance: none; cursor: pointer;
+    background-color: hsl(var(--background)); color: hsl(var(--foreground));
+    border: 1px solid hsl(var(--border)); border-radius: var(--radius);
+    padding: 0.5rem 2rem 0.5rem 0.7rem;
+    font-size: 0.9rem; font-family: inherit; line-height: 1.4;
+    /* seta dupla idêntica a select.ubm-input (zero asset, só gradient) */
+    background-image:
+      linear-gradient(45deg, transparent 50%, hsl(var(--muted-foreground)) 50%),
+      linear-gradient(135deg, hsl(var(--muted-foreground)) 50%, transparent 50%);
+    background-position: calc(100% - 0.95rem) 1.02rem, calc(100% - 0.62rem) 1.02rem;
+    background-size: 0.32rem 0.32rem; background-repeat: no-repeat;
+    transition: border-color 0.15s ease, box-shadow 0.15s ease, background-color 0.15s ease;
+  }
+  .ubm-filtro-select:hover { border-color: hsl(var(--primary) / 0.5); }
+  .ubm-filtro-select:focus {
+    outline: none; border-color: hsl(var(--primary));
+    box-shadow: 0 0 0 3px hsl(var(--primary) / 0.16);
+  }
+  .ubm-filtro-select:focus-visible { outline: 2px solid hsl(var(--ring)); outline-offset: 1px; }
+  /* estado ATIVO (valor ≠ "Todos"): realce azul + texto primário (redundância visual) */
+  .ubm-filtro-select[data-ativo="true"],
+  .ubm-filtro-select.is-ativo {
+    border-color: hsl(var(--primary));
+    background-color: hsl(var(--primary) / 0.06);
+    color: hsl(var(--primary)); font-weight: 600;
+  }
+
+  /* ── linha de resultado: contagem + chips de filtro aplicado + limpar ── */
+  .ubm-filtros-resultado {
+    display: flex; align-items: center; flex-wrap: wrap; gap: 0.5rem 0.7rem;
+    margin-bottom: 1.1rem; min-height: 1.6rem;
+  }
+  .ubm-filtros-contagem {
+    font-family: var(--font-mono), monospace; text-transform: uppercase;
+    letter-spacing: 0.1em; font-size: 0.72rem; font-weight: 600;
+    color: hsl(var(--muted-foreground)); white-space: nowrap;
+  }
+  .ubm-filtros-contagem b { color: hsl(var(--foreground)); font-weight: 700; }
+
+  /* chip de "filtro aplicado" (marsala parcimonioso — só aqui o acento aparece em repouso) */
+  .ubm-filtro-chip {
+    display: inline-flex; align-items: center; gap: 0.4rem;
+    padding: 0.2rem 0.35rem 0.2rem 0.65rem;
+    font-size: 0.78rem; font-weight: 600; line-height: 1.2;
+    color: hsl(var(--accent));
+    background-color: hsl(var(--accent) / 0.1);
+    border: 1px solid hsl(var(--accent) / 0.4);
+    border-radius: 999px;
+    animation: ubm-fade 0.18s ease-out;
+  }
+  .ubm-filtro-chip-rotulo { color: hsl(var(--accent) / 0.85); font-weight: 700; text-transform: uppercase; letter-spacing: 0.04em; font-size: 0.64rem; }
+  /* botão ✕ do chip (remove só aquela dimensão) — alvo ≥ 1.4rem */
+  .ubm-filtro-chip-x {
+    display: inline-flex; align-items: center; justify-content: center;
+    width: 1.4rem; height: 1.4rem; flex: none; padding: 0; margin: 0;
+    color: inherit; background: transparent; border: 0; border-radius: 999px;
+    cursor: pointer; transition: background-color 0.14s ease;
+  }
+  .ubm-filtro-chip-x > svg { width: 0.8rem; height: 0.8rem; }
+  .ubm-filtro-chip-x:hover { background-color: hsl(var(--accent) / 0.18); }
+  .ubm-filtro-chip-x:focus-visible { outline: 2px solid hsl(var(--ring)); outline-offset: 1px; }
+
+  /* botão "Limpar filtros" — texto-ação discreto, vira marsala no hover */
+  .ubm-filtros-limpar {
+    margin-left: auto; /* empurra p/ a direita no desktop */
+    display: inline-flex; align-items: center; gap: 0.35rem;
+    padding: 0.3rem 0.5rem;
+    font-family: inherit; font-size: 0.8rem; font-weight: 600;
+    color: hsl(var(--muted-foreground)); background: transparent;
+    border: 0; border-radius: var(--radius); cursor: pointer;
+    transition: color 0.14s ease, background-color 0.14s ease;
+  }
+  .ubm-filtros-limpar > svg { width: 0.9rem; height: 0.9rem; }
+  .ubm-filtros-limpar:hover { color: hsl(var(--accent)); background-color: hsl(var(--accent) / 0.08); }
+  .ubm-filtros-limpar:focus-visible { outline: 2px solid hsl(var(--ring)); outline-offset: 1px; }
+
+  /* ── empty state específico de "nenhum resultado p/ os filtros" ──
+     reusa .ubm-empty (já existe) com um modifier; o CTA é um <button> real. */
+  .ubm-empty--filtros { animation: ubm-fade 0.22s ease-out; }
+  .ubm-empty-limpar {
+    /* CTA do empty: botão-secundário sem depender de Link */
+    margin-top: 0.25rem;
+  }
+
+  /* ── MOBILE: esteira horizontal de peças (não empilha em bloco alto) ── */
+  @media (max-width: 719px) {
+    .ubm-filtros {
+      gap: 0; padding: 0.75rem;
+      overflow-x: auto; scroll-snap-type: x proximity;
+      -webkit-overflow-scrolling: touch;
+    }
+    .ubm-filtros-titulo { display: none; }
+    .ubm-filtros-campos {
+      display: flex; gap: 0.6rem; width: max-content;
+    }
+    .ubm-filtro-campo { min-width: 13rem; scroll-snap-align: start; }
+    .ubm-filtros-limpar { margin-left: 0; }
+    /* barra de rolagem fina e na cor da marca */
+    .ubm-filtros::-webkit-scrollbar { height: 0.35rem; }
+    .ubm-filtros::-webkit-scrollbar-thumb { background-color: hsl(var(--border)); border-radius: 999px; }
+  }
+
+  /* reduced-motion: sem solda animada, sem fades */
+  @media (prefers-reduced-motion: reduce) {
+    .ubm-filtros::after { transition: none; }
+    .ubm-filtro-select { transition: none; }
+    .ubm-filtro-chip, .ubm-empty--filtros { animation: none; }
+    .ubm-filtros-limpar, .ubm-filtro-chip-x { transition: none; }
+  }
+
   /* ───────────── PEÇA LACRADA (sigilo visível / EM BREVE — T8/T1) ─────────────
      hachura diagonal + cadeado + cota (RESTRITO/EM BREVE) + microcopy. NÃO anima. */
   .ubm-locked {

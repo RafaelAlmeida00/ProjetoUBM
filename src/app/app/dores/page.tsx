@@ -38,6 +38,9 @@ export default async function DoresRoutePage() {
   let temPapel = false
   let papelUsuario: 'aluno' | 'coordenador' | 'representante' | undefined
   let vinculosUsuario: Awaited<ReturnType<typeof obterMeusVinculosProjeto>> | undefined
+  // 009 — cursos do coordenador (slugs); só buscado para coordenador aprovado.
+  // Fonte: coordenador_curso JOIN curso (slug). Degrada para [] em erro.
+  let cursosCoordenacao: string[] = []
 
   if (user) {
     const { data: perfil } = await supabase
@@ -65,9 +68,36 @@ export default async function DoresRoutePage() {
       papelUsuario = 'aluno'
     }
 
-    // Vínculos do usuário (indicações ativas + membros de equipe) — para derivar estado do slot
+    // Vínculos do usuário (indicações ativas + membros de equipe + host) — para derivar estado do slot
     if (papelUsuario === 'aluno' || papelUsuario === 'coordenador') {
       vinculosUsuario = await obterMeusVinculosProjeto()
+    }
+
+    // 009 — cursos do coordenador: busca coordenador_curso JOIN curso(slug).
+    // Gate: só para coordenador (aprovado ou pendente — opção "Minha Coordenação" mostra seus cursos).
+    // RLS de coordenador_curso: user_id = auth.uid() → leitura segura, sem service_role.
+    // coordenador_curso NÃO tem soft-delete (schema 0003/0057: user_id, curso_id, aprovado, …) —
+    // o vínculo é removido por DELETE direto; por isso NÃO filtramos deleted_at (coluna inexistente
+    // faria o PostgREST errar e "Minha Coordenação" nunca apareceria). Degrada para [] em erro.
+    if (papelUsuario === 'coordenador' && user) {
+      try {
+        const { data: ccRows } = await supabase
+          .from('coordenador_curso')
+          .select('curso(slug)')
+          .eq('user_id', user.id)
+        if (ccRows) {
+          cursosCoordenacao = ccRows
+            .flatMap((r) => {
+              const c = (r as { curso: { slug: string } | { slug: string }[] | null }).curso
+              if (!c) return []
+              const arr = Array.isArray(c) ? c : [c]
+              return arr.map((x) => x.slug)
+            })
+            .filter(Boolean)
+        }
+      } catch {
+        cursosCoordenacao = []
+      }
     }
 
     if (isRepresentante) {
@@ -198,6 +228,7 @@ export default async function DoresRoutePage() {
       temPapel={temPapel}
       papelUsuario={papelUsuario}
       vinculosUsuario={vinculosUsuario}
+      cursosCoordenacao={cursosCoordenacao}
       indicacoesAgregadas={indicacoesAgregadas}
     />
   )

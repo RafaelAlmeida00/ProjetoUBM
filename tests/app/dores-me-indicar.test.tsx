@@ -290,8 +290,9 @@ describe('ADR-0002 Q1 — EstagioSelo no card da vitrine (selo × botão = mutua
         isVerificado={false}
       />
     )
-    expect(screen.getByText(/virou caso/i)).toBeInTheDocument()
+    // Busca pelo elemento de classe (não getByText: a barra de filtros também tem "Virou caso" como <option>)
     expect(container.querySelector('.ubm-status--caso')).not.toBeNull()
+    expect(container.querySelector('.ubm-status--caso')?.textContent).toMatch(/virou caso/i)
   })
 
   it('card com projeto finalizado exibe chip "FINALIZADO" (.ubm-status--finalizado)', () => {
@@ -303,8 +304,9 @@ describe('ADR-0002 Q1 — EstagioSelo no card da vitrine (selo × botão = mutua
         isVerificado={false}
       />
     )
-    expect(screen.getByText(/finalizado/i)).toBeInTheDocument()
+    // Busca pelo elemento de classe (não getByText: a barra de filtros também tem "Finalizado" como <option>)
     expect(container.querySelector('.ubm-status--finalizado')).not.toBeNull()
+    expect(container.querySelector('.ubm-status--finalizado')?.textContent).toMatch(/finalizado/i)
   })
 
   it('card em indicação (em_analise) NÃO exibe selo de estágio', () => {
@@ -333,8 +335,8 @@ describe('ADR-0002 Q1 — EstagioSelo no card da vitrine (selo × botão = mutua
     expect(container.querySelector('.ubm-status--finalizado')).toBeNull()
   })
 
-  it('em_analise (indicação aberta): mostra "Me indicar" e NÃO mostra "VIROU CASO"', () => {
-    render(
+  it('em_analise (indicação aberta): mostra "Me indicar" e NÃO mostra chip "VIROU CASO"', () => {
+    const { container } = render(
       <DoresPage
         doresPublicadas={[DOR_EM_INDICACAO]}
         minhasDores={[]}
@@ -345,11 +347,12 @@ describe('ADR-0002 Q1 — EstagioSelo no card da vitrine (selo × botão = mutua
       />
     )
     expect(screen.getByRole('button', { name: /me indicar/i })).toBeInTheDocument()
-    expect(screen.queryByText(/virou caso/i)).toBeNull()
+    // Confirma que o CHIP do card não existe (a <option> da barra de filtros não conta)
+    expect(container.querySelector('.ubm-status--caso')).toBeNull()
   })
 
-  it('aprovado (pós-indicação): mostra "VIROU CASO" e NÃO mostra "Me indicar"', () => {
-    render(
+  it('aprovado (pós-indicação): mostra chip "VIROU CASO" e NÃO mostra "Me indicar"', () => {
+    const { container } = render(
       <DoresPage
         doresPublicadas={[DOR_COM_PROJETO_ATIVO]}
         minhasDores={[]}
@@ -359,7 +362,7 @@ describe('ADR-0002 Q1 — EstagioSelo no card da vitrine (selo × botão = mutua
         vinculosUsuario={{ indicadoProjetoIds: [], membroProjetoIds: [] }}
       />
     )
-    expect(screen.getByText(/virou caso/i)).toBeInTheDocument()
+    expect(container.querySelector('.ubm-status--caso')).not.toBeNull()
     expect(screen.queryByRole('button', { name: /me indicar/i })).toBeNull()
   })
 })
@@ -402,8 +405,8 @@ describe('009 T19 — guarda: indicar-se inline (coordenador / avançado)', () =
     expect(screen.getByRole('button', { name: /retirar/i })).toBeInTheDocument()
   })
 
-  it('coordenador + projeto avançado (aprovado) → SEM "Me indicar", COM selo "VIROU CASO"', () => {
-    render(
+  it('coordenador + projeto avançado (aprovado) → SEM "Me indicar", COM chip "VIROU CASO"', () => {
+    const { container } = render(
       <DoresPage
         doresPublicadas={[{ ...DOR_PUBLICADA, id: 'dor-coord-2', projeto_id: 'proj-c2', projeto_status: 'aprovado' }]}
         minhasDores={[]}
@@ -414,6 +417,7 @@ describe('009 T19 — guarda: indicar-se inline (coordenador / avançado)', () =
       />
     )
     expect(screen.queryByRole('button', { name: /me indicar/i })).toBeNull()
-    expect(screen.getByText(/virou caso/i)).toBeInTheDocument()
+    // Confirma chip .ubm-status--caso no card (não usa getByText: barra de filtros tem <option>Virou caso</option>)
+    expect(container.querySelector('.ubm-status--caso')).not.toBeNull()
   })
 })

@@ -220,15 +220,21 @@ export async function listarIndicacoes(projetoId: string): Promise<Indicacao[]> 
 export interface MeusVinculosProjeto {
   indicadoProjetoIds: string[]
   membroProjetoIds: string[]
+  /**
+   * 009 — IDs dos projetos onde o usuário logado é host/coordenador-anfitrião.
+   * Preenchido apenas para coordenadores (RSC gate). Derivado de projeto.host_coordenador_id = uid.
+   * Degrada para [] em erro (fail-soft). Usado pelo filtro "Host" da vitrine.
+   */
+  hostProjetoIds: string[]
 }
 
 export async function obterMeusVinculosProjeto(): Promise<MeusVinculosProjeto> {
-  const vazio: MeusVinculosProjeto = { indicadoProjetoIds: [], membroProjetoIds: [] }
+  const vazio: MeusVinculosProjeto = { indicadoProjetoIds: [], membroProjetoIds: [], hostProjetoIds: [] }
   try {
     const supabase = await createSupabaseServerClient()
     const { data: { user } } = await supabase.auth.getUser()
     if (!user) return vazio
-    const [indicacoesRes, membrosRes] = await Promise.all([
+    const [indicacoesRes, membrosRes, projetosHostRes] = await Promise.all([
       supabase
         .from('indicacao')
         .select('projeto_id')
@@ -239,10 +245,18 @@ export async function obterMeusVinculosProjeto(): Promise<MeusVinculosProjeto> {
         .select('projeto_id')
         .eq('pessoa_id', user.id)
         .is('deleted_at', null),
+      // 009 — projetos onde sou host (host_coordenador_id = uid), não-deletados.
+      // Leitura sob RLS do usuário logado (sem service_role). Degrada para [] em erro.
+      supabase
+        .from('projeto')
+        .select('id')
+        .eq('host_coordenador_id', user.id)
+        .is('deleted_at', null),
     ])
     const indicadoProjetoIds = (indicacoesRes.data ?? []).map((r) => r.projeto_id as string)
     const membroProjetoIds = (membrosRes.data ?? []).map((r) => r.projeto_id as string)
-    return { indicadoProjetoIds, membroProjetoIds }
+    const hostProjetoIds = (projetosHostRes.data ?? []).map((r) => (r as { id: string }).id)
+    return { indicadoProjetoIds, membroProjetoIds, hostProjetoIds }
   } catch {
     return vazio
   }

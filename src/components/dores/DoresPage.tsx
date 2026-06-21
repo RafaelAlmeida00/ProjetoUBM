@@ -1,7 +1,7 @@
 'use client'
-import { useState, useId } from 'react'
+import { useState, useId, useMemo } from 'react'
 import Link from 'next/link'
-import { Lock } from 'lucide-react'
+import { Lock, X } from 'lucide-react'
 import { StatusDor } from './StatusDor'
 import { EstagioSelo, derivarEstagioSelo } from './EstagioSelo'
 import { MeIndicarSlot, type EstadoIndicacao } from './MeIndicarSlot'
@@ -51,11 +51,17 @@ interface DoresPageProps {
    */
   papelUsuario?: 'aluno' | 'coordenador' | 'representante'
   /**
-   * Vínculos do usuário (indicações ativas + membros de equipe) por projeto/dor.
-   * Quando undefined → fail-safe: não renderiza botão "Me indicar".
-   * Onda 2 — B6.
+   * Vínculos do usuário (indicações ativas + membros de equipe + host) por projeto.
+   * Quando undefined → fail-safe: não renderiza botão "Me indicar" nem filtro Participação.
+   * Onda 2 — B6. 009: estendido com hostProjetoIds.
    */
   vinculosUsuario?: MeusVinculosProjeto
+  /**
+   * 009 — Cursos que o coordenador coordena (slugs como em curso_ubm).
+   * Passado pelo RSC apenas quando papelUsuario === 'coordenador'.
+   * Vazio ou undefined → opção "Minha Coordenação" não é renderizada (evita opção morta).
+   */
+  cursosCoordenacao?: string[]
   /**
    * 009 T18 — grupos de "Indicações recebidas" AGREGADOS dos projetos abertos, JÁ buscados e
    * gated pelo RSC (admin/coord-aprovado; PII só chega aqui se autorizado). Vazio/undefined →
@@ -172,6 +178,319 @@ function derivarEstadoIndicacao(
   return 'disponivel'
 }
 
+// ─────────────────────────────────────────────────────────────────────────────
+// 009 — Tipos para o estado dos filtros
+// ─────────────────────────────────────────────────────────────────────────────
+
+type FiltroAndamento = '' | 'publicada' | 'em_analise' | 'caso' | 'finalizado'
+type FiltroParticipacao = '' | 'indicado' | 'nao_indicado' | 'membro' | 'host'
+
+interface EstadoFiltros {
+  curso: string        // '' = Todos, '__minha_coord__' = Minha Coordenação, ou slug
+  empresa: string      // '' = Todas, ou nome exato
+  andamento: FiltroAndamento
+  participacao: FiltroParticipacao
+}
+
+const FILTROS_VAZIO: EstadoFiltros = { curso: '', empresa: '', andamento: '', participacao: '' }
+
+// ─────────────────────────────────────────────────────────────────────────────
+// 009 — Barra de filtros (componente interno)
+// ─────────────────────────────────────────────────────────────────────────────
+
+interface BarraFiltrosProps {
+  dores: DorCard[]
+  papelUsuario?: 'aluno' | 'coordenador' | 'representante'
+  vinculosUsuario?: MeusVinculosProjeto
+  cursosCoordenacao?: string[]
+  filtros: EstadoFiltros
+  onFiltroChange: (parcial: Partial<EstadoFiltros>) => void
+  onLimpar: () => void
+  totalFiltrado: number
+}
+
+function BarraFiltros({
+  dores,
+  papelUsuario,
+  vinculosUsuario,
+  cursosCoordenacao,
+  filtros,
+  onFiltroChange,
+  onLimpar,
+  totalFiltrado,
+}: BarraFiltrosProps) {
+  // Opções derivadas das dores presentes (evita opções sem resultado garantido)
+  const cursosDistintos = useMemo(() => {
+    const vals = Array.from(new Set(dores.flatMap((d) => d.cursos)))
+    return vals
+      .map((v) => ({ value: v, label: CURSOS_UBM.find((c) => c.value === v)?.label ?? v }))
+      .sort((a, b) => a.label.localeCompare(b.label, 'pt-BR'))
+  }, [dores])
+
+  const empresasDistintas = useMemo(() => {
+    return Array.from(new Set(dores.map((d) => d.empresa_nome))).sort((a, b) =>
+      a.localeCompare(b, 'pt-BR'),
+    )
+  }, [dores])
+
+  // Filtro Participação: oculto para representante ou sem vinculosUsuario
+  const mostrarParticipacao =
+    papelUsuario !== 'representante' && !!vinculosUsuario && papelUsuario !== undefined
+
+  const isCoord = papelUsuario === 'coordenador'
+  const temCursoCoord = isCoord && !!cursosCoordenacao && cursosCoordenacao.length > 0
+
+  // Quais filtros estão ativos
+  const filtrosAtivos = Object.entries(filtros).filter(([, v]) => v !== '') as [
+    keyof EstadoFiltros,
+    string,
+  ][]
+  const temFiltroAtivo = filtrosAtivos.length > 0
+
+  // Rótulos legíveis para chips
+  const rotulosDimensao: Record<keyof EstadoFiltros, string> = {
+    curso: 'CURSO',
+    empresa: 'EMPRESA',
+    andamento: 'ANDAMENTO',
+    participacao: 'PARTICIPAÇÃO',
+  }
+
+  function labelValorFiltro(dim: keyof EstadoFiltros, valor: string): string {
+    if (dim === 'curso') {
+      if (valor === '__minha_coord__') return 'Minha Coordenação'
+      return CURSOS_UBM.find((c) => c.value === valor)?.label ?? valor
+    }
+    if (dim === 'andamento') {
+      const mapa: Record<string, string> = {
+        publicada: 'Publicada',
+        em_analise: 'Em análise',
+        caso: 'Virou caso',
+        finalizado: 'Finalizado',
+      }
+      return mapa[valor] ?? valor
+    }
+    if (dim === 'participacao') {
+      const mapa: Record<string, string> = {
+        indicado: 'Indicado',
+        nao_indicado: 'Não indicado',
+        membro: 'Membro',
+        host: 'Host',
+      }
+      return mapa[valor] ?? valor
+    }
+    return valor
+  }
+
+  const totalLabel = totalFiltrado === 1 ? '1 dor' : `${totalFiltrado} dores`
+
+  return (
+    <>
+      <div className="ubm-filtros">
+        <span className="ubm-filtros-titulo" aria-hidden>
+          FILTRAR
+        </span>
+        <div className="ubm-filtros-campos">
+          {/* ── Curso ── */}
+          <label className="ubm-filtro-campo">
+            <span className="ubm-filtro-cota">CURSO</span>
+            <select
+              className="ubm-filtro-select"
+              aria-label="Filtrar por curso"
+              value={filtros.curso}
+              data-ativo={filtros.curso !== '' ? 'true' : undefined}
+              onChange={(e) => onFiltroChange({ curso: e.target.value })}
+            >
+              <option value="">Todos</option>
+              {temCursoCoord && (
+                <option value="__minha_coord__">Minha Coordenação</option>
+              )}
+              {cursosDistintos.map((c) => (
+                <option key={c.value} value={c.value}>
+                  {c.label}
+                </option>
+              ))}
+            </select>
+          </label>
+
+          {/* ── Empresa ── */}
+          <label className="ubm-filtro-campo">
+            <span className="ubm-filtro-cota">EMPRESA</span>
+            <select
+              className="ubm-filtro-select"
+              aria-label="Filtrar por empresa"
+              value={filtros.empresa}
+              data-ativo={filtros.empresa !== '' ? 'true' : undefined}
+              onChange={(e) => onFiltroChange({ empresa: e.target.value })}
+            >
+              <option value="">Todas</option>
+              {empresasDistintas.map((e) => (
+                <option key={e} value={e}>
+                  {e}
+                </option>
+              ))}
+            </select>
+          </label>
+
+          {/* ── Andamento ── */}
+          <label className="ubm-filtro-campo">
+            <span className="ubm-filtro-cota">ANDAMENTO</span>
+            <select
+              className="ubm-filtro-select"
+              aria-label="Filtrar por andamento"
+              value={filtros.andamento}
+              data-ativo={filtros.andamento !== '' ? 'true' : undefined}
+              onChange={(e) =>
+                onFiltroChange({ andamento: e.target.value as FiltroAndamento })
+              }
+            >
+              <option value="">Todos</option>
+              <option value="publicada">Publicada</option>
+              <option value="em_analise">Em análise</option>
+              <option value="caso">Virou caso</option>
+              <option value="finalizado">Finalizado</option>
+            </select>
+          </label>
+
+          {/* ── Participação (oculto para representante / sem vínculos) ── */}
+          {mostrarParticipacao && (
+            <label className="ubm-filtro-campo">
+              <span className="ubm-filtro-cota">PARTICIPAÇÃO</span>
+              <select
+                className="ubm-filtro-select"
+                aria-label="Filtrar por participação"
+                value={filtros.participacao}
+                data-ativo={filtros.participacao !== '' ? 'true' : undefined}
+                onChange={(e) =>
+                  onFiltroChange({ participacao: e.target.value as FiltroParticipacao })
+                }
+              >
+                <option value="">Todos</option>
+                <option value="indicado">Indicado</option>
+                <option value="nao_indicado">Não indicado</option>
+                <option value="membro">Membro</option>
+                {isCoord && <option value="host">Host</option>}
+              </select>
+            </label>
+          )}
+        </div>
+      </div>
+
+      {/* ── Linha de resultado: contagem + chips + limpar ── */}
+      <div
+        className="ubm-filtros-resultado"
+        aria-live="polite"
+        aria-atomic="true"
+      >
+        <span className="ubm-filtros-contagem">
+          <b>{totalFiltrado}</b> {totalFiltrado === 1 ? 'dor' : 'dores'}
+        </span>
+
+        {filtrosAtivos.map(([dim, valor]) => (
+          <span key={dim} className="ubm-filtro-chip">
+            <span className="ubm-filtro-chip-rotulo">{rotulosDimensao[dim]}</span>
+            {' '}{labelValorFiltro(dim, valor)}
+            <button
+              type="button"
+              className="ubm-filtro-chip-x"
+              aria-label={`Remover filtro de ${rotulosDimensao[dim].toLowerCase()}`}
+              onClick={() => onFiltroChange({ [dim]: '' } as Partial<EstadoFiltros>)}
+            >
+              <X aria-hidden />
+            </button>
+          </span>
+        ))}
+
+        {temFiltroAtivo && (
+          <button
+            type="button"
+            className="ubm-filtros-limpar"
+            onClick={onLimpar}
+            aria-label="Limpar filtros"
+          >
+            <X aria-hidden />
+            Limpar filtros
+          </button>
+        )}
+
+        {/* Acessível mas invisível quando sem filtro — só para screen readers */}
+        {!temFiltroAtivo && (
+          <span className="sr-only">{totalLabel}</span>
+        )}
+      </div>
+    </>
+  )
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Lógica de filtragem client-side (AND entre dimensões)
+// ─────────────────────────────────────────────────────────────────────────────
+
+function filtrarDores(
+  dores: DorCard[],
+  filtros: EstadoFiltros,
+  vinculosUsuario: MeusVinculosProjeto | undefined,
+  cursosCoordenacao: string[] | undefined,
+): DorCard[] {
+  return dores.filter((d) => {
+    // ── Curso ──
+    if (filtros.curso !== '') {
+      if (filtros.curso === '__minha_coord__') {
+        const cursos = cursosCoordenacao ?? []
+        if (!d.cursos.some((c) => cursos.includes(c))) return false
+      } else {
+        if (!d.cursos.includes(filtros.curso)) return false
+      }
+    }
+
+    // ── Empresa ──
+    if (filtros.empresa !== '' && d.empresa_nome !== filtros.empresa) return false
+
+    // ── Andamento (alinhado a derivarEstagioSelo) ──
+    if (filtros.andamento !== '') {
+      const estagio = derivarEstagioSelo(d.projeto_status)
+      switch (filtros.andamento) {
+        case 'publicada':
+          if (!(!d.projeto_id && d.status === 'publicada')) return false
+          break
+        case 'em_analise':
+          if (d.projeto_status !== 'em_analise') return false
+          break
+        case 'caso':
+          if (estagio !== 'caso') return false
+          break
+        case 'finalizado':
+          if (estagio !== 'finalizado') return false
+          break
+      }
+    }
+
+    // ── Participação ──
+    if (filtros.participacao !== '' && vinculosUsuario) {
+      const pid = d.projeto_id
+      switch (filtros.participacao) {
+        case 'indicado':
+          if (!pid || !vinculosUsuario.indicadoProjetoIds.includes(pid)) return false
+          break
+        case 'membro':
+          if (!pid || !vinculosUsuario.membroProjetoIds.includes(pid)) return false
+          break
+        case 'host':
+          if (!pid || !vinculosUsuario.hostProjetoIds.includes(pid)) return false
+          break
+        case 'nao_indicado':
+          // Dor em janela de indicação (em_analise) e usuário NÃO indicado/membro
+          if (d.projeto_status !== 'em_analise') return false
+          if (!pid) return false
+          if (vinculosUsuario.indicadoProjetoIds.includes(pid)) return false
+          if (vinculosUsuario.membroProjetoIds.includes(pid)) return false
+          break
+      }
+    }
+
+    return true
+  })
+}
+
 export function DoresPage({
   doresPublicadas,
   minhasDores,
@@ -181,10 +500,12 @@ export function DoresPage({
   temPapel = true,
   papelUsuario,
   vinculosUsuario,
+  cursosCoordenacao,
   indicacoesAgregadas,
 }: DoresPageProps) {
   const tabsId = useId()
   const [abaAtiva, setAbaAtiva] = useState<'vitrine' | 'minhas'>('vitrine')
+  const [filtros, setFiltros] = useState<EstadoFiltros>(FILTROS_VAZIO)
 
   const vitrineId = `${tabsId}-vitrine`
   const minhasId = `${tabsId}-minhas`
@@ -204,6 +525,20 @@ export function DoresPage({
   // A prop não existe ainda; derivamos a partir de vinculosUsuario === undefined
   // → coord sem vinculosUsuario = fail-safe (sem slot) por derivarEstadoIndicacao.
   const coordAprovado = papelUsuario === 'coordenador' && !!vinculosUsuario
+
+  // 009 — Dores filtradas (client-side, AND entre dimensões)
+  const doresFiltradas = useMemo(
+    () => filtrarDores(doresPublicadas, filtros, vinculosUsuario, cursosCoordenacao),
+    [doresPublicadas, filtros, vinculosUsuario, cursosCoordenacao],
+  )
+
+  function handleFiltroChange(parcial: Partial<EstadoFiltros>) {
+    setFiltros((prev) => ({ ...prev, ...parcial }))
+  }
+
+  function handleLimparFiltros() {
+    setFiltros(FILTROS_VAZIO)
+  }
 
   return (
     <section className="ubm-section">
@@ -307,16 +642,48 @@ export function DoresPage({
                 </p>
               </div>
             ) : (
-              <div className="ubm-dor-grid">
-                {doresPublicadas.map((d) => (
-                  <DorCardItem
-                    key={d.id}
-                    dor={d}
-                    estadoIndicacao={derivarEstadoIndicacao(d.projeto_id, papelUsuario, vinculosUsuario, coordAprovado)}
-                    papelBase={papelBase}
-                  />
-                ))}
-              </div>
+              <>
+                {/* 009 — Barra de filtros (só quando há dores) */}
+                <BarraFiltros
+                  dores={doresPublicadas}
+                  papelUsuario={papelUsuario}
+                  vinculosUsuario={vinculosUsuario}
+                  cursosCoordenacao={cursosCoordenacao}
+                  filtros={filtros}
+                  onFiltroChange={handleFiltroChange}
+                  onLimpar={handleLimparFiltros}
+                  totalFiltrado={doresFiltradas.length}
+                />
+
+                {/* Grade ou empty-state de filtros */}
+                {doresFiltradas.length === 0 ? (
+                  <div className="ubm-empty ubm-empty--filtros">
+                    <div className="ubm-empty-node" aria-hidden />
+                    <p className="ubm-empty-title">Nenhuma dor com esses filtros</p>
+                    <p className="ubm-empty-msg">
+                      Ajuste ou limpe os filtros para ver outras dores publicadas.
+                    </p>
+                    <button
+                      type="button"
+                      className="ubm-btn ubm-btn-secondary ubm-empty-limpar"
+                      onClick={handleLimparFiltros}
+                    >
+                      Limpar filtros
+                    </button>
+                  </div>
+                ) : (
+                  <div className="ubm-dor-grid">
+                    {doresFiltradas.map((d) => (
+                      <DorCardItem
+                        key={d.id}
+                        dor={d}
+                        estadoIndicacao={derivarEstadoIndicacao(d.projeto_id, papelUsuario, vinculosUsuario, coordAprovado)}
+                        papelBase={papelBase}
+                      />
+                    ))}
+                  </div>
+                )}
+              </>
             )}
           </>
         )}
