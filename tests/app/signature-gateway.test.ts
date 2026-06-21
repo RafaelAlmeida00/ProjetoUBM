@@ -39,6 +39,18 @@ describe('getSignatureGateway() — factory por env', () => {
     // O Fake se identifica por uma propriedade pública discriminante
     expect((gw as Record<string, unknown>)['_isFake']).toBe(true)
   })
+
+  it('PRODUÇÃO sem token → LANÇA (nunca assina com Fake)', async () => {
+    const saved = process.env['VERCEL_ENV']
+    process.env['VERCEL_ENV'] = 'production'
+    try {
+      const { getSignatureGateway } = await import('@/lib/signature/gateway')
+      expect(() => getSignatureGateway()).toThrow(/autentique/i)
+    } finally {
+      if (saved === undefined) delete process.env['VERCEL_ENV']
+      else process.env['VERCEL_ENV'] = saved
+    }
+  })
 })
 
 describe('FakeSignatureGateway.criarPedido', () => {
