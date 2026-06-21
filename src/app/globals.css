@@ -690,6 +690,12 @@
   /* Status chips dentro do slot de ação */
   .ubm-card-action-status { display: inline-flex; align-items: center; gap: 0.5rem; flex-wrap: wrap; }
 
+  /* No card de dor, o rodapé EMPILHA (não fica lado a lado): data → badge → botão de ação.
+     Sobrepõe .ubm-card-action-row (row+space-between) e o chip+botão (action-status) só aqui —
+     o detalhe /dores/[id] mantém o layout próprio. Seletor combinado p/ vencer por especificidade. */
+  .ubm-dor-card-foot.ubm-card-action-row { flex-direction: column; align-items: flex-start; gap: 0.5rem; }
+  .ubm-dor-card-foot .ubm-card-action-status { flex-direction: column; align-items: flex-start; }
+
   /* grade responsiva 1→2→3 colunas */
   .ubm-dor-grid { display: grid; gap: 1rem; grid-template-columns: 1fr; }
   @media (min-width: 600px) { .ubm-dor-grid { grid-template-columns: 1fr 1fr; } }
