@@ -9,11 +9,14 @@
  */
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 
+const { mockRpc, mockRevalidatePath } = vi.hoisted(() => ({
+  mockRpc: vi.fn().mockResolvedValue({ data: null, error: null }),
+  mockRevalidatePath: vi.fn(),
+}))
+
 vi.mock('next/headers', () => ({
   cookies: vi.fn().mockReturnValue({ getAll: () => [], setAll: () => {} }),
 }))
-
-const mockRpc = vi.fn().mockResolvedValue({ data: null, error: null })
 
 vi.mock('@/lib/supabase/server', () => ({
   createSupabaseServerClient: vi.fn(() => ({
@@ -21,6 +24,8 @@ vi.mock('@/lib/supabase/server', () => ({
     auth: { getUser: vi.fn().mockResolvedValue({ data: { user: { id: 'admin-uid' } }, error: null }) },
   })),
 }))
+
+vi.mock('next/cache', () => ({ revalidatePath: mockRevalidatePath }))
 
 import { concederCoordenador, concederRepresentante } from '@/lib/actions/admin-usuarios'
 
@@ -89,5 +94,34 @@ describe('concederRepresentante — 0057: nova action com empresa obrigatória',
   it('0057-CR-3: função concederRepresentante é exportada', async () => {
     const mod = await import('@/lib/actions/admin-usuarios')
     expect(typeof mod.concederRepresentante).toBe('function')
+  })
+
+  it('0057-CR-4: chama revalidatePath /admin/usuarios após sucesso', async () => {
+    await concederRepresentante('user-rep-1', 'emp-uuid-1')
+    expect(mockRevalidatePath).toHaveBeenCalledWith('/admin/usuarios')
+  })
+
+  it('0057-CR-5: NÃO chama revalidatePath quando rpc falha', async () => {
+    mockRpc.mockResolvedValueOnce({ data: null, error: { message: 'erro' } })
+    await concederRepresentante('user-rep-1', 'emp-uuid-1')
+    expect(mockRevalidatePath).not.toHaveBeenCalled()
+  })
+})
+
+describe('concederCoordenador — revalidatePath', () => {
+  beforeEach(() => {
+    vi.clearAllMocks()
+    mockRpc.mockResolvedValue({ data: null, error: null })
+  })
+
+  it('0057-CC-R1: chama revalidatePath /admin/usuarios após sucesso', async () => {
+    await concederCoordenador('user-123', ['direito'])
+    expect(mockRevalidatePath).toHaveBeenCalledWith('/admin/usuarios')
+  })
+
+  it('0057-CC-R2: NÃO chama revalidatePath quando rpc falha', async () => {
+    mockRpc.mockResolvedValueOnce({ data: null, error: { message: 'erro' } })
+    await concederCoordenador('user-123', ['direito'])
+    expect(mockRevalidatePath).not.toHaveBeenCalled()
   })
 })

@@ -1,4 +1,5 @@
 'use server'
+import { revalidatePath } from 'next/cache'
 import { createSupabaseServerClient } from '@/lib/supabase/server'
 
 export type ActionResult = { ok: true } | { ok: false; error: string }
@@ -21,6 +22,9 @@ export async function indicarSe(
       p_mensagem: mensagem ?? null,
     })
     if (error) return { ok: false, error: mapDbError(error.message) }
+    revalidatePath('/app/dores')
+    revalidatePath('/app/dores', 'layout')
+    revalidatePath('/app', 'page')
     return { ok: true }
   } catch (e) {
     const msg = e instanceof Error ? e.message : String(e)
@@ -41,6 +45,9 @@ export async function retirarIndicacao(
       p_projeto_id: projetoId,
     })
     if (error) return { ok: false, error: mapDbError(error.message) }
+    revalidatePath('/app/dores')
+    revalidatePath('/app/dores', 'layout')
+    revalidatePath('/app', 'page')
     return { ok: true }
   } catch (e) {
     const msg = e instanceof Error ? e.message : String(e)

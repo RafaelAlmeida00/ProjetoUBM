@@ -1,4 +1,5 @@
 'use server'
+import { revalidatePath } from 'next/cache'
 /**
  * lib/actions/admin-paletas.ts
  *
@@ -91,7 +92,9 @@ export async function salvarPaleta(input: SalvarPaletaInput): Promise<ActionResu
  * contracts/paleta.md §4 / tasks.md T13
  */
 export async function definirOficialAtiva(paletaId: string): Promise<ActionResult> {
-  return _chamarAtivarPaleta(paletaId)
+  const result = await _chamarAtivarPaleta(paletaId)
+  if (result.ok) revalidatePath('/', 'layout')
+  return result
 }
 
 // ─── ativarPaletaEmpresa ──────────────────────────────────────────────────────
@@ -103,7 +106,9 @@ export async function definirOficialAtiva(paletaId: string): Promise<ActionResul
  * contracts/paleta.md §4 / tasks.md T13
  */
 export async function ativarPaletaEmpresa(paletaId: string): Promise<ActionResult> {
-  return _chamarAtivarPaleta(paletaId)
+  const result = await _chamarAtivarPaleta(paletaId)
+  if (result.ok) revalidatePath('/admin/paletas')
+  return result
 }
 
 // ─── excluirPaleta ────────────────────────────────────────────────────────────
@@ -117,6 +122,7 @@ export async function excluirPaleta(paletaId: string): Promise<ActionResult> {
     const supabase = await createSupabaseServerClient()
     const { error } = await supabase.rpc('excluir_paleta', { p_id: paletaId })
     if (error) return { ok: false, error: _humanizarErroBanco(error.message) }
+    revalidatePath('/admin/paletas')
     return { ok: true }
   } catch {
     return { ok: false, error: 'Erro interno ao excluir a paleta. Tente novamente.' }
@@ -138,6 +144,7 @@ export async function restaurarPaleta(paletaId: string): Promise<ActionResult> {
       p_id: paletaId,
     })
     if (error) return { ok: false, error: _humanizarErroBanco(error.message) }
+    revalidatePath('/admin/paletas')
     return { ok: true }
   } catch {
     return { ok: false, error: 'Erro interno ao restaurar a paleta. Tente novamente.' }

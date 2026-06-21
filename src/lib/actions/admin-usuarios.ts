@@ -1,4 +1,5 @@
 'use server'
+import { revalidatePath } from 'next/cache'
 import { createSupabaseServerClient } from '@/lib/supabase/server'
 
 export interface UsuarioAdmin {
@@ -53,6 +54,7 @@ export async function concederPapel(
       p_role: papel,
     })
     if (error) return { ok: false, error: 'Não foi possível conceder o papel.' }
+    revalidatePath('/admin/usuarios')
     return { ok: true }
   } catch {
     return { ok: false, error: 'Não foi possível conceder o papel.' }
@@ -69,6 +71,8 @@ export async function concederAdmin(
     const supabase = await createSupabaseServerClient()
     const { error } = await supabase.rpc('conceder_admin', { p_user_id: userId })
     if (error) return { ok: false, error: 'Não foi possível conceder o acesso de administrador.' }
+    revalidatePath('/admin/usuarios')
+    revalidatePath('/app', 'page')
     return { ok: true }
   } catch {
     return { ok: false, error: 'Não foi possível conceder o acesso de administrador.' }
@@ -111,6 +115,8 @@ export async function revogarAdmin(
       }
       return { ok: false, error: 'Não foi possível revogar o acesso de administrador.' }
     }
+    revalidatePath('/admin/usuarios')
+    revalidatePath('/app', 'page')
     return { ok: true }
   } catch {
     return { ok: false, error: 'Não foi possível revogar o acesso de administrador.' }
@@ -132,6 +138,7 @@ export async function revogarPapel(
       p_role: role,
     })
     if (error) return { ok: false, error: 'Não foi possível revogar o papel.' }
+    revalidatePath('/admin/usuarios')
     return { ok: true }
   } catch {
     return { ok: false, error: 'Não foi possível revogar o papel.' }
@@ -155,6 +162,7 @@ export async function concederCoordenador(
       p_curso_slugs: cursoSlugs,
     })
     if (error) return { ok: false, error: 'Não foi possível conceder o papel de coordenador.' }
+    revalidatePath('/admin/usuarios')
     return { ok: true }
   } catch {
     return { ok: false, error: 'Não foi possível conceder o papel de coordenador.' }
@@ -177,6 +185,7 @@ export async function concederRepresentante(
       p_empresa_id: empresaId,
     })
     if (error) return { ok: false, error: 'Não foi possível conceder o papel de representante.' }
+    revalidatePath('/admin/usuarios')
     return { ok: true }
   } catch {
     return { ok: false, error: 'Não foi possível conceder o papel de representante.' }
@@ -197,6 +206,7 @@ export async function adminEditarPerfil(
       p_nome_publico: nomePublico,
     })
     if (error) return { ok: false, error: 'Não foi possível salvar o nome.' }
+    revalidatePath('/admin/usuarios')
     return { ok: true }
   } catch {
     return { ok: false, error: 'Não foi possível salvar o nome.' }
@@ -239,6 +249,7 @@ export async function aprovarCoordenador(
       p_curso_id: cursoId,
     })
     if (error) return { ok: false, error: 'Não foi possível aprovar o coordenador.' }
+    revalidatePath('/admin/usuarios')
     return { ok: true }
   } catch {
     return { ok: false, error: 'Não foi possível aprovar o coordenador.' }
@@ -259,6 +270,7 @@ export async function recusarCoordenador(
       p_curso_id: cursoId,
     })
     if (error) return { ok: false, error: 'Não foi possível recusar o cadastro.' }
+    revalidatePath('/admin/usuarios')
     return { ok: true }
   } catch {
     return { ok: false, error: 'Não foi possível recusar o cadastro.' }

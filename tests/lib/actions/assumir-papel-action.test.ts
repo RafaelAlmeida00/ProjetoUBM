@@ -5,11 +5,16 @@
  */
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 
-const { mockRpc } = vi.hoisted(() => ({ mockRpc: vi.fn() }))
+const { mockRpc, mockRevalidatePath } = vi.hoisted(() => ({
+  mockRpc: vi.fn(),
+  mockRevalidatePath: vi.fn(),
+}))
 
 vi.mock('@/lib/supabase/server', () => ({
   createSupabaseServerClient: vi.fn().mockResolvedValue({ rpc: mockRpc }),
 }))
+
+vi.mock('next/cache', () => ({ revalidatePath: mockRevalidatePath }))
 
 import { assumirPapel } from '@/lib/actions/assumir-papel'
 
@@ -41,5 +46,17 @@ describe('assumirPapel', () => {
     const result = await assumirPapel('coordenador')
     expect(result.ok).toBe(false)
     expect(result.error).toBe('permission denied for function assumir_papel')
+  })
+
+  it('chama revalidatePath / layout após sucesso', async () => {
+    mockRpc.mockResolvedValue({ error: null })
+    await assumirPapel('aluno')
+    expect(mockRevalidatePath).toHaveBeenCalledWith('/', 'layout')
+  })
+
+  it('NÃO chama revalidatePath quando RPC falha', async () => {
+    mockRpc.mockResolvedValue({ error: { message: 'denied' } })
+    await assumirPapel('aluno')
+    expect(mockRevalidatePath).not.toHaveBeenCalled()
   })
 })

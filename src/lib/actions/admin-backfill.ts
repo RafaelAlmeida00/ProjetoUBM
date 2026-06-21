@@ -1,4 +1,5 @@
 'use server'
+import { revalidatePath } from 'next/cache'
 import { createSupabaseServerClient } from '@/lib/supabase/server'
 
 export interface GrupoBackfill {
@@ -29,6 +30,8 @@ export async function fixarGrupo(
       p_canonico_id: canonicoId ?? null,
     })
     if (error) return { ok: false, error: 'Não foi possível fixar o grupo.' }
+    revalidatePath('/admin/backfill')
+    revalidatePath('/admin/empresas')
     return { ok: true }
   } catch {
     return { ok: false, error: 'Não foi possível fixar o grupo.' }

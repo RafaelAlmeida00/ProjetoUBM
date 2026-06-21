@@ -1,4 +1,5 @@
 'use server'
+import { revalidatePath } from 'next/cache'
 import { createSupabaseServerClient } from '@/lib/supabase/server'
 
 export type ActionResult = { ok: true } | { ok: false; error: string }
@@ -35,6 +36,8 @@ export async function criarTarefa(input: CriarTarefaInput): Promise<CriarTarefaR
       .single()
     if (error) return { ok: false, error: mapDbError(error.message) }
     const id = (data as { id?: string } | null)?.id ?? ''
+    revalidatePath('/app/dores', 'layout')
+    revalidatePath('/app', 'page')
     return { ok: true, tarefaId: id }
   } catch (e) {
     const msg = e instanceof Error ? e.message : String(e)
@@ -61,6 +64,8 @@ export async function editarTarefa(input: EditarTarefaInput): Promise<ActionResu
       .update(payload)
       .eq('id', input.id)
     if (error) return { ok: false, error: mapDbError(error.message) }
+    revalidatePath('/app/dores', 'layout')
+    revalidatePath('/app', 'page')
     return { ok: true }
   } catch (e) {
     const msg = e instanceof Error ? e.message : String(e)
@@ -80,6 +85,8 @@ export async function concluirTarefa(tarefaId: string): Promise<ActionResult> {
       .update({ concluida: true })
       .eq('id', tarefaId)
     if (error) return { ok: false, error: mapDbError(error.message) }
+    revalidatePath('/app/dores', 'layout')
+    revalidatePath('/app', 'page')
     return { ok: true }
   } catch (e) {
     const msg = e instanceof Error ? e.message : String(e)
@@ -102,6 +109,8 @@ export async function reatribuirTarefa(
       .update({ responsavel_id: novoResponsavelId })
       .eq('id', tarefaId)
     if (error) return { ok: false, error: mapDbError(error.message) }
+    revalidatePath('/app/dores', 'layout')
+    revalidatePath('/app', 'page')
     return { ok: true }
   } catch (e) {
     const msg = e instanceof Error ? e.message : String(e)

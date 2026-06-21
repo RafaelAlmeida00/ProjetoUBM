@@ -1,17 +1,18 @@
 /**
  * T-O3.1 — Server Action: submeterDorLanding
  * TDD RED: testa a action antes de ela chamar as RPCs reais.
- * Mocks: supabase/server + rpc.
+ * Mocks: supabase/server + rpc + next/cache (revalidatePath).
  */
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 
 // --- vi.hoisted garante que as vars estão disponíveis quando vi.mock é içado ---
-const { mockGetUser, mockRpc, mockFrom, mockInsert } = vi.hoisted(() => {
+const { mockGetUser, mockRpc, mockFrom, mockInsert, mockRevalidatePath } = vi.hoisted(() => {
   const mockInsert = vi.fn()
   const mockFrom = vi.fn(() => ({ insert: mockInsert }))
   const mockGetUser = vi.fn()
   const mockRpc = vi.fn()
-  return { mockGetUser, mockRpc, mockFrom, mockInsert }
+  const mockRevalidatePath = vi.fn()
+  return { mockGetUser, mockRpc, mockFrom, mockInsert, mockRevalidatePath }
 })
 
 vi.mock('@/lib/supabase/server', () => ({
@@ -21,6 +22,8 @@ vi.mock('@/lib/supabase/server', () => ({
     from: mockFrom,
   }),
 }))
+
+vi.mock('next/cache', () => ({ revalidatePath: mockRevalidatePath }))
 
 import { submeterDorLanding, moderarDor, submeterDor } from '@/lib/actions/dor'
 
@@ -43,6 +46,19 @@ describe('submeterDorLanding', () => {
     mockRpc.mockResolvedValue({ data: { dor_id: 'dor-abc' }, error: null })
     mockInsert.mockResolvedValue({ error: null })
     mockFrom.mockReturnValue({ insert: mockInsert })
+  })
+
+  it('chama revalidatePath em /admin/dores, /app/dores e /app ao ter sucesso', async () => {
+    await submeterDorLanding(INPUT_BASE)
+    expect(mockRevalidatePath).toHaveBeenCalledWith('/admin/dores')
+    expect(mockRevalidatePath).toHaveBeenCalledWith('/app/dores')
+    expect(mockRevalidatePath).toHaveBeenCalledWith('/app', 'page')
+  })
+
+  it('NÃO chama revalidatePath quando falha (sem sessão)', async () => {
+    mockGetUser.mockResolvedValue({ data: { user: null }, error: { message: 'not authenticated' } })
+    await submeterDorLanding(INPUT_BASE)
+    expect(mockRevalidatePath).not.toHaveBeenCalled()
   })
 
   it('retorna ok:true com dorId quando RPCs têm sucesso', async () => {
@@ -127,6 +143,20 @@ describe('moderarDor', () => {
     mockRpc.mockResolvedValue({ data: null, error: null })
   })
 
+  it('chama revalidatePath em /admin/dores, /app/dores, /app e /app/dores/<id> ao ter sucesso', async () => {
+    await moderarDor('dor-xyz', 'aprovar')
+    expect(mockRevalidatePath).toHaveBeenCalledWith('/admin/dores')
+    expect(mockRevalidatePath).toHaveBeenCalledWith('/app/dores')
+    expect(mockRevalidatePath).toHaveBeenCalledWith('/app/dores/dor-xyz')
+    expect(mockRevalidatePath).toHaveBeenCalledWith('/app', 'page')
+  })
+
+  it('NÃO chama revalidatePath quando RPC falha', async () => {
+    mockRpc.mockResolvedValueOnce({ data: null, error: { message: 'permission denied' } })
+    await moderarDor('dor-xyz', 'aprovar')
+    expect(mockRevalidatePath).not.toHaveBeenCalled()
+  })
+
   it('retorna ok:true ao aprovar', async () => {
     const result = await moderarDor('dor-1', 'aprovar')
     expect(result.ok).toBe(true)
@@ -159,6 +189,19 @@ describe('submeterDor', () => {
   beforeEach(() => {
     vi.clearAllMocks()
     mockRpc.mockResolvedValue({ data: null, error: null })
+  })
+
+  it('chama revalidatePath em /admin/dores, /app/dores e /app/dores/<id> ao ter sucesso', async () => {
+    await submeterDor('dor-1')
+    expect(mockRevalidatePath).toHaveBeenCalledWith('/admin/dores')
+    expect(mockRevalidatePath).toHaveBeenCalledWith('/app/dores')
+    expect(mockRevalidatePath).toHaveBeenCalledWith('/app/dores/dor-1')
+  })
+
+  it('NÃO chama revalidatePath quando RPC falha', async () => {
+    mockRpc.mockResolvedValueOnce({ data: null, error: { message: 'transição inválida' } })
+    await submeterDor('dor-1')
+    expect(mockRevalidatePath).not.toHaveBeenCalled()
   })
 
   it('retorna ok:true ao reenviar dor para moderação', async () => {

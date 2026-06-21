@@ -7,9 +7,10 @@
  */
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 
-const { mockRpc } = vi.hoisted(() => {
+const { mockRpc, mockRevalidatePath } = vi.hoisted(() => {
   const mockRpc = vi.fn()
-  return { mockRpc }
+  const mockRevalidatePath = vi.fn()
+  return { mockRpc, mockRevalidatePath }
 })
 
 vi.mock('@/lib/supabase/server', () => ({
@@ -18,12 +19,27 @@ vi.mock('@/lib/supabase/server', () => ({
   }),
 }))
 
+vi.mock('next/cache', () => ({ revalidatePath: mockRevalidatePath }))
+
 import { indicarSe, retirarIndicacao } from '@/lib/actions/indicacao'
 
 describe('indicarSe', () => {
   beforeEach(() => {
     vi.clearAllMocks()
     mockRpc.mockResolvedValue({ data: null, error: null })
+  })
+
+  it('chama revalidatePath em /app/dores, /app/dores layout e /app ao ter sucesso', async () => {
+    await indicarSe('projeto-1', 'aluno')
+    expect(mockRevalidatePath).toHaveBeenCalledWith('/app/dores')
+    expect(mockRevalidatePath).toHaveBeenCalledWith('/app/dores', 'layout')
+    expect(mockRevalidatePath).toHaveBeenCalledWith('/app', 'page')
+  })
+
+  it('NÃO chama revalidatePath quando RPC falha', async () => {
+    mockRpc.mockResolvedValueOnce({ data: null, error: { message: 'conta nao verificada' } })
+    await indicarSe('projeto-1', 'aluno')
+    expect(mockRevalidatePath).not.toHaveBeenCalled()
   })
 
   it('retorna ok:true quando RPC tem sucesso', async () => {
@@ -103,6 +119,19 @@ describe('retirarIndicacao', () => {
   beforeEach(() => {
     vi.clearAllMocks()
     mockRpc.mockResolvedValue({ data: null, error: null })
+  })
+
+  it('chama revalidatePath em /app/dores, /app/dores layout e /app ao ter sucesso', async () => {
+    await retirarIndicacao('projeto-1')
+    expect(mockRevalidatePath).toHaveBeenCalledWith('/app/dores')
+    expect(mockRevalidatePath).toHaveBeenCalledWith('/app/dores', 'layout')
+    expect(mockRevalidatePath).toHaveBeenCalledWith('/app', 'page')
+  })
+
+  it('NÃO chama revalidatePath quando RPC falha', async () => {
+    mockRpc.mockResolvedValueOnce({ data: null, error: { message: 'indicacao nao encontrada' } })
+    await retirarIndicacao('projeto-1')
+    expect(mockRevalidatePath).not.toHaveBeenCalled()
   })
 
   it('retorna ok:true quando RPC tem sucesso', async () => {

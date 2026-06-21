@@ -19,6 +19,8 @@ vi.mock('@/lib/supabase/server', () => ({
   }),
 }))
 
+vi.mock('next/cache', () => ({ revalidatePath: vi.fn() }))
+
 import { revogarAdmin } from '@/lib/actions/admin-usuarios'
 
 describe('revogarAdmin — B-guard: bloquear self-revoke', () => {

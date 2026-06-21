@@ -1,4 +1,5 @@
 'use server'
+import { revalidatePath } from 'next/cache'
 import { createSupabaseServerClient } from '@/lib/supabase/server'
 
 // Shape plano retornado pela RPC listar_duplicatas_possiveis():
@@ -34,6 +35,8 @@ export async function mergeEmpresa(
       p_winner: idB,
     })
     if (error) return { ok: false, error: 'Não foi possível unir as empresas.' }
+    revalidatePath('/admin/empresas')
+    revalidatePath('/app/dores', 'layout')
     return { ok: true, log_id: (data as { log_id: string })?.log_id }
   } catch {
     return { ok: false, error: 'Não foi possível unir as empresas.' }
@@ -46,6 +49,8 @@ export async function desfazerMerge(logId: string): Promise<{ ok: boolean; error
     // Varredura D4: assinatura real é desfazer_merge(p_log uuid)
     const { error } = await supabase.rpc('desfazer_merge', { p_log: logId })
     if (error) return { ok: false, error: 'Não foi possível desfazer a união.' }
+    revalidatePath('/admin/empresas')
+    revalidatePath('/app/dores', 'layout')
     return { ok: true }
   } catch {
     return { ok: false, error: 'Não foi possível desfazer a união.' }

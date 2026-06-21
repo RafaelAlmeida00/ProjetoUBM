@@ -15,6 +15,8 @@ vi.mock('next/headers', () => ({
   cookies: vi.fn().mockReturnValue({ getAll: () => [], setAll: () => {} }),
 }))
 
+vi.mock('next/cache', () => ({ revalidatePath: vi.fn() }))
+
 const mockRpc = vi.fn().mockResolvedValue({ data: null, error: null })
 const mockFrom = vi.fn()
 const mockInsert = vi.fn()

@@ -2,13 +2,14 @@
  * T-O2.2 — TDD RED: testa as actions fecharEquipe / trocarHost
  * antes de existirem em workspace/src/lib/actions/equipe.ts
  *
- * Padrão: vi.mock('@/lib/supabase/server') + mockRpc.
+ * Padrão: vi.mock('@/lib/supabase/server') + mockRpc + vi.mock('next/cache').
  */
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 
-const { mockRpc } = vi.hoisted(() => {
+const { mockRpc, mockRevalidatePath } = vi.hoisted(() => {
   const mockRpc = vi.fn()
-  return { mockRpc }
+  const mockRevalidatePath = vi.fn()
+  return { mockRpc, mockRevalidatePath }
 })
 
 vi.mock('@/lib/supabase/server', () => ({
@@ -16,6 +17,8 @@ vi.mock('@/lib/supabase/server', () => ({
     rpc: mockRpc,
   }),
 }))
+
+vi.mock('next/cache', () => ({ revalidatePath: mockRevalidatePath }))
 
 import { fecharEquipe, trocarHost } from '@/lib/actions/equipe'
 
@@ -29,6 +32,19 @@ describe('fecharEquipe', () => {
   beforeEach(() => {
     vi.clearAllMocks()
     mockRpc.mockResolvedValue({ data: null, error: null })
+  })
+
+  it('chama revalidatePath em /app/dores, /app e /app/notificacoes ao ter sucesso', async () => {
+    await fecharEquipe('projeto-1', 'pessoa-1', MEMBROS_INPUT)
+    expect(mockRevalidatePath).toHaveBeenCalledWith('/app/dores', 'layout')
+    expect(mockRevalidatePath).toHaveBeenCalledWith('/app', 'page')
+    expect(mockRevalidatePath).toHaveBeenCalledWith('/app/notificacoes')
+  })
+
+  it('NÃO chama revalidatePath quando RPC falha', async () => {
+    mockRpc.mockResolvedValueOnce({ data: null, error: { message: 'permission denied' } })
+    await fecharEquipe('projeto-1', 'pessoa-1', MEMBROS_INPUT)
+    expect(mockRevalidatePath).not.toHaveBeenCalled()
   })
 
   it('retorna ok:true quando RPC tem sucesso', async () => {
@@ -144,6 +160,18 @@ describe('trocarHost', () => {
   beforeEach(() => {
     vi.clearAllMocks()
     mockRpc.mockResolvedValue({ data: null, error: null })
+  })
+
+  it('chama revalidatePath em /app/dores e /app ao ter sucesso', async () => {
+    await trocarHost('projeto-1', 'novo-host-1')
+    expect(mockRevalidatePath).toHaveBeenCalledWith('/app/dores', 'layout')
+    expect(mockRevalidatePath).toHaveBeenCalledWith('/app', 'page')
+  })
+
+  it('NÃO chama revalidatePath quando RPC falha', async () => {
+    mockRpc.mockResolvedValueOnce({ data: null, error: { message: 'permission denied' } })
+    await trocarHost('projeto-1', 'novo-host-1')
+    expect(mockRevalidatePath).not.toHaveBeenCalled()
   })
 
   it('retorna ok:true quando RPC tem sucesso', async () => {

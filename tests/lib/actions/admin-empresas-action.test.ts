@@ -6,11 +6,16 @@
  */
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 
-const { mockRpc } = vi.hoisted(() => ({ mockRpc: vi.fn() }))
+const { mockRpc, mockRevalidatePath } = vi.hoisted(() => ({
+  mockRpc: vi.fn(),
+  mockRevalidatePath: vi.fn(),
+}))
 
 vi.mock('@/lib/supabase/server', () => ({
   createSupabaseServerClient: vi.fn().mockResolvedValue({ rpc: mockRpc }),
 }))
+
+vi.mock('next/cache', () => ({ revalidatePath: mockRevalidatePath }))
 
 import { mergeEmpresa, desfazerMerge } from '@/lib/actions/admin-empresas'
 
@@ -36,6 +41,19 @@ describe('mergeEmpresa', () => {
     mockRpc.mockResolvedValue({ data: null, error: { message: 'apenas admin' } })
     expect((await mergeEmpresa('a', 'b')).ok).toBe(false)
   })
+
+  it('chama revalidatePath /admin/empresas e /app/dores layout após sucesso', async () => {
+    mockRpc.mockResolvedValue({ data: { log_id: 'log-1' }, error: null })
+    await mergeEmpresa('a', 'b')
+    expect(mockRevalidatePath).toHaveBeenCalledWith('/admin/empresas')
+    expect(mockRevalidatePath).toHaveBeenCalledWith('/app/dores', 'layout')
+  })
+
+  it('NÃO chama revalidatePath quando RPC falha', async () => {
+    mockRpc.mockResolvedValue({ data: null, error: { message: 'erro' } })
+    await mergeEmpresa('a', 'b')
+    expect(mockRevalidatePath).not.toHaveBeenCalled()
+  })
 })
 
 describe('desfazerMerge', () => {
@@ -55,5 +73,18 @@ describe('desfazerMerge', () => {
   it('retorna { ok: false } quando a RPC retorna erro', async () => {
     mockRpc.mockResolvedValue({ error: { message: 'merge nao encontrado ou ja desfeito' } })
     expect((await desfazerMerge('log-1')).ok).toBe(false)
+  })
+
+  it('chama revalidatePath /admin/empresas e /app/dores layout após sucesso', async () => {
+    mockRpc.mockResolvedValue({ error: null })
+    await desfazerMerge('log-1')
+    expect(mockRevalidatePath).toHaveBeenCalledWith('/admin/empresas')
+    expect(mockRevalidatePath).toHaveBeenCalledWith('/app/dores', 'layout')
+  })
+
+  it('NÃO chama revalidatePath quando RPC falha', async () => {
+    mockRpc.mockResolvedValue({ error: { message: 'erro' } })
+    await desfazerMerge('log-1')
+    expect(mockRevalidatePath).not.toHaveBeenCalled()
   })
 })

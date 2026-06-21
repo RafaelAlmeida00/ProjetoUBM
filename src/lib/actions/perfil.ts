@@ -1,4 +1,5 @@
 'use server'
+import { revalidatePath } from 'next/cache'
 import { createSupabaseServerClient } from '@/lib/supabase/server'
 
 // ── atualizarPerfil ────────────────────────────────────────────────────────────
@@ -47,6 +48,8 @@ export async function atualizarPerfil(
     }
     return { ok: false, error: 'Não foi possível salvar o perfil. Tente novamente.' }
   }
+
+  revalidatePath('/app', 'page')
 
   return { ok: true }
 }

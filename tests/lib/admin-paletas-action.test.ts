@@ -22,6 +22,9 @@ vi.mock('@/lib/theming/paleta-core', () => ({
   ],
 }))
 
+const mockRevalidatePath = vi.hoisted(() => vi.fn())
+vi.mock('next/cache', () => ({ revalidatePath: mockRevalidatePath }))
+
 // Importações estáticas APÓS os mocks (vi.mock é hoisted mesmo assim, mas manter a ordem é boa prática)
 import {
   salvarPaleta,
@@ -155,6 +158,18 @@ describe('T13 — Server Actions admin-paletas', () => {
       expect(result.ok).toBe(true)
     })
 
+    it('chama revalidatePath("/", "layout") para invalidar tema site-wide', async () => {
+      mockRpc.mockResolvedValue({ data: null, error: null })
+      await definirOficialAtiva('paleta-uuid-oficial')
+      expect(mockRevalidatePath).toHaveBeenCalledWith('/', 'layout')
+    })
+
+    it('NÃO chama revalidatePath quando RPC falha', async () => {
+      mockRpc.mockResolvedValue({ data: null, error: { message: 'apenas admin' } })
+      await definirOficialAtiva('paleta-uuid')
+      expect(mockRevalidatePath).not.toHaveBeenCalled()
+    })
+
     it('propaga erro da RPC como mensagem PT-BR sem stack', async () => {
       mockRpc.mockResolvedValue({ data: null, error: { message: 'apenas admin' } })
       const result = await definirOficialAtiva('paleta-uuid')
@@ -172,6 +187,12 @@ describe('T13 — Server Actions admin-paletas', () => {
       expect(mockRpc).toHaveBeenCalledWith('ativar_paleta', { p_id: 'paleta-uuid-empresa' })
       expect(result.ok).toBe(true)
     })
+
+    it('chama revalidatePath("/admin/paletas") ao ativar paleta de empresa', async () => {
+      mockRpc.mockResolvedValue({ data: null, error: null })
+      await ativarPaletaEmpresa('paleta-uuid-empresa')
+      expect(mockRevalidatePath).toHaveBeenCalledWith('/admin/paletas')
+    })
   })
 
   // ─── excluirPaleta ────────────────────────────────────────────────────────────
@@ -181,6 +202,12 @@ describe('T13 — Server Actions admin-paletas', () => {
       const result = await excluirPaleta('paleta-para-excluir')
       expect(mockRpc).toHaveBeenCalledWith('excluir_paleta', { p_id: 'paleta-para-excluir' })
       expect(result.ok).toBe(true)
+    })
+
+    it('chama revalidatePath("/admin/paletas") ao excluir', async () => {
+      mockRpc.mockResolvedValue({ data: null, error: null })
+      await excluirPaleta('paleta-para-excluir')
+      expect(mockRevalidatePath).toHaveBeenCalledWith('/admin/paletas')
     })
   })
 
@@ -194,6 +221,12 @@ describe('T13 — Server Actions admin-paletas', () => {
         p_id: 'paleta-para-restaurar',
       })
       expect(result.ok).toBe(true)
+    })
+
+    it('chama revalidatePath("/admin/paletas") ao restaurar', async () => {
+      mockRpc.mockResolvedValue({ data: null, error: null })
+      await restaurarPaleta('paleta-para-restaurar')
+      expect(mockRevalidatePath).toHaveBeenCalledWith('/admin/paletas')
     })
   })
 })

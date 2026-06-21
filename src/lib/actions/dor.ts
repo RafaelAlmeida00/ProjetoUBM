@@ -1,4 +1,5 @@
 'use server'
+import { revalidatePath } from 'next/cache'
 import { createSupabaseServerClient } from '@/lib/supabase/server'
 import {
   checarRateLimit,
@@ -83,6 +84,10 @@ export async function submeterDorLanding(
 
     // Dispara verificação de conta (gate: autor precisa verificar para publicar)
     await supabase.rpc('emitir_token_verificacao', {})
+
+    revalidatePath('/admin/dores')
+    revalidatePath('/app/dores')
+    revalidatePath('/app', 'page')
 
     return { ok: true, dorId: dorId as string }
   } catch (e) {
@@ -213,6 +218,10 @@ export async function moderarDor(
       p_motivo: motivo ?? null,
     })
     if (error) return { ok: false, error: mapDbError(error.message) }
+    revalidatePath('/admin/dores')
+    revalidatePath('/app/dores')
+    revalidatePath('/app/dores/' + dorId)
+    revalidatePath('/app', 'page')
     return { ok: true }
   } catch (e) {
     const msg = e instanceof Error ? e.message : String(e)
@@ -231,6 +240,9 @@ export async function submeterDor(
     const supabase = await createSupabaseServerClient()
     const { error } = await supabase.rpc('submeter_dor', { p_dor_id: dorId })
     if (error) return { ok: false, error: mapDbError(error.message) }
+    revalidatePath('/admin/dores')
+    revalidatePath('/app/dores')
+    revalidatePath('/app/dores/' + dorId)
     return { ok: true }
   } catch (e) {
     const msg = e instanceof Error ? e.message : String(e)
@@ -268,6 +280,8 @@ export async function criarDor(input: {
     if (error) return { ok: false, error: mapDbError(error.message) }
 
     const dorId = (data as string) ?? (data as { id?: string })?.id
+    revalidatePath('/app/dores')
+    revalidatePath('/app', 'page')
     return { ok: true, dorId: dorId as string }
   } catch (e) {
     const msg = e instanceof Error ? e.message : String(e)
@@ -297,6 +311,9 @@ export async function editarDor(input: {
     })
 
     if (error) return { ok: false, error: mapDbError(error.message) }
+    revalidatePath('/admin/dores')
+    revalidatePath('/app/dores')
+    revalidatePath('/app/dores/' + input.dorId)
     return { ok: true }
   } catch (e) {
     const msg = e instanceof Error ? e.message : String(e)

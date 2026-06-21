@@ -5,8 +5,8 @@
  */
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 
-// ── Mocks Supabase ─────────────────────────────────────────────────────────────
-const { mockEq, mockUpdate, mockFrom, mockGetUser } = vi.hoisted(() => {
+// ── Mocks Supabase + next/cache ────────────────────────────────────────────────
+const { mockEq, mockUpdate, mockFrom, mockGetUser, mockRevalidatePath } = vi.hoisted(() => {
   const mockEq = vi.fn().mockResolvedValue({ error: null })
   const mockUpdate = vi.fn(() => ({ eq: mockEq }))
   const mockFrom = vi.fn(() => ({ update: mockUpdate }))
@@ -14,7 +14,8 @@ const { mockEq, mockUpdate, mockFrom, mockGetUser } = vi.hoisted(() => {
     data: { user: { id: 'uid-abc' } },
     error: null,
   })
-  return { mockEq, mockUpdate, mockFrom, mockGetUser }
+  const mockRevalidatePath = vi.fn()
+  return { mockEq, mockUpdate, mockFrom, mockGetUser, mockRevalidatePath }
 })
 
 vi.mock('@/lib/supabase/server', () => ({
@@ -23,6 +24,8 @@ vi.mock('@/lib/supabase/server', () => ({
     from: mockFrom,
   }),
 }))
+
+vi.mock('next/cache', () => ({ revalidatePath: mockRevalidatePath }))
 
 // ── Import DEPOIS dos mocks ────────────────────────────────────────────────────
 import { atualizarPerfil } from '@/lib/actions/perfil'
@@ -42,6 +45,17 @@ describe('atualizarPerfil', () => {
   it('retorna ok:true quando update tem sucesso', async () => {
     const result = await atualizarPerfil({ nomePublico: 'João Silva' })
     expect(result.ok).toBe(true)
+  })
+
+  it('chama revalidatePath em /app ao ter sucesso', async () => {
+    await atualizarPerfil({ nomePublico: 'João Silva' })
+    expect(mockRevalidatePath).toHaveBeenCalledWith('/app', 'page')
+  })
+
+  it('NÃO chama revalidatePath quando falha (sem sessão)', async () => {
+    mockGetUser.mockResolvedValueOnce({ data: { user: null }, error: null })
+    await atualizarPerfil({ nomePublico: 'João Silva' })
+    expect(mockRevalidatePath).not.toHaveBeenCalled()
   })
 
   it('atualiza perfil na tabela perfil com nome_publico trimado', async () => {

@@ -1,4 +1,5 @@
 'use server'
+import { revalidatePath } from 'next/cache'
 import { createSupabaseServerClient } from '@/lib/supabase/server'
 import { hasSupabaseEnv } from '@/lib/supabase/env'
 
@@ -103,6 +104,8 @@ export async function onboardingRepresentante(
     })
 
     if (error) return { ok: false, error: mapError(error.message) }
+    revalidatePath('/app', 'page')
+    revalidatePath('/app/dores')
     return { ok: true }
   } catch (e) {
     return { ok: false, error: mapError(e instanceof Error ? e.message : String(e)) }
@@ -135,6 +138,8 @@ export async function onboardingAluno(
     })
 
     if (error) return { ok: false, error: mapError(error.message) }
+    revalidatePath('/app', 'page')
+    revalidatePath('/app/dores')
     return { ok: true }
   } catch (e) {
     return { ok: false, error: mapError(e instanceof Error ? e.message : String(e)) }

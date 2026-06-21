@@ -1,4 +1,5 @@
 'use server'
+import { revalidatePath } from 'next/cache'
 import { createSupabaseServerClient } from '@/lib/supabase/server'
 
 export type StatusProjeto =
@@ -24,6 +25,10 @@ export async function avancarProjeto(projetoId: string): Promise<ActionResult> {
       p_projeto_id: projetoId,
     })
     if (error) return { ok: false, error: mapDbError(error.message) }
+    revalidatePath('/app/dores')
+    revalidatePath('/app/dores', 'layout')
+    revalidatePath('/app', 'page')
+    revalidatePath('/app/notificacoes')
     return { ok: true }
   } catch (e) {
     const msg = e instanceof Error ? e.message : String(e)
@@ -52,6 +57,11 @@ export async function overrideTransicao(
       p_motivo: motivo,
     })
     if (error) return { ok: false, error: mapDbError(error.message) }
+    revalidatePath('/app/dores')
+    revalidatePath('/app/dores', 'layout')
+    revalidatePath('/app', 'page')
+    revalidatePath('/app/notificacoes')
+    revalidatePath('/admin', 'page')
     return { ok: true }
   } catch (e) {
     const msg = e instanceof Error ? e.message : String(e)
@@ -72,6 +82,10 @@ export async function arquivarProjeto(projetoId: string): Promise<ActionResult> 
       .update({ deleted_at: new Date().toISOString() })
       .eq('id', projetoId)
     if (error) return { ok: false, error: mapDbError(error.message) }
+    revalidatePath('/app/dores')
+    revalidatePath('/app/dores', 'layout')
+    revalidatePath('/app', 'page')
+    revalidatePath('/admin', 'page')
     return { ok: true }
   } catch (e) {
     const msg = e instanceof Error ? e.message : String(e)
@@ -91,6 +105,10 @@ export async function restaurarProjeto(projetoId: string): Promise<ActionResult>
       p_id: projetoId,
     })
     if (error) return { ok: false, error: mapDbError(error.message) }
+    revalidatePath('/app/dores')
+    revalidatePath('/app/dores', 'layout')
+    revalidatePath('/app', 'page')
+    revalidatePath('/admin', 'page')
     return { ok: true }
   } catch (e) {
     const msg = e instanceof Error ? e.message : String(e)

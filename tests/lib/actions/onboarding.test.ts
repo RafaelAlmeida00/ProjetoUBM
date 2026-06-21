@@ -6,10 +6,13 @@
  */
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 
-// ── Mocks Supabase ──────────────────────────────────────────────────────────
-const rpcMock = vi.fn()
-const authGetUserMock = vi.fn()
-const fromMock = vi.fn()
+// ── Mocks Supabase + next/cache ─────────────────────────────────────────────
+const { rpcMock, authGetUserMock, fromMock, mockRevalidatePath } = vi.hoisted(() => ({
+  rpcMock: vi.fn(),
+  authGetUserMock: vi.fn(),
+  fromMock: vi.fn(),
+  mockRevalidatePath: vi.fn(),
+}))
 
 vi.mock('@/lib/supabase/server', () => ({
   createSupabaseServerClient: vi.fn(() => ({
@@ -22,6 +25,8 @@ vi.mock('@/lib/supabase/server', () => ({
 vi.mock('next/headers', () => ({
   cookies: vi.fn().mockReturnValue({ getAll: () => [], setAll: () => {} }),
 }))
+
+vi.mock('next/cache', () => ({ revalidatePath: mockRevalidatePath }))
 
 // ── Import após mocks ────────────────────────────────────────────────────────
 import {
@@ -121,6 +126,26 @@ describe('onboardingRepresentante — CA24/CA27', () => {
     expect(result.ok).toBe(false)
     expect((result as { ok: false; error: string }).error).toMatch(/e-mail corp|corporativo/i)
   })
+
+  it('chama revalidatePath em /app e /app/dores ao ter sucesso', async () => {
+    await onboardingRepresentante({
+      empresaId: 'emp-1',
+      nome: 'João',
+      emailCorporativo: 'joao@empresa.com.br',
+    })
+    expect(mockRevalidatePath).toHaveBeenCalledWith('/app', 'page')
+    expect(mockRevalidatePath).toHaveBeenCalledWith('/app/dores')
+  })
+
+  it('NÃO chama revalidatePath quando RPC falha', async () => {
+    rpcMock.mockResolvedValue({ data: null, error: { message: 'erro' } })
+    await onboardingRepresentante({
+      empresaId: 'emp-1',
+      nome: 'João',
+      emailCorporativo: 'joao@empresa.com.br',
+    })
+    expect(mockRevalidatePath).not.toHaveBeenCalled()
+  })
 })
 
 describe('onboardingAluno — CA25', () => {
@@ -156,5 +181,11 @@ describe('onboardingAluno — CA25', () => {
     authGetUserMock.mockResolvedValue({ data: { user: null }, error: null })
     const result = await onboardingAluno({ nome: 'X', cursoIds: [] })
     expect(result.ok).toBe(false)
+  })
+
+  it('chama revalidatePath em /app e /app/dores ao ter sucesso', async () => {
+    await onboardingAluno({ nome: 'Ana', cursoIds: ['curso-1'] })
+    expect(mockRevalidatePath).toHaveBeenCalledWith('/app', 'page')
+    expect(mockRevalidatePath).toHaveBeenCalledWith('/app/dores')
   })
 })

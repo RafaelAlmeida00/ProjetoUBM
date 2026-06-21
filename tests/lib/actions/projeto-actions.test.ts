@@ -7,12 +7,13 @@
  */
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 
-const { mockRpc, mockFrom, mockUpdate, mockEq } = vi.hoisted(() => {
+const { mockRpc, mockFrom, mockUpdate, mockEq, mockRevalidatePath } = vi.hoisted(() => {
   const mockEq = vi.fn().mockResolvedValue({ error: null })
   const mockUpdate = vi.fn(() => ({ eq: mockEq }))
   const mockFrom = vi.fn(() => ({ update: mockUpdate }))
   const mockRpc = vi.fn()
-  return { mockRpc, mockFrom, mockUpdate, mockEq }
+  const mockRevalidatePath = vi.fn()
+  return { mockRpc, mockFrom, mockUpdate, mockEq, mockRevalidatePath }
 })
 
 vi.mock('@/lib/supabase/server', () => ({
@@ -21,6 +22,8 @@ vi.mock('@/lib/supabase/server', () => ({
     from: mockFrom,
   }),
 }))
+
+vi.mock('next/cache', () => ({ revalidatePath: mockRevalidatePath }))
 
 import {
   avancarProjeto,
@@ -33,6 +36,20 @@ describe('avancarProjeto', () => {
   beforeEach(() => {
     vi.clearAllMocks()
     mockRpc.mockResolvedValue({ data: null, error: null })
+  })
+
+  it('chama revalidatePath em /app/dores, /app e /app/notificacoes ao ter sucesso', async () => {
+    await avancarProjeto('projeto-1')
+    expect(mockRevalidatePath).toHaveBeenCalledWith('/app/dores')
+    expect(mockRevalidatePath).toHaveBeenCalledWith('/app/dores', 'layout')
+    expect(mockRevalidatePath).toHaveBeenCalledWith('/app', 'page')
+    expect(mockRevalidatePath).toHaveBeenCalledWith('/app/notificacoes')
+  })
+
+  it('NÃO chama revalidatePath quando RPC falha', async () => {
+    mockRpc.mockResolvedValueOnce({ data: null, error: { message: 'apenas o host pode avancar' } })
+    await avancarProjeto('projeto-1')
+    expect(mockRevalidatePath).not.toHaveBeenCalled()
   })
 
   it('retorna ok:true quando RPC tem sucesso', async () => {
@@ -144,6 +161,20 @@ describe('arquivarProjeto', () => {
     mockFrom.mockReturnValue({ update: mockUpdate })
   })
 
+  it('chama revalidatePath em /app/dores, /app e /admin ao ter sucesso', async () => {
+    await arquivarProjeto('projeto-1')
+    expect(mockRevalidatePath).toHaveBeenCalledWith('/app/dores')
+    expect(mockRevalidatePath).toHaveBeenCalledWith('/app/dores', 'layout')
+    expect(mockRevalidatePath).toHaveBeenCalledWith('/app', 'page')
+    expect(mockRevalidatePath).toHaveBeenCalledWith('/admin', 'page')
+  })
+
+  it('NÃO chama revalidatePath quando DML falha', async () => {
+    mockEq.mockResolvedValueOnce({ error: { message: 'permission denied for table projeto' } })
+    await arquivarProjeto('projeto-1')
+    expect(mockRevalidatePath).not.toHaveBeenCalled()
+  })
+
   it('retorna ok:true quando soft-delete tem sucesso', async () => {
     const result = await arquivarProjeto('projeto-1')
     expect(result.ok).toBe(true)
@@ -182,6 +213,20 @@ describe('restaurarProjeto', () => {
   beforeEach(() => {
     vi.clearAllMocks()
     mockRpc.mockResolvedValue({ data: null, error: null })
+  })
+
+  it('chama revalidatePath em /app/dores, /app e /admin ao ter sucesso', async () => {
+    await restaurarProjeto('projeto-1')
+    expect(mockRevalidatePath).toHaveBeenCalledWith('/app/dores')
+    expect(mockRevalidatePath).toHaveBeenCalledWith('/app/dores', 'layout')
+    expect(mockRevalidatePath).toHaveBeenCalledWith('/app', 'page')
+    expect(mockRevalidatePath).toHaveBeenCalledWith('/admin', 'page')
+  })
+
+  it('NÃO chama revalidatePath quando RPC falha', async () => {
+    mockRpc.mockResolvedValueOnce({ data: null, error: { message: 'permission denied' } })
+    await restaurarProjeto('projeto-1')
+    expect(mockRevalidatePath).not.toHaveBeenCalled()
   })
 
   it('retorna ok:true quando RPC tem sucesso', async () => {

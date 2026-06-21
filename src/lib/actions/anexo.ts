@@ -1,4 +1,5 @@
 'use server'
+import { revalidatePath } from 'next/cache'
 import { createSupabaseServerClient } from '@/lib/supabase/server'
 
 export interface AnexoMeta {
@@ -43,6 +44,8 @@ export async function uploadAnexo(
     if (error) {
       return { ok: false, error: mapAnexoError(error.message) }
     }
+    revalidatePath('/app/dores/' + dorId)
+    revalidatePath('/app/dores', 'layout')
     return { ok: true, anexo: data as AnexoMeta }
   } catch (e) {
     return { ok: false, error: 'Não foi possível registrar o anexo.' }
@@ -63,6 +66,7 @@ export async function removerAnexo(
       .update({ deleted_at: new Date().toISOString() })
       .eq('id', anexoId)
     if (error) return { ok: false, error: mapAnexoError(error.message) }
+    revalidatePath('/app/dores', 'layout')
     return { ok: true }
   } catch {
     return { ok: false, error: 'Não foi possível remover o anexo.' }

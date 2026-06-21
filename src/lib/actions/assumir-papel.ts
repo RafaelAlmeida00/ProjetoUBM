@@ -1,4 +1,5 @@
 'use server'
+import { revalidatePath } from 'next/cache'
 import { createSupabaseServerClient } from '@/lib/supabase/server'
 
 export type Papel = 'aluno' | 'coordenador' | 'representante'
@@ -14,6 +15,7 @@ export async function assumirPapel(papel: Papel): Promise<{ ok: boolean; error?:
     // Com p_papel, PostgREST retorna HTTP 404 → papel nunca criado no onboarding.
     const { error } = await supabase.rpc('assumir_papel', { p_role: papel })
     if (error) return { ok: false, error: error.message }
+    revalidatePath('/', 'layout')
     return { ok: true }
   } catch {
     return { ok: false, error: 'Não conseguimos definir seu papel. Tente novamente.' }

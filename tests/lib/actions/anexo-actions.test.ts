@@ -7,7 +7,7 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 
 // --- vi.hoisted: vars disponíveis antes do içamento do vi.mock ---
-const { mockGetUser, mockFrom, mockInsert, mockSelect, mockSingle, mockUpdate, mockEq } =
+const { mockGetUser, mockFrom, mockInsert, mockSelect, mockSingle, mockUpdate, mockEq, mockRevalidatePath } =
   vi.hoisted(() => {
     const mockSingle  = vi.fn()
     const mockSelect  = vi.fn(() => ({ single: mockSingle }))
@@ -16,7 +16,8 @@ const { mockGetUser, mockFrom, mockInsert, mockSelect, mockSingle, mockUpdate, m
     const mockUpdate  = vi.fn(() => ({ eq: mockEq }))
     const mockFrom    = vi.fn(() => ({ insert: mockInsert, update: mockUpdate }))
     const mockGetUser = vi.fn()
-    return { mockGetUser, mockFrom, mockInsert, mockSelect, mockSingle, mockUpdate, mockEq }
+    const mockRevalidatePath = vi.fn()
+    return { mockGetUser, mockFrom, mockInsert, mockSelect, mockSingle, mockUpdate, mockEq, mockRevalidatePath }
   })
 
 vi.mock('@/lib/supabase/server', () => ({
@@ -25,6 +26,8 @@ vi.mock('@/lib/supabase/server', () => ({
     from: mockFrom,
   }),
 }))
+
+vi.mock('next/cache', () => ({ revalidatePath: mockRevalidatePath }))
 
 import { uploadAnexo, removerAnexo } from '@/lib/actions/anexo'
 
@@ -98,6 +101,19 @@ describe('uploadAnexo', () => {
       })
     )
   })
+
+  it('A7: chama revalidatePath com dorId e layout após sucesso', async () => {
+    mockGetUser.mockResolvedValue({ data: { user: { id: 'uid-abc' } }, error: null })
+    await uploadAnexo('dor-7', 'dor/dor-7/foto.png', META)
+    expect(mockRevalidatePath).toHaveBeenCalledWith('/app/dores/dor-7')
+    expect(mockRevalidatePath).toHaveBeenCalledWith('/app/dores', 'layout')
+  })
+
+  it('A8: NÃO chama revalidatePath quando sem sessão', async () => {
+    mockGetUser.mockResolvedValue({ data: { user: null }, error: null })
+    await uploadAnexo('dor-8', 'dor/dor-8/foto.png', META)
+    expect(mockRevalidatePath).not.toHaveBeenCalled()
+  })
 })
 
 describe('removerAnexo', () => {
@@ -127,5 +143,16 @@ describe('removerAnexo', () => {
     if (!result.ok) {
       expect(result.error).toMatch(/remo|Você não tem permissão/i)
     }
+  })
+
+  it('R4: chama revalidatePath com layout após sucesso', async () => {
+    await removerAnexo('anexo-uuid-4')
+    expect(mockRevalidatePath).toHaveBeenCalledWith('/app/dores', 'layout')
+  })
+
+  it('R5: NÃO chama revalidatePath quando update falha', async () => {
+    mockEq.mockResolvedValue({ error: { message: 'permissao negada' } })
+    await removerAnexo('anexo-uuid-5')
+    expect(mockRevalidatePath).not.toHaveBeenCalled()
   })
 })

@@ -1,4 +1,5 @@
 'use server'
+import { revalidatePath } from 'next/cache'
 import { createSupabaseServerClient } from '@/lib/supabase/server'
 
 export type ActionResult = { ok: true } | { ok: false; error: string }
@@ -35,6 +36,9 @@ export async function fecharEquipe(
       p_membros: pMembros,
     })
     if (error) return { ok: false, error: mapDbError(error.message) }
+    revalidatePath('/app/dores', 'layout')
+    revalidatePath('/app', 'page')
+    revalidatePath('/app/notificacoes')
     return { ok: true }
   } catch (e) {
     const msg = e instanceof Error ? e.message : String(e)
@@ -63,6 +67,8 @@ export async function editarEquipe(
       p_membros: pMembros,
     })
     if (error) return { ok: false, error: mapDbError(error.message) }
+    revalidatePath('/app/dores', 'layout')
+    revalidatePath('/app', 'page')
     return { ok: true }
   } catch (e) {
     const msg = e instanceof Error ? e.message : String(e)
@@ -86,6 +92,8 @@ export async function trocarHost(
       p_novo_host_pessoa_id: novoHostPessoaId,
     })
     if (error) return { ok: false, error: mapDbError(error.message) }
+    revalidatePath('/app/dores', 'layout')
+    revalidatePath('/app', 'page')
     return { ok: true }
   } catch (e) {
     const msg = e instanceof Error ? e.message : String(e)
@@ -108,6 +116,8 @@ export async function elegerHost(
       p_host_pessoa_id: hostPessoaId,
     })
     if (error) return { ok: false, error: mapDbError(error.message) }
+    revalidatePath('/app/dores', 'layout')
+    revalidatePath('/app', 'page')
     return { ok: true }
   } catch (e) {
     const msg = e instanceof Error ? e.message : String(e)
@@ -123,6 +133,9 @@ export async function reabrirIndicacoes(projetoId: string): Promise<ActionResult
     const supabase = await createSupabaseServerClient()
     const { error } = await supabase.rpc('reabrir_indicacoes', { p_projeto_id: projetoId })
     if (error) return { ok: false, error: mapDbError(error.message) }
+    revalidatePath('/app/dores', 'layout')
+    revalidatePath('/app/dores')
+    revalidatePath('/app', 'page')
     return { ok: true }
   } catch (e) {
     const msg = e instanceof Error ? e.message : String(e)
@@ -139,6 +152,8 @@ export async function encerrarIndicacoes(projetoId: string): Promise<ActionResul
     const supabase = await createSupabaseServerClient()
     const { error } = await supabase.rpc('encerrar_indicacoes', { p_projeto_id: projetoId })
     if (error) return { ok: false, error: mapDbError(error.message) }
+    revalidatePath('/app/dores', 'layout')
+    revalidatePath('/app/dores')
     return { ok: true }
   } catch (e) {
     const msg = e instanceof Error ? e.message : String(e)
@@ -160,6 +175,8 @@ export async function removerMembro(
       p_pessoa_id: pessoaId,
     })
     if (error) return { ok: false, error: mapDbError(error.message) }
+    revalidatePath('/app/dores', 'layout')
+    revalidatePath('/app', 'page')
     return { ok: true }
   } catch (e) {
     const msg = e instanceof Error ? e.message : String(e)

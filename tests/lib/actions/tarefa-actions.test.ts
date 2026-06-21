@@ -9,14 +9,15 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 
 // Mocks da cadeia fluente do Supabase: from().insert().select().single(), from().update().eq()
-const { mockInsert, mockSelect, mockSingle, mockUpdate, mockEq, mockFrom } = vi.hoisted(() => {
+const { mockInsert, mockSelect, mockSingle, mockUpdate, mockEq, mockFrom, mockRevalidatePath } = vi.hoisted(() => {
   const mockSingle = vi.fn().mockResolvedValue({ data: { id: 'tarefa-nova' }, error: null })
   const mockSelect = vi.fn(() => ({ single: mockSingle }))
   const mockInsert = vi.fn(() => ({ select: mockSelect }))
   const mockEq = vi.fn().mockResolvedValue({ error: null })
   const mockUpdate = vi.fn(() => ({ eq: mockEq }))
   const mockFrom = vi.fn(() => ({ insert: mockInsert, update: mockUpdate }))
-  return { mockInsert, mockSelect, mockSingle, mockUpdate, mockEq, mockFrom }
+  const mockRevalidatePath = vi.fn()
+  return { mockInsert, mockSelect, mockSingle, mockUpdate, mockEq, mockFrom, mockRevalidatePath }
 })
 
 vi.mock('@/lib/supabase/server', () => ({
@@ -24,6 +25,8 @@ vi.mock('@/lib/supabase/server', () => ({
     from: mockFrom,
   }),
 }))
+
+vi.mock('next/cache', () => ({ revalidatePath: mockRevalidatePath }))
 
 import {
   criarTarefa,
@@ -40,6 +43,18 @@ describe('criarTarefa', () => {
     mockSelect.mockReturnValue({ single: mockSingle })
     mockInsert.mockReturnValue({ select: mockSelect })
     mockFrom.mockReturnValue({ insert: mockInsert, update: mockUpdate })
+  })
+
+  it('chama revalidatePath em /app/dores e /app ao ter sucesso', async () => {
+    await criarTarefa({ projetoId: 'proj-1', responsavelId: 'user-1', titulo: 'Tarefa X' })
+    expect(mockRevalidatePath).toHaveBeenCalledWith('/app/dores', 'layout')
+    expect(mockRevalidatePath).toHaveBeenCalledWith('/app', 'page')
+  })
+
+  it('NÃO chama revalidatePath quando inserção falha', async () => {
+    mockSingle.mockResolvedValueOnce({ data: null, error: { message: 'permission denied' } })
+    await criarTarefa({ projetoId: 'proj-1', responsavelId: 'user-1', titulo: 'Tarefa X' })
+    expect(mockRevalidatePath).not.toHaveBeenCalled()
   })
 
   it('retorna ok:true com id quando inserção tem sucesso', async () => {
@@ -160,6 +175,12 @@ describe('concluirTarefa', () => {
     mockEq.mockResolvedValue({ error: null })
     mockUpdate.mockReturnValue({ eq: mockEq })
     mockFrom.mockReturnValue({ insert: mockInsert, update: mockUpdate })
+  })
+
+  it('chama revalidatePath em /app/dores e /app ao ter sucesso', async () => {
+    await concluirTarefa('tarefa-1')
+    expect(mockRevalidatePath).toHaveBeenCalledWith('/app/dores', 'layout')
+    expect(mockRevalidatePath).toHaveBeenCalledWith('/app', 'page')
   })
 
   it('retorna ok:true quando update tem sucesso', async () => {
