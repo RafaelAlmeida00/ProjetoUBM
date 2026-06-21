@@ -27,6 +27,7 @@ export class FakeSignatureGateway implements SignatureGateway {
 
     return {
       provedor_doc_id: provedorDocId,
+      link_assinatura: `https://fake.assinatura/${provedorDocId}`,
       clausulaAceiteMeioEletronico: params.clausulaAceiteMeioEletronico ?? true,
       // CA9: único signatário = o representante passado (nunca admin)
       signatarios: [

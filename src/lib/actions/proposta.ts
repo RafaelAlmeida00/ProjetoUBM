@@ -42,6 +42,26 @@ export async function enviarProposta(params: EnviarPropostaParams): Promise<Acti
 
     const supabase = await createSupabaseServerClient()
 
+    // 0. Signatário = representante da empresa, buscado AUTORITATIVAMENTE no banco (RN3/CA9).
+    //    Não depende de props do cliente — sem e-mail correto, o Autentique cria doc sem
+    //    signatário e o representante nunca recebe o convite.
+    const { data: sigRows } = await supabase.rpc('obter_signatario_proposta', {
+      p_projeto_id: params.projetoId,
+    })
+    const sigRow = (Array.isArray(sigRows) ? sigRows[0] : sigRows) as
+      | { nome?: string; email?: string }
+      | undefined
+    const signatario = {
+      nome: sigRow?.nome || params.signatario.nome || '',
+      email: sigRow?.email || params.signatario.email || '',
+    }
+    if (!signatario.email) {
+      return {
+        ok: false,
+        error: 'Não encontramos o e-mail do representante da empresa para enviar a assinatura.',
+      }
+    }
+
     // 1. Upload ao bucket privado 'propostas'
     const storagePath = `${params.projetoId}/${params.documentoId}-original.pdf`
     const arrayBuf = await params.pdf.arrayBuffer()
@@ -59,15 +79,18 @@ export async function enviarProposta(params: EnviarPropostaParams): Promise<Acti
       projetoId: params.projetoId,
       documentoId: params.documentoId,
       storagePath,
-      signatario: params.signatario,
+      signatario,
       clausulaAceiteMeioEletronico: true,
     })
 
-    // 3. RPC enviar_proposta (AUTZ + INSERT documento_proposta + assinatura + UPDATE projeto)
+    // 3. RPC enviar_proposta (AUTZ + INSERT documento_proposta + assinatura + UPDATE projeto).
+    //    p_origem='autentique' (Caminho A); persiste provedor_doc_id + link p/ webhook/UI.
     const { error: rpcErr } = await supabase.rpc('enviar_proposta', {
       p_projeto_id: params.projetoId,
       p_storage_path: storagePath,
+      p_origem: 'autentique',
       p_provedor_doc_id: pedido.provedor_doc_id,
+      p_link_assinatura: pedido.link_assinatura ?? null,
     })
     if (rpcErr) return { ok: false, error: mapDbError(rpcErr.message) }
 

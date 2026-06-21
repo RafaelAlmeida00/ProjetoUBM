@@ -51,14 +51,20 @@ beforeEach(() => {
   // Upload retorna sem erro
   uploadMock.mockResolvedValue({ data: { path: 'propostas/proj-1/uuid-original.pdf' }, error: null })
   storageMock.mockReturnValue({ upload: uploadMock })
-  // Gateway retorna provedor_doc_id
+  // Gateway retorna provedor_doc_id + link
   criarPedidoMock.mockResolvedValue({
     provedor_doc_id: 'aut-doc-123',
+    link_assinatura: 'https://aut/sign/aut-doc-123',
     clausulaAceiteMeioEletronico: true,
     signatarios: [{ email: 'rep@empresa.com' }],
   })
-  // RPC retorna sem erro
-  rpcMock.mockResolvedValue({ data: null, error: null })
+  // RPC: obter_signatario_proposta devolve o representante; demais sem erro
+  rpcMock.mockImplementation(async (name: string) => {
+    if (name === 'obter_signatario_proposta') {
+      return { data: [{ nome: 'Rep Silva', email: 'rep@empresa.com' }], error: null }
+    }
+    return { data: null, error: null }
+  })
 })
 
 describe('enviarProposta — T4.2 (Caminho A)', () => {
@@ -99,8 +105,38 @@ describe('enviarProposta — T4.2 (Caminho A)', () => {
       expect.objectContaining({
         p_projeto_id: 'proj-1',
         p_storage_path: expect.any(String),
+        p_origem: 'autentique',
+        p_provedor_doc_id: 'aut-doc-123',
       }),
     )
+  })
+
+  it('busca o signatário no banco e passa o representante ao gateway', async () => {
+    await enviarProposta({
+      projetoId: 'proj-1',
+      documentoId: 'doc-1',
+      signatario: { nome: '', email: '' }, // props vazias: a action resolve pelo banco
+      pdf: makePdf(),
+    })
+    expect(rpcMock).toHaveBeenCalledWith('obter_signatario_proposta', { p_projeto_id: 'proj-1' })
+    expect(criarPedidoMock).toHaveBeenCalledWith(
+      expect.objectContaining({ signatario: expect.objectContaining({ email: 'rep@empresa.com' }) }),
+    )
+  })
+
+  it('retorna ok:false quando não há e-mail de representante', async () => {
+    rpcMock.mockImplementation(async (name: string) => {
+      if (name === 'obter_signatario_proposta') return { data: [], error: null }
+      return { data: null, error: null }
+    })
+    const result = await enviarProposta({
+      projetoId: 'proj-1',
+      documentoId: 'doc-1',
+      signatario: { nome: '', email: '' },
+      pdf: makePdf(),
+    })
+    expect(result.ok).toBe(false)
+    if (!result.ok) expect(result.error).toMatch(/representante|e-?mail/i)
   })
 
   it('revalida /app/dores/[id] e /app/notificacoes após sucesso', async () => {

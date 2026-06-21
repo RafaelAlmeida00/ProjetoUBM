@@ -17,6 +17,9 @@ export interface CriarPedidoParams {
 
 export interface CriarPedidoResult {
   provedor_doc_id: string
+  /** Link de assinatura no provedor (Caminho A). Opcional: o Autentique convida o
+   *  signatário por e-mail; o Fake/local devolve um link para a UI mostrar o botão. */
+  link_assinatura?: string
   clausulaAceiteMeioEletronico: boolean
   signatarios: { nome: string; email: string }[]
 }

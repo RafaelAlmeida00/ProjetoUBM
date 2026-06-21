@@ -140,4 +140,56 @@ describe('0068a enviar_proposta', () => {
     await comoAnon(db)
     expect(await negado(db.query(`select public.enviar_proposta('${projetoId}','p.pdf','autentique')`))).toBe(true)
   })
+
+  it('0075 CA7: persiste provedor_doc_id + link_assinatura + status=enviada (Caminho A)', async () => {
+    await comoUsuario(db, { uid: HOST })
+    await db.query(`select public.enviar_proposta('${projetoId}','propostas/orig.pdf','autentique','aut-doc-xyz','https://aut/sign/xyz')`)
+    await comoServiceRole(db)
+    const r = (await db.query<{ provedor_doc_id: string; link_assinatura: string; status: string }>(
+      `select a.provedor_doc_id, a.link_assinatura, a.status from public.assinatura a
+         join public.documento_proposta d on d.id=a.documento_id where d.projeto_id='${projetoId}'`
+    )).rows[0]!
+    expect(r.provedor_doc_id).toBe('aut-doc-xyz')
+    expect(r.link_assinatura).toBe('https://aut/sign/xyz')
+    expect(r.status).toBe('enviada')
+  })
+
+  it('0075 compat: chamada 3-arg ainda funciona (status pendente, provedor null)', async () => {
+    await comoUsuario(db, { uid: HOST })
+    await db.query(`select public.enviar_proposta('${projetoId}','propostas/orig.pdf','autentique')`)
+    await comoServiceRole(db)
+    const r = (await db.query<{ status: string; provedor_doc_id: string | null }>(
+      `select a.status, a.provedor_doc_id from public.assinatura a
+         join public.documento_proposta d on d.id=a.documento_id where d.projeto_id='${projetoId}'`
+    )).rows[0]!
+    expect(r.status).toBe('pendente')
+    expect(r.provedor_doc_id).toBeNull()
+  })
+})
+
+describe('0075 obter_signatario_proposta', () => {
+  it('host obtém nome+email do representante da empresa', async () => {
+    await comoUsuario(db, { uid: HOST })
+    const r = (await db.query<{ nome: string; email: string }>(
+      `select * from public.obter_signatario_proposta('${projetoId}')`
+    )).rows[0]!
+    expect(r.email).toBe('rep@ubm.br')
+  })
+
+  it('admin também obtém o signatário', async () => {
+    await comoUsuario(db, { uid: ADM, appMeta: { is_admin: true } })
+    const r = (await db.query<{ email: string }>(
+      `select * from public.obter_signatario_proposta('${projetoId}')`
+    )).rows
+    expect(r[0]?.email).toBe('rep@ubm.br')
+  })
+
+  it('rep/aluno/anon NÃO podem obter o signatário (RN18)', async () => {
+    await comoUsuario(db, { uid: REP })
+    expect(await negado(db.query(`select * from public.obter_signatario_proposta('${projetoId}')`))).toBe(true)
+    await comoUsuario(db, { uid: ALUNO })
+    expect(await negado(db.query(`select * from public.obter_signatario_proposta('${projetoId}')`))).toBe(true)
+    await comoAnon(db)
+    expect(await negado(db.query(`select * from public.obter_signatario_proposta('${projetoId}')`))).toBe(true)
+  })
 })

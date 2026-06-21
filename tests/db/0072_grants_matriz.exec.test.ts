@@ -35,7 +35,7 @@ async function anonTemGrant(fnName: string, argtypes: string): Promise<boolean> 
 
 describe('0072 hardening grants 006 — anon NUNCA executa RPCs de escrita', () => {
   it('anon não tem grant em enviar_proposta', async () => {
-    expect(await anonTemGrant('public.enviar_proposta', 'uuid, text, public.origem_assinatura')).toBe(false)
+    expect(await anonTemGrant('public.enviar_proposta', 'uuid, text, public.origem_assinatura, text, text')).toBe(false)
   })
 
   it('anon não tem grant em contrapropor_proposta', async () => {
