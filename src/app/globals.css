@@ -652,7 +652,10 @@
   a.ubm-dor-card:hover, .ubm-dor-card:hover, .ubm-dor-card:focus-within {
     --weld-scale: 1; transform: translateY(-2px); box-shadow: var(--shadow-md); border-color: hsl(var(--primary) / 0.4);
   }
-  .ubm-dor-card-head { display: flex; align-items: flex-start; justify-content: space-between; gap: 0.75rem; }
+  /* Título ocupa a largura inteira do topo; o badge de status quebra para baixo dele
+     (antes era flex-row space-between → o badge "EM MODERAÇÃO" era espremido/cortado na
+     borda do card). Empilha: título → badge → descrição → cursos → data. */
+  .ubm-dor-card-head { display: flex; flex-direction: column; align-items: flex-start; gap: 0.5rem; }
   .ubm-dor-card-empresa { font-family: var(--font-display), Georgia, serif; font-weight: 600; font-size: 1.2rem; line-height: 1.2; color: hsl(var(--foreground)); margin: 0; }
   .ubm-dor-card-desc { color: hsl(var(--muted-foreground)); font-size: 0.95rem; line-height: 1.5; display: -webkit-box; -webkit-line-clamp: 3; line-clamp: 3; -webkit-box-orient: vertical; overflow: hidden; }
   .ubm-dor-card-cursos { display: flex; flex-wrap: wrap; gap: 0.4rem; }
