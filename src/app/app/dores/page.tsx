@@ -24,7 +24,7 @@ export default async function DoresRoutePage() {
   // projeto(status) via FK dor_id — uq_projeto_dor garante 0 ou 1 linha por dor (ADR-0002 Q1)
   const { data: publicadas } = await supabase
     .from('dor')
-    .select('id, empresa_id, descricao, titulo, status_dor, publicada_em, aprovado_por, projeto(id, status)')
+    .select('id, empresa_id, descricao, titulo, status_dor, publicada_em, aprovado_por, projeto(id, status, indicacoes_abertas)')
     .eq('status_dor', 'publicada')
     .order('publicada_em', { ascending: false })
     .limit(50)
@@ -177,7 +177,7 @@ export default async function DoresRoutePage() {
   const doresPublicadas: DorCard[] = (publicadas ?? []).map((d: {
     id: string; empresa_id: string; descricao: string; titulo: string | null; status_dor: 'publicada'
     publicada_em: string | null; aprovado_por: string | null
-    projeto: { id: string; status: string } | { id: string; status: string }[] | null
+    projeto: { id: string; status: string; indicacoes_abertas?: boolean } | { id: string; status: string; indicacoes_abertas?: boolean }[] | null
   }) => {
     // projeto pode ser null (sem projeto), objeto único ou array (PostgREST FK)
     const projetoArr = Array.isArray(d.projeto) ? d.projeto : (d.projeto ? [d.projeto] : [])
@@ -194,6 +194,7 @@ export default async function DoresRoutePage() {
       aprovado_por: d.aprovado_por,
       projeto_status: projetoAtivo?.status as string | undefined,
       projeto_id: projetoAtivo?.id as string | undefined,
+      indicacoes_abertas: !!projetoAtivo?.indicacoes_abertas,
     }
   })
 

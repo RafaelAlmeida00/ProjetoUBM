@@ -131,6 +131,22 @@ export async function reabrirIndicacoes(projetoId: string): Promise<ActionResult
 }
 
 /**
+ * Server Action: encerrar indicações (admin ou host) — fecha a janela de novo (status inalterado).
+ * Par do reabrirIndicacoes (0063). Janela desacoplada do status do projeto.
+ */
+export async function encerrarIndicacoes(projetoId: string): Promise<ActionResult> {
+  try {
+    const supabase = await createSupabaseServerClient()
+    const { error } = await supabase.rpc('encerrar_indicacoes', { p_projeto_id: projetoId })
+    if (error) return { ok: false, error: mapDbError(error.message) }
+    return { ok: true }
+  } catch (e) {
+    const msg = e instanceof Error ? e.message : String(e)
+    return { ok: false, error: mapDbError(msg) }
+  }
+}
+
+/**
  * Server Action: remover membro da equipe (host ou admin) — não a si mesmo; o host não por aqui.
  */
 export async function removerMembro(

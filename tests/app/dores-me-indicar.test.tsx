@@ -546,3 +546,34 @@ describe('009 T19 — guarda: indicar-se inline (coordenador / avançado)', () =
     expect(container.querySelector('.ubm-status--caso')).not.toBeNull()
   })
 })
+
+// ── (5) 0063 — janela de indicação reaberta na VITRINE (sem regredir status) ──
+describe('0063 — vitrine respeita indicacoes_abertas (reaberto em fase avançada)', () => {
+  it('projeto aprovado com indicacoes_abertas=true: card mostra "Me indicar" mesmo com selo de estágio', () => {
+    render(
+      <DoresPage
+        doresPublicadas={[{ ...DOR_PUBLICADA, id: 'dor-reab', projeto_id: 'proj-reab', projeto_status: 'aprovado', indicacoes_abertas: true }]}
+        minhasDores={[]}
+        isRepresentante={false}
+        isVerificado={true}
+        papelUsuario="aluno"
+        vinculosUsuario={{ indicadoProjetoIds: [], membroProjetoIds: [] }}
+      />,
+    )
+    expect(screen.getByRole('button', { name: /me indicar/i })).toBeInTheDocument()
+  })
+
+  it('projeto aprovado com janela FECHADA (sem flag): card NÃO mostra "Me indicar"', () => {
+    render(
+      <DoresPage
+        doresPublicadas={[{ ...DOR_PUBLICADA, id: 'dor-fech', projeto_id: 'proj-fech', projeto_status: 'aprovado' }]}
+        minhasDores={[]}
+        isRepresentante={false}
+        isVerificado={true}
+        papelUsuario="aluno"
+        vinculosUsuario={{ indicadoProjetoIds: [], membroProjetoIds: [] }}
+      />,
+    )
+    expect(screen.queryByRole('button', { name: /me indicar/i })).toBeNull()
+  })
+})

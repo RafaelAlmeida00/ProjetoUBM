@@ -60,6 +60,8 @@ interface DorDetalheProps {
    *  Todos GATED pelo RSC: chegam vazios/null quando o papel não tem direito. */
   projetoId?: string | null
   projetoStatus?: string | null
+  /** 0063 — janela de indicação aberta (independente do status); liga reabrir/encerrar e o "Me indicar". */
+  indicacoesAbertas?: boolean
   hostElected?: boolean
   /** 0060 — pessoa_id do host eleito (para o team-builder entrar em modo composição). */
   hostPessoaId?: string | null
@@ -156,6 +158,7 @@ export function DorDetalhe({
   timelineDor = [],
   projetoId = null,
   projetoStatus = null,
+  indicacoesAbertas = false,
   hostElected = false,
   hostPessoaId = null,
   papelAtual = null,
@@ -556,8 +559,8 @@ export function DorDetalhe({
           </section>
         )}
 
-        {/* ── 009 T11: ação contextual "Me indicar" (aluno/coord; janela aberta = em_analise) ── */}
-        {projetoStatus === 'em_analise' && papelBaseIndicacao && estadoIndicacao && projetoId && (
+        {/* ── 009 T11 + 0063: "Me indicar" (aluno/coord) quando a janela está aberta (em_analise OU reaberta) ── */}
+        {(projetoStatus === 'em_analise' || indicacoesAbertas) && papelBaseIndicacao && estadoIndicacao && projetoId && (
           <section className="ubm-section-block ubm-card-action-row">
             <MeIndicarSlot
               projetoId={projetoId}
@@ -631,6 +634,7 @@ export function DorDetalhe({
               hostElected={hostElected}
               hostPessoaId={hostPessoaId}
               gestao={gestao}
+              indicacoesAbertas={indicacoesAbertas}
               currentUserId={currentUserId}
             />
           </details>

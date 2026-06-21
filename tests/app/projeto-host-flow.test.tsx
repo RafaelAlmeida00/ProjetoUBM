@@ -15,12 +15,13 @@ vi.mock('@/components/feedback/ToastProvider', () => ({
   useToast: () => ({ sucesso: vi.fn(), erro: vi.fn(), info: vi.fn(), dispensar: vi.fn() }),
 }))
 
-const { elegerHostMock, trocarHostMock, fecharEquipeMock, editarEquipeMock, reabrirMock, removerMock, avancarMock } = vi.hoisted(() => ({
+const { elegerHostMock, trocarHostMock, fecharEquipeMock, editarEquipeMock, reabrirMock, encerrarMock, removerMock, avancarMock } = vi.hoisted(() => ({
   elegerHostMock: vi.fn(),
   trocarHostMock: vi.fn(),
   fecharEquipeMock: vi.fn(),
   editarEquipeMock: vi.fn(),
   reabrirMock: vi.fn(),
+  encerrarMock: vi.fn(),
   removerMock: vi.fn(),
   avancarMock: vi.fn(),
 }))
@@ -31,6 +32,7 @@ vi.mock('@/lib/actions/equipe', () => ({
   fecharEquipe: (...a: unknown[]) => fecharEquipeMock(...a),
   editarEquipe: (...a: unknown[]) => editarEquipeMock(...a),
   reabrirIndicacoes: (...a: unknown[]) => reabrirMock(...a),
+  encerrarIndicacoes: (...a: unknown[]) => encerrarMock(...a),
   removerMembro: (...a: unknown[]) => removerMock(...a),
 }))
 vi.mock('@/lib/actions/projeto', () => ({ avancarProjeto: (...a: unknown[]) => avancarMock(...a) }))
@@ -45,6 +47,7 @@ beforeEach(() => {
   trocarHostMock.mockResolvedValue({ ok: true })
   editarEquipeMock.mockResolvedValue({ ok: true })
   reabrirMock.mockResolvedValue({ ok: true })
+  encerrarMock.mockResolvedValue({ ok: true })
   removerMock.mockResolvedValue({ ok: true })
 })
 
@@ -68,6 +71,20 @@ describe('ProjetoDetalheClient — fluxo de host (0060)', () => {
 
   it('admin em aprovado: "Reabrir indicações" chama a action', async () => {
     render(<ProjetoDetalheClient projetoId="p1" indicacoes={[]} papelAtual="admin" projetoStatus="aprovado" hostElected />)
+    fireEvent.click(screen.getByRole('button', { name: /reabrir indicações/i }))
+    await waitFor(() => expect(reabrirMock).toHaveBeenCalledWith('p1'))
+  })
+
+  // 0063 — janela de indicação desacoplada do status: reabrir/encerrar em qualquer fase (admin+host)
+  it('janela ABERTA (indicacoesAbertas) em aguardando_proposta: admin vê "Encerrar indicações" e chama a action', async () => {
+    render(<ProjetoDetalheClient projetoId="p1" indicacoes={[]} papelAtual="admin" projetoStatus="aguardando_proposta" hostElected hostPessoaId="p-host" indicacoesAbertas />)
+    expect(screen.queryByRole('button', { name: /reabrir indicações/i })).toBeNull()
+    fireEvent.click(screen.getByRole('button', { name: /encerrar indicações/i }))
+    await waitFor(() => expect(encerrarMock).toHaveBeenCalledWith('p1'))
+  })
+
+  it('host em aguardando_proposta (janela fechada): vê "Reabrir indicações" e chama a action', async () => {
+    render(<ProjetoDetalheClient projetoId="p1" indicacoes={[]} papelAtual="host" projetoStatus="aguardando_proposta" hostElected hostPessoaId="p-host" />)
     fireEvent.click(screen.getByRole('button', { name: /reabrir indicações/i }))
     await waitFor(() => expect(reabrirMock).toHaveBeenCalledWith('p1'))
   })

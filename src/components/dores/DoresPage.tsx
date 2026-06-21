@@ -29,6 +29,8 @@ export interface DorCard {
   /** ID do projeto associado (uq_projeto_dor). É a CHAVE da indicação (indicar_se/retirar
    *  e vínculos operam por projeto_id, não por dor_id). undefined = dor sem projeto ainda. */
   projeto_id?: string
+  /** 0063 — janela de indicação reaberta (independente do status): abre "Me indicar" mesmo com selo. */
+  indicacoes_abertas?: boolean
 }
 
 interface DoresPageProps {
@@ -94,10 +96,10 @@ function DorCardItem({
   const data = dor.publicada_em ?? dor.criada_em
   // Selo de estágio só para dor publicada. em_analise/sem-projeto → undefined (indicação aberta).
   const estagio = dor.status === 'publicada' ? derivarEstagioSelo(dor.projeto_status) : undefined
-  // Selo × botão são MUTUAMENTE EXCLUSIVOS: enquanto a indicação está aberta (sem selo),
-  // só o botão "Me indicar" aparece; quando o projeto avança (aprovado+/finalizado → tem selo),
-  // a janela de indicação fecha (RN9: backend nega indicar fora de em_analise) → só o selo aparece.
-  const indicacaoAberta = !estagio
+  // Selo × botão: normalmente exclusivos — projeto avançado (com selo) fecha a indicação.
+  // EXCEÇÃO 0063: se a janela foi REABERTA (indicacoes_abertas), o "Me indicar" volta a aparecer
+  // mesmo com selo de estágio (admin/host reabriram em fase avançada, sem regredir o status).
+  const indicacaoAberta = !estagio || !!dor.indicacoes_abertas
   return (
     <article className={`ubm-dor-card ubm-dor-card--linkable${minha ? ' ubm-dor-card--dor' : ''}`}>
       <div className="ubm-dor-card-head">

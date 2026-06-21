@@ -89,12 +89,15 @@ describe('0060 fluxo de host', () => {
     expect(await status()).toBe('aprovado')
   })
 
-  it('admin reabre indicações (aprovado → em_analise)', async () => {
+  it('admin reabre indicações: abre a janela SEM regredir o status (0063)', async () => {
     await comoUsuario(db, { uid: ADM, appMeta: { is_admin: true } })
     await db.query(`select public.fechar_equipe('${pid}','${COORD}',${MEMBROS_FULL()})`)
     expect(await status()).toBe('aprovado')
     await db.query(`select public.reabrir_indicacoes('${pid}')`)
-    expect(await status()).toBe('em_analise')
+    // 0063: janela desacoplada do status — reabrir NÃO regride a etapa do projeto.
+    expect(await status()).toBe('aprovado')
+    const a = (await db.query<{ a: boolean }>(`select indicacoes_abertas a from public.projeto where id='${pid}'`)).rows[0]!.a
+    expect(a).toBe(true)
   })
 
   it('remover_membro: admin remove aluno; NÃO remove host; host NÃO remove a si', async () => {

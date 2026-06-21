@@ -140,6 +140,7 @@ export default async function DorDetalhePage({ params }: Props) {
   let timeline: EventoTimeline[] = []
   let projetoId: string | null = null
   let projetoStatus: string | null = null
+  let indicacoesAbertas = false
   let hostElected = false
   let hostPessoaId: string | null = null
   let isHost = false
@@ -152,7 +153,7 @@ export default async function DorDetalhePage({ params }: Props) {
 
   const { data: projetoVinculado } = await supabase
     .from('projeto')
-    .select('id, status, host_coordenador_id')
+    .select('id, status, host_coordenador_id, indicacoes_abertas')
     .eq('dor_id', id)
     .is('deleted_at', null)
     .maybeSingle()
@@ -160,6 +161,7 @@ export default async function DorDetalhePage({ params }: Props) {
   if (projetoVinculado?.id) {
     projetoId = projetoVinculado.id as string
     projetoStatus = projetoVinculado.status as string
+    indicacoesAbertas = !!(projetoVinculado as { indicacoes_abertas?: boolean }).indicacoes_abertas
     const hostId = (projetoVinculado.host_coordenador_id as string | null) ?? null
     hostElected = !!hostId
     hostPessoaId = hostId
@@ -193,7 +195,7 @@ export default async function DorDetalhePage({ params }: Props) {
     // 009 T11 — estado da ação "Me indicar" no detalhe (aluno/coord; só na janela aberta).
     const pBase: 'aluno' | 'coordenador' | null =
       roles.includes('coordenador') ? 'coordenador' : roles.includes('aluno') ? 'aluno' : null
-    if (pBase && projetoStatus === 'em_analise' && user) {
+    if (pBase && (projetoStatus === 'em_analise' || indicacoesAbertas) && user) {
       papelBaseIndicacao = pBase
       const vinc = await obterMeusVinculosProjeto()
       const verificado = !!(user.app_metadata?.verificado || user.email_confirmed_at)
@@ -232,6 +234,7 @@ export default async function DorDetalhePage({ params }: Props) {
       timelineDor={timelineDor}
       projetoId={projetoId}
       projetoStatus={projetoStatus}
+      indicacoesAbertas={indicacoesAbertas}
       hostElected={hostElected}
       hostPessoaId={hostPessoaId}
       papelAtual={papelAtual}

@@ -10,7 +10,7 @@
 
 import React, { useState, useTransition } from 'react'
 import type { Indicacao, FuncaoTarefa, MembroPublico, MembroGestao } from '@/lib/data/projetos'
-import { fecharEquipe, trocarHost, elegerHost, reabrirIndicacoes, removerMembro, editarEquipe } from '@/lib/actions/equipe'
+import { fecharEquipe, trocarHost, elegerHost, reabrirIndicacoes, encerrarIndicacoes, removerMembro, editarEquipe } from '@/lib/actions/equipe'
 import { avancarProjeto } from '@/lib/actions/projeto'
 import { criarTarefa, editarTarefa, concluirTarefa, reatribuirTarefa } from '@/lib/actions/tarefa'
 import { UbmTeamBuilder } from '@/components/ubm-team-builder'
@@ -30,6 +30,8 @@ export interface ProjetoDetalheClientProps {
   hostPessoaId?: string | null
   /** membros com pessoa_id+nome (admin/host) para remoção. */
   gestao?: MembroGestao[]
+  /** 0063 — janela de indicação aberta (independente do status). Liga o toggle reabrir/encerrar. */
+  indicacoesAbertas?: boolean
   /** P0.2: tarefas do projeto (privadas, passadas via RSC sob RLS) */
   tarefas?: FuncaoTarefa[]
   /** P0.2: userId do usuário logado (para responsável de nova tarefa) */
@@ -50,6 +52,7 @@ export function ProjetoDetalheClient({
   hostElected = false,
   hostPessoaId = null,
   gestao = [],
+  indicacoesAbertas = false,
   tarefas = [],
   currentUserId = null,
   equipe: _equipe = [],
@@ -80,6 +83,16 @@ export function ProjetoDetalheClient({
         toast.sucesso('Indicações reabertas.')
       } else {
         toast.erro(res.error || 'Não foi possível reabrir as indicações. Tente novamente.')
+      }
+    })
+  }
+  const handleEncerrar = () => {
+    startTransition(async () => {
+      const res = await encerrarIndicacoes(projetoId)
+      if (res.ok) {
+        toast.sucesso('Indicações encerradas.')
+      } else {
+        toast.erro(res.error || 'Não foi possível encerrar as indicações. Tente novamente.')
       }
     })
   }
@@ -238,11 +251,17 @@ export function ProjetoDetalheClient({
           </button>
         )}
 
-        {/* ── aprovado: reabertura (reverte → em_analise) e avanço do host ── */}
-        {aprovado && isAdmin && (
-          <button type="button" className="ubm-btn ubm-btn-ghost" onClick={handleReabrir} disabled={isPending}>
-            Reabrir indicações
-          </button>
+        {/* ── Janela de indicação (0063): reabrir/encerrar em QUALQUER fase (admin+host), SEM regredir status ── */}
+        {equipeFormada && (isAdmin || isHost) && (
+          indicacoesAbertas ? (
+            <button type="button" className="ubm-btn ubm-btn-ghost" onClick={handleEncerrar} disabled={isPending}>
+              Encerrar indicações
+            </button>
+          ) : (
+            <button type="button" className="ubm-btn ubm-btn-ghost" onClick={handleReabrir} disabled={isPending}>
+              Reabrir indicações
+            </button>
+          )
         )}
         {aprovado && isHost && (
           <button
