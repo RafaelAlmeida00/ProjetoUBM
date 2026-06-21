@@ -24,6 +24,9 @@ export interface ProjetoDetalheClientProps {
   projetoStatus: string
   /** true quando já há host eleito (projeto.host_coordenador_id setado). */
   hostElected?: boolean
+  /** 0060 — pessoa_id do host eleito pelo admin. Com isso, o team-builder vira COMPOSIÇÃO
+   *  (sem eleição de host na UI; só admin elege via ElegerHostModal). null = admin ainda sem host. */
+  hostPessoaId?: string | null
   /** membros com pessoa_id+nome (admin/host) para remoção. */
   gestao?: MembroGestao[]
   /** P0.2: tarefas do projeto (privadas, passadas via RSC sob RLS) */
@@ -44,6 +47,7 @@ export function ProjetoDetalheClient({
   papelAtual,
   projetoStatus,
   hostElected = false,
+  hostPessoaId = null,
   gestao = [],
   tarefas = [],
   currentUserId = null,
@@ -233,6 +237,8 @@ export function ProjetoDetalheClient({
           projetoId={projetoId}
           indicacoes={indicacoes}
           nomesIndicados={nomesIndicados}
+          hostPessoaId={hostPessoaId}
+          membrosExistentes={gestao.map((m) => m.pessoa_id)}
           onFechar={() => setModal(null)}
           onConfirmar={fecharEquipe}
         />

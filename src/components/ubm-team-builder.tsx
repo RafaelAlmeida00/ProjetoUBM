@@ -23,6 +23,18 @@ export interface UbmTeamBuilderProps {
   ) => Promise<ActionResult>
   /** Nomes dos indicados para exibição (mapeados por pessoa_id) */
   nomesIndicados?: Record<string, string>
+  /**
+   * 0060 — host JÁ eleito pelo admin. Quando setado, o builder vira COMPOSIÇÃO:
+   *  - NÃO oferece eleição de host (só admin elege/troca via ElegerHostModal);
+   *  - o host fixo é enviado ao fechar_equipe (não escolhido na UI).
+   * Quando null/undefined (override do admin SEM host eleito), mantém a eleição inline.
+   */
+  hostPessoaId?: string | null
+  /**
+   * 0060 — pessoa_ids que JÁ são membros da equipe (inclui o host e quem o admin já adicionou).
+   * São EXCLUÍDOS da lista de selecionáveis (não dá para "selecionar quem já faz parte").
+   */
+  membrosExistentes?: string[]
 }
 
 export function UbmTeamBuilder({
@@ -31,6 +43,8 @@ export function UbmTeamBuilder({
   onFechar,
   onConfirmar,
   nomesIndicados = {},
+  hostPessoaId = null,
+  membrosExistentes = [],
 }: UbmTeamBuilderProps) {
   const [selecionados, setSelecionados] = useState<Set<string>>(new Set())
   const [hostId, setHostId] = useState<string>('')
@@ -38,6 +52,9 @@ export function UbmTeamBuilder({
   const [isPending, startTransition] = useTransition()
   const modalRef = useRef<HTMLDivElement>(null)
   const primeiroFocusRef = useRef<HTMLButtonElement>(null)
+
+  // host já eleito → modo composição (sem eleição de host na UI)
+  const hostFixo = !!hostPessoaId
 
   // Foco preso no modal (a11y)
   useEffect(() => {
@@ -71,8 +88,14 @@ export function UbmTeamBuilder({
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [onFechar, isPending, hostId, selecionados])
 
+  // Exclui quem JÁ é membro (host eleito + adicionados pelo admin): não dá para
+  // "selecionar quem já faz parte" nem o próprio host (que já está na equipe).
+  // Defesa-em-profundidade: o hostPessoaId é SEMPRE excluído, mesmo que `membrosExistentes`
+  // chegue vazio (ex.: listarEquipeGestao degradou) — o host nunca é selecionável.
+  const membrosSet = new Set([...membrosExistentes, ...(hostPessoaId ? [hostPessoaId] : [])])
   const ativas = indicacoes.filter((ind) => !ind.deleted_at)
-  const coordenadores = ativas.filter((ind) => ind.papel_pretendido === 'coordenador')
+  const disponiveis = ativas.filter((ind) => !membrosSet.has(ind.pessoa_id))
+  const coordenadores = disponiveis.filter((ind) => ind.papel_pretendido === 'coordenador')
 
   const toggleMembro = (pessoaId: string) => {
     setSelecionados((prev) => {
@@ -90,6 +113,8 @@ export function UbmTeamBuilder({
   }
 
   const validar = (): string | null => {
+    // host já eleito (modo composição): não exige eleição — o admin já definiu o host.
+    if (hostFixo) return null
     if (!hostId) return 'Escolha exatamente um host para a equipe.'
     const hostEhCoordIndicado = coordenadores.some(
       (ind) => ind.pessoa_id === hostId && selecionados.has(hostId),
@@ -106,8 +131,8 @@ export function UbmTeamBuilder({
     }
     startTransition(async () => {
       const membros = Array.from(selecionados).map((pessoaId) => {
-        const ind = ativas.find((i) => i.pessoa_id === pessoaId)
-        const ehHost = pessoaId === hostId
+        const ind = disponiveis.find((i) => i.pessoa_id === pessoaId)
+        const ehHost = !hostFixo && pessoaId === hostId
         const papel = ehHost
           ? 'host'
           : ind?.papel_pretendido === 'coordenador'
@@ -119,7 +144,9 @@ export function UbmTeamBuilder({
           indicacaoId: ind?.id,
         }
       })
-      const res = await onConfirmar(projetoId, hostId, membros)
+      // host fixo (eleito pelo admin) ou, no override do admin sem host, o escolhido na UI.
+      const hostFinal = hostFixo ? (hostPessoaId as string) : hostId
+      const res = await onConfirmar(projetoId, hostFinal, membros)
       if (!res.ok) {
         // Mapeia erros específicos mantendo a seleção
         if (/host.*exist|duplicate.*host/i.test(res.error)) {
@@ -153,7 +180,7 @@ export function UbmTeamBuilder({
         {/* Cabeçalho */}
         <div className="ubm-team-builder-header">
           <h2 id="team-builder-title" className="ubm-confirm-title">
-            Fechar equipe e eleger host
+            {hostFixo ? 'Compor equipe' : 'Fechar equipe e eleger host'}
           </h2>
           <button
             ref={primeiroFocusRef}
@@ -167,17 +194,23 @@ export function UbmTeamBuilder({
         </div>
 
         <p className="ubm-confirm-msg">
-          Selecione os membros e eleja 1 coordenador como host.
+          {hostFixo
+            ? 'O host já foi definido. Selecione os membros que entram na equipe e feche.'
+            : 'Selecione os membros e eleja 1 coordenador como host.'}
         </p>
 
         {/* Lista de indicados com checkboxes */}
         <fieldset className="ubm-team-builder-membros">
           <legend className="ubm-cota">Indicados</legend>
-          {ativas.length === 0 ? (
-            <p className="ubm-empty-msg">Nenhuma indicação ativa neste projeto.</p>
+          {disponiveis.length === 0 ? (
+            <p className="ubm-empty-msg">
+              {ativas.length === 0
+                ? 'Nenhuma indicação ativa neste projeto.'
+                : 'Todos os indicados já fazem parte da equipe.'}
+            </p>
           ) : (
             <ul className="ubm-team-builder-lista" aria-label="Selecionar membros">
-              {ativas.map((ind) => {
+              {disponiveis.map((ind) => {
                 const nome = nomesIndicados[ind.pessoa_id] ?? `Indicado (${ind.papel_pretendido})`
                 const ehCoord = ind.papel_pretendido === 'coordenador'
                 const estaSelecionado = selecionados.has(ind.pessoa_id)
@@ -198,8 +231,9 @@ export function UbmTeamBuilder({
                       </span>
                     </label>
 
-                    {/* Rádio de host (só coordenadores selecionados) */}
-                    {ehCoord && estaSelecionado && (
+                    {/* Rádio de host — só no override do admin SEM host eleito.
+                        Com host fixo (eleito pelo admin), o host NÃO é escolhido aqui. */}
+                    {!hostFixo && ehCoord && estaSelecionado && (
                       <label
                         className="ubm-team-builder-host-label"
                         aria-describedby="host-restricao"
@@ -220,9 +254,11 @@ export function UbmTeamBuilder({
               })}
             </ul>
           )}
-          <p id="host-restricao" className="ubm-cota ubm-cota--muted ubm-team-builder-restricao">
-            O host deve ser um coordenador indicado.
-          </p>
+          {!hostFixo && (
+            <p id="host-restricao" className="ubm-cota ubm-cota--muted ubm-team-builder-restricao">
+              O host deve ser um coordenador indicado.
+            </p>
+          )}
         </fieldset>
 
         {/* Resumo */}

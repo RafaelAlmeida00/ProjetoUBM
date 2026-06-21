@@ -141,6 +141,7 @@ export default async function DorDetalhePage({ params }: Props) {
   let projetoId: string | null = null
   let projetoStatus: string | null = null
   let hostElected = false
+  let hostPessoaId: string | null = null
   let isHost = false
   let papelAtual: 'admin' | 'host' | 'aluno' | null = null
   let tarefas: FuncaoTarefa[] = []
@@ -161,6 +162,7 @@ export default async function DorDetalhePage({ params }: Props) {
     projetoStatus = projetoVinculado.status as string
     const hostId = (projetoVinculado.host_coordenador_id as string | null) ?? null
     hostElected = !!hostId
+    hostPessoaId = hostId
     isHost = !!user && hostId === user.id
 
     ;[equipe, timeline, tarefas] = await Promise.all([
@@ -231,6 +233,7 @@ export default async function DorDetalhePage({ params }: Props) {
       projetoId={projetoId}
       projetoStatus={projetoStatus}
       hostElected={hostElected}
+      hostPessoaId={hostPessoaId}
       papelAtual={papelAtual}
       gestao={gestao}
       indicacoesGrupos={indicacoesGrupos}

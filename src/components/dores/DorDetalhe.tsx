@@ -60,6 +60,8 @@ interface DorDetalheProps {
   projetoId?: string | null
   projetoStatus?: string | null
   hostElected?: boolean
+  /** 0060 — pessoa_id do host eleito (para o team-builder entrar em modo composição). */
+  hostPessoaId?: string | null
   papelAtual?: 'admin' | 'host' | 'aluno' | null
   gestao?: MembroGestao[]
   indicacoesGrupos?: GrupoIndicacoes[]
@@ -154,6 +156,7 @@ export function DorDetalhe({
   projetoId = null,
   projetoStatus = null,
   hostElected = false,
+  hostPessoaId = null,
   papelAtual = null,
   gestao = [],
   indicacoesGrupos = [],
@@ -617,6 +620,7 @@ export function DorDetalhe({
               papelAtual={papelAtual}
               projetoStatus={projetoStatus ?? ''}
               hostElected={hostElected}
+              hostPessoaId={hostPessoaId}
               gestao={gestao}
               currentUserId={currentUserId}
             />
