@@ -113,19 +113,6 @@ export default async function NotificacoesPage() {
   // Filtra notificações com opt-out (CA28) — tipos 005 respeitam preferências
   // (opt-out é controlado pela 002; aqui apenas não renderizamos se a notif
   //  não deve aparecer — o dado já vem filtrado pela RLS/procedure da 002)
-
-  // Separa notificações da 005 das da base (002)
-  const notifs005 = notificacoes.filter((n) => {
-    const payload = n.payload as Record<string, string> | null
-    const tipo = payload?.evento ?? n.tipo
-    return TIPOS_005.has(tipo)
-  })
-  const outrasNotifs = notificacoes.filter((n) => {
-    const payload = n.payload as Record<string, string> | null
-    const tipo = payload?.evento ?? n.tipo
-    return !TIPOS_005.has(tipo)
-  })
-
   const todasOrdenadas = [...notificacoes]
 
   return (

@@ -146,10 +146,11 @@ describe('DorDetalhe — T8 (visão da dor parcial)', () => {
       <DorDetalhe dor={DOR_BASE} currentUserId={null} isAdmin={false} />
     )
     // P1.1 (005): o placeholder "EM BREVE (005)" foi substituído por UbmTabs.
-    expect(screen.getByText(/linha do tempo e equipe/i)).toBeInTheDocument()
-    // BUG #1: projeto 1ª/default; dor 2ª; equipe 3ª
+    // 009 T12: seção "Linha do tempo e equipe" → "Andamento e equipe" (projeto dissolve na dor).
+    expect(screen.getByText(/andamento e equipe/i)).toBeInTheDocument()
+    // BUG #1: projeto 1ª/default ("Andamento"); dor 2ª; equipe 3ª
     expect(screen.getByRole('tab', { name: 'Linha do tempo da dor' })).toBeInTheDocument()
-    expect(screen.getByRole('tab', { name: 'Linha do tempo do projeto' })).toBeInTheDocument()
+    expect(screen.getByRole('tab', { name: 'Andamento' })).toBeInTheDocument()
     expect(screen.getByRole('tab', { name: /equipe/i })).toBeInTheDocument()
     expect(screen.queryByText(/em breve/i)).toBeNull()
   })
