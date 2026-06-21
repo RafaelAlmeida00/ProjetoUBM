@@ -110,6 +110,32 @@ function _buildCssVars(
     .join('')
 }
 
+// ─── Favicon por paleta (azul/marsala) ─────────────────────────────────────────
+// O ícone da aba do navegador reflete a paleta ATIVA. Como a paleta não expõe nome
+// (RS-P4), escolhemos pela MATIZ do --primary: azul UBM (~205) vs marsala (~345),
+// por menor distância circular de matiz. Fail-safe → azul (marca padrão).
+export const ICON_AZUL = '/ubm-icon-azul.png'
+export const ICON_MARSALA = '/ubm-icon-marsala.png'
+
+export function pickPaletteIconHref(primaryHsl: string): string {
+  const hue = _parseHue(primaryHsl)
+  if (hue === null) return ICON_AZUL
+  return _hueDist(hue, 345) < _hueDist(hue, 205) ? ICON_MARSALA : ICON_AZUL
+}
+
+function _parseHue(hsl: unknown): number | null {
+  if (typeof hsl !== 'string') return null
+  const m = /^\s*(\d{1,3}(?:\.\d+)?)\s+\d/.exec(hsl)
+  if (!m) return null
+  const h = parseFloat(m[1])
+  return Number.isFinite(h) ? ((h % 360) + 360) % 360 : null
+}
+
+function _hueDist(a: number, b: number): number {
+  const d = Math.abs(a - b) % 360
+  return d > 180 ? 360 - d : d
+}
+
 /**
  * Sanitiza tokens vindos do banco:
  * - Mantém apenas chaves do conjunto fechado

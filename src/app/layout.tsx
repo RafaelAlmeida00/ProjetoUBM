@@ -6,6 +6,7 @@ import { Header } from '@/components/layout/Header'
 import { Footer } from '@/components/layout/Footer'
 import { createSupabaseServerClient } from '@/lib/supabase/server'
 import { PaletteStyle } from '@/components/theme/PaletteStyle'
+import { PaletteFavicon } from '@/components/theme/PaletteFavicon'
 import { Analytics } from '@vercel/analytics/next'
 import { SpeedInsights } from '@vercel/speed-insights/next'
 
@@ -53,6 +54,8 @@ export default async function RootLayout({ children }: Readonly<{ children: Reac
       <head>
         {/* T15: paleta resolvida no servidor → cor no 1º byte (0 FOUC por construção) */}
         <PaletteStyle uid={uid} />
+        {/* Favicon da marca conforme a paleta ativa (azul/marsala), resolvido no servidor */}
+        <PaletteFavicon uid={uid} />
       </head>
       <body className="min-h-full flex flex-col">
         <AppProviders>
