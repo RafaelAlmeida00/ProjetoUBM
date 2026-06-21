@@ -129,12 +129,6 @@ describe('UbmTimeline — T-O3.1', () => {
     expect(screen.queryByRole('textbox')).toBeNull()
   })
 
-  it('rodapé de imutabilidade presente', () => {
-    render(<UbmTimeline eventos={EVENTOS} />)
-    // BUG #3: microcopy atualizado pelo ux-ui ("Histórico permanente · não editável")
-    expect(screen.getByText(/histórico permanente|não editável/i)).toBeInTheDocument()
-  })
-
   it('lista vazia exibe estado vazio (não erro)', () => {
     render(<UbmTimeline eventos={[]} />)
     // Deve exibir mensagem humanizada — não jogar erro

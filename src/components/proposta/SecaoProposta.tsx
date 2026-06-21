@@ -558,13 +558,6 @@ function VisaoHost({
           </p>
         </div>
       )}
-
-      {/* Footer */}
-      <footer className="ubm-proposta-foot">
-        <span className="ubm-cota ubm-cota--muted">
-          Documento privado · visível só à coordenação, ao representante e à UBM
-        </span>
-      </footer>
     </>
   )
 }
@@ -820,12 +813,6 @@ function VisaoRepresentante({
           </div>
         </>
       )}
-
-      <footer className="ubm-proposta-foot">
-        <span className="ubm-cota ubm-cota--muted">
-          Documento privado · visível só à coordenação, ao representante e à UBM
-        </span>
-      </footer>
     </>
   )
 }
@@ -874,11 +861,6 @@ function VisaoCoCoordenador({ dados }: { dados: DadosProposta }) {
         </div>
       )}
       <ChipEstado estadoProjeto={estadoProjeto} statusAssinatura={statusAssinatura} />
-      <footer className="ubm-proposta-foot">
-        <span className="ubm-cota ubm-cota--muted">
-          Documento privado · visível só à coordenação, ao representante e à UBM
-        </span>
-      </footer>
     </>
   )
 }

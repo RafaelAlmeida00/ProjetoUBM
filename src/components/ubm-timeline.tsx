@@ -161,15 +161,6 @@ export function UbmTimeline({ eventos, compacto = false }: UbmTimelineProps) {
           )
         })}
       </ol>
-
-      {/* Rodapé de imutabilidade (append-only visível — RN18) */}
-      {!compacto && (
-        <footer className="ubm-timeline-footer">
-          <span className="ubm-cota ubm-cota--muted">
-            Histórico permanente · não editável
-          </span>
-        </footer>
-      )}
     </div>
   )
 }

@@ -11,6 +11,7 @@ import { useToast } from '@/components/feedback/ToastProvider'
 import { AnexoUploader } from '@/components/anexos/AnexoUploader'
 import { CourseMultiSelect } from '@/components/course/CourseMultiSelect'
 import { CURSOS_UBM } from '@/lib/courses'
+import { rotuloProjeto } from '@/lib/format/projeto'
 import { UbmTabs } from '@/components/ubm-tabs'
 import { UbmTimeline } from '@/components/ubm-timeline'
 import { UbmTeam } from '@/components/ubm-team'
@@ -137,9 +138,6 @@ function DorTimeline({ eventos }: { eventos: EventoTimelineDor[] }) {
           </li>
         ))}
       </ol>
-      <footer className="ubm-dor-timeline-footer">
-        <span className="ubm-cota ubm-cota--muted">Histórico permanente · não editável</span>
-      </footer>
     </div>
   )
 }
@@ -283,7 +281,7 @@ export function DorDetalhe({
           <b>{dor.empresa_nome.toUpperCase()}</b>
         </div>
         <div className="ubm-title-row">
-          <h1 className="ubm-page-title">{dor.empresa_nome}</h1>
+          <h1 className="ubm-page-title">{rotuloProjeto(dor.titulo, dor.empresa_nome)}</h1>
           <StatusDor
             status={dor.status}
             aprovadoPor={dor.aprovado_por}
