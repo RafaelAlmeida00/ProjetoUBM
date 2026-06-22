@@ -122,6 +122,11 @@ export class AutentiqueGateway implements SignatureGateway {
     }
 
     const doc = json.data!.createDocument
+    // DIAG-AUTENTIQUE (TEMPORÁRIO — remover após investigação do short_link)
+    try {
+      console.error('[autentique][diag] createDocument=', JSON.stringify({ id: doc.id, signatures: doc.signatures }))
+    } catch { /* noop */ }
+
     // Link de assinatura do signatário (rep). Casa pelo e-mail; fallback ao 1º.
     const pick = (sigs: { email: string; link: { short_link: string } | null }[]) =>
       sigs.find((s) => s.email?.toLowerCase() === params.signatario.email.toLowerCase()) ?? sigs[0]
@@ -137,9 +142,14 @@ export class AutentiqueGateway implements SignatureGateway {
           q,
           { id: doc.id },
         )
+        // DIAG-AUTENTIQUE (TEMPORÁRIO — remover)
+        try {
+          console.error('[autentique][diag] document(id).signatures=', JSON.stringify(d2.document?.signatures))
+        } catch { /* noop */ }
         link = pick(d2.document.signatures)?.link?.short_link ?? undefined
-      } catch {
-        // sem link in-app → o rep usa o convite por e-mail do Autentique
+      } catch (e) {
+        // DIAG-AUTENTIQUE (TEMPORÁRIO — remover): registra o erro do follow-up
+        console.error('[autentique][diag] follow-up document(id) erro:', e instanceof Error ? e.message : String(e))
       }
     }
 
