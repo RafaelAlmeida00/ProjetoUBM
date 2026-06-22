@@ -8,7 +8,7 @@
  */
 import type { SignatureGateway, CriarPedidoParams, CriarPedidoResult, BaixarProvaResult } from '../gateway'
 
-const AUTENTIQUE_GQL_URL = 'https://api.autentique.com.br/2/graphql'
+const AUTENTIQUE_GQL_URL = 'https://api.autentique.com.br/v2/graphql'
 
 interface GqlResponse<T> {
   data?: T
@@ -59,39 +59,77 @@ export class AutentiqueGateway implements SignatureGateway {
   }
 
   async criarPedido(params: CriarPedidoParams): Promise<CriarPedidoResult> {
-    // GraphQL mínimo: criar documento + um signatário (CA9 — único: o representante)
-    const mutation = `
-      mutation CriarDocumento($nome: String!, $signatarios: [SignatarioInput!]!, $mensagem: String) {
-        createDocument(
-          document: { name: $nome, message: $mensagem }
-          signers: $signatarios
-        ) {
-          id
-          signers { email }
-        }
-      }
-    `
-    const sandbox = process.env['AUTENTIQUE_SANDBOX'] === 'true'
-    const mensagem = params.clausulaAceiteMeioEletronico !== false
-      ? 'Ao assinar este documento, você declara aceitar o uso do meio eletrônico como forma válida de assinatura (MP 2.200-2/2001, Lei 14.063/2020).'
-      : undefined
+    if (!params.pdfBuffer) {
+      throw new Error('Autentique: PDF ausente para criar o documento. Tente novamente.')
+    }
+    // createDocument exige o arquivo via Upload (multipart/form-data — spec GraphQL multipart).
+    const mutation =
+      'mutation CriarDocumento($document: DocumentInput!, $signers: [SignerInput!]!, $file: Upload!) {' +
+      '  createDocument(document: $document, signers: $signers, file: $file) {' +
+      '    id signatures { public_id email link { short_link } }' +
+      '  }' +
+      '}'
 
-    type CreateResult = { createDocument: { id: string; signers: { email: string }[] } }
-    const data = await this.gql<CreateResult>(mutation, {
-      nome: `Proposta-${params.projetoId}-${params.documentoId}${sandbox ? '-SANDBOX' : ''}`,
-      signatarios: [
-        {
-          email: params.signatario.email,
-          name: params.signatario.nome,
-          action: 'SIGN',
+    const sandbox = process.env['AUTENTIQUE_SANDBOX'] === 'true'
+    const mensagem =
+      params.clausulaAceiteMeioEletronico !== false
+        ? 'Ao assinar este documento, você declara aceitar o uso do meio eletrônico como forma válida de assinatura (MP 2.200-2/2001, Lei 14.063/2020).'
+        : undefined
+
+    const operations = JSON.stringify({
+      query: mutation,
+      variables: {
+        document: {
+          name: `Proposta-${params.projetoId}-${params.documentoId}${sandbox ? '-SANDBOX' : ''}`,
+          message: mensagem,
         },
-      ],
-      mensagem,
+        signers: [{ email: params.signatario.email, name: params.signatario.nome, action: 'SIGN' }],
+        file: null,
+      },
     })
 
-    const docId = data.createDocument.id
+    const form = new FormData()
+    form.append('operations', operations)
+    form.append('map', JSON.stringify({ '0': ['variables.file'] }))
+    form.append('0', new Blob([params.pdfBuffer], { type: 'application/pdf' }), 'proposta.pdf')
+
+    let res: Response
+    try {
+      // NÃO definir Content-Type manualmente — o FormData define o boundary do multipart.
+      res = await fetch(AUTENTIQUE_GQL_URL, {
+        method: 'POST',
+        headers: { Authorization: `Bearer ${this.token}` },
+        body: form,
+      })
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : String(err)
+      throw new Error(`Autentique indisponível no momento. Tente o Caminho B (upload). Detalhe: ${msg}`)
+    }
+    if (res.status === 429) {
+      throw new Error('Limite de requisições Autentique atingido. Use o Caminho B (upload) ou aguarde alguns minutos.')
+    }
+    if (!res.ok) {
+      throw new Error(`Autentique retornou erro ${res.status}. Use o Caminho B (upload) ou tente novamente.`)
+    }
+
+    type CreateResult = {
+      createDocument: { id: string; signatures: { public_id: string; email: string; link: { short_link: string } | null }[] }
+    }
+    const json = (await res.json()) as { data?: CreateResult; errors?: { message: string }[] }
+    if (json.errors?.length) {
+      const msgs = json.errors.map((e) => e.message).join('; ')
+      throw new Error(`Erro do Autentique: ${msgs}. Use o Caminho B (upload) se o problema persistir.`)
+    }
+
+    const doc = json.data!.createDocument
+    // Link de assinatura do signatário (rep). Casa pelo e-mail; fallback ao 1º.
+    const sig =
+      doc.signatures.find((s) => s.email?.toLowerCase() === params.signatario.email.toLowerCase()) ??
+      doc.signatures[0]
+
     return {
-      provedor_doc_id: docId,
+      provedor_doc_id: doc.id,
+      link_assinatura: sig?.link?.short_link ?? undefined,
       clausulaAceiteMeioEletronico: params.clausulaAceiteMeioEletronico ?? true,
       signatarios: [{ nome: params.signatario.nome, email: params.signatario.email }],
     }

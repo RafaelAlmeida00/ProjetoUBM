@@ -161,3 +161,64 @@ describe('FakeSignatureGateway.baixarProvaAssinada', () => {
     expect(result.manifesto).toBeDefined()
   })
 })
+
+describe('AutentiqueGateway.criarPedido (multipart real)', () => {
+  it('POSTa multipart para /v2/graphql e retorna provedor_doc_id + short_link', async () => {
+    process.env['AUTENTIQUE_API_TOKEN'] = 'tok-test'
+    const fetchMock = vi.fn().mockResolvedValue({
+      ok: true,
+      status: 200,
+      json: async () => ({
+        data: {
+          createDocument: {
+            id: 'doc-aut-1',
+            signatures: [
+              { public_id: 'p1', email: 'rep@e.com', link: { short_link: 'https://autentique.com.br/assinar/abc' } },
+            ],
+          },
+        },
+      }),
+    })
+    const origFetch = global.fetch
+    global.fetch = fetchMock as unknown as typeof fetch
+    try {
+      const { getSignatureGateway } = await import('@/lib/signature/gateway')
+      const gw = getSignatureGateway()
+      const res = await gw.criarPedido({
+        projetoId: 'proj-1',
+        documentoId: 'doc-1',
+        storagePath: 'propostas/p.pdf',
+        signatario: { nome: 'Rep', email: 'rep@e.com' },
+        pdfBuffer: new Uint8Array([1, 2, 3]).buffer,
+      })
+      expect(res.provedor_doc_id).toBe('doc-aut-1')
+      expect(res.link_assinatura).toBe('https://autentique.com.br/assinar/abc')
+      const [url, opts] = fetchMock.mock.calls[0] as [string, { method: string; headers: Record<string, string>; body: unknown }]
+      expect(url).toBe('https://api.autentique.com.br/v2/graphql')
+      expect(opts.method).toBe('POST')
+      expect(opts.headers.Authorization).toMatch(/Bearer tok-test/)
+      expect(opts.body).toBeInstanceOf(FormData)
+    } finally {
+      global.fetch = origFetch
+      delete process.env['AUTENTIQUE_API_TOKEN']
+    }
+  })
+
+  it('falha com mensagem clara quando falta o pdfBuffer', async () => {
+    process.env['AUTENTIQUE_API_TOKEN'] = 'tok-test'
+    try {
+      const { getSignatureGateway } = await import('@/lib/signature/gateway')
+      const gw = getSignatureGateway()
+      await expect(
+        gw.criarPedido({
+          projetoId: 'p',
+          documentoId: 'd',
+          storagePath: 's',
+          signatario: { nome: 'R', email: 'r@e.com' },
+        }),
+      ).rejects.toThrow(/PDF/i)
+    } finally {
+      delete process.env['AUTENTIQUE_API_TOKEN']
+    }
+  })
+})

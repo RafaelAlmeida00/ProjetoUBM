@@ -346,7 +346,7 @@ function VisaoHost({
   const [modalFinalizar, setModalFinalizar] = useState(false)
   const toast = useToast()
 
-  const { estadoProjeto, documentoSignedUrl, provaSignedUrl, statusAssinatura, nRodadas = 0 } = dados
+  const { estadoProjeto, documentoSignedUrl, provaSignedUrl, statusAssinatura, contraproposta, nRodadas = 0 } = dados
   const loopAlerta = nRodadas >= 3
 
   const handleEnviar = () => {
@@ -407,6 +407,32 @@ function VisaoHost({
       {/* Estado: aguardando_proposta → enviar */}
       {estadoProjeto === 'aguardando_proposta' && (
         <div className="ubm-proposta-acoes" data-testid="zona-enviar">
+          {/* Motivo da contraproposta (quando o rep devolveu) — o host precisa saber o porquê */}
+          {contraproposta && (
+            <div
+              className="ubm-machined"
+              role="status"
+              aria-live="polite"
+              data-testid="contraproposta-motivo"
+              style={{
+                padding: '1rem 1.25rem',
+                marginBottom: '1rem',
+                borderColor: 'hsl(var(--warning) / 0.6)',
+                background: 'hsl(var(--warning) / 0.08)',
+              }}
+            >
+              <p
+                className="ubm-cota"
+                style={{ color: 'hsl(var(--warning))', marginBottom: '0.35rem', display: 'flex', gap: '0.4rem', alignItems: 'center' }}
+              >
+                <CornerUpLeft size={15} aria-hidden="true" />
+                Contraproposta recebida — ajuste e reenvie
+              </p>
+              <p style={{ color: 'hsl(var(--foreground))', lineHeight: 1.55, whiteSpace: 'pre-wrap' }}>
+                {contraproposta.motivo}
+              </p>
+            </div>
+          )}
           <label className="ubm-dropzone" htmlFor="pdf-proposta">
             <span className="ubm-dropzone-cta">
               <b>Selecionar PDF</b> ou arraste aqui

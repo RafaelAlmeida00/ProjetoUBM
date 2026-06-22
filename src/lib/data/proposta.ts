@@ -84,29 +84,10 @@ export async function lerDadosProposta(
       return { estadoProjeto }
     }
 
-    // 2. Documento proposta (não-aluno/não-null)
-    const { data: doc } = await supabase
-      .from('documento_proposta')
-      .select('id, storage_path_original, storage_path_assinado, superado_em')
-      .eq('projeto_id', projetoId)
-      .is('deleted_at', null)
-      .is('superado_em', null)
-      .order('created_at', { ascending: false })
-      .limit(1)
-      .maybeSingle()
-
-    if (!doc) {
-      return { estadoProjeto }
-    }
-
-    // 3. Assinatura associada ao documento
-    const { data: assin } = await supabase
-      .from('assinatura')
-      .select('status, origem, provedor_doc_id, link_assinatura')
-      .eq('documento_id', doc.id)
-      .maybeSingle()
-
-    // 4. Contraproposta mais recente
+    // 2. Contraproposta mais recente + contagem de rodadas — buscadas ANTES do doc.
+    //    Após uma contraproposta o doc vigente fica `superado_em` (some do fetch abaixo),
+    //    e o estado volta a `aguardando_proposta`; o host precisa ver o MOTIVO mesmo sem
+    //    doc vigente. Antes, o return cedo (sem doc) escondia a contraproposta.
     const { data: contras } = await supabase
       .from('contraproposta')
       .select('motivo, created_at')
@@ -122,6 +103,33 @@ export async function lerDadosProposta(
       .is('deleted_at', null)
 
     const nRodadas = (contaContras as unknown as { count: number } | null)?.count ?? 0
+    const contraproposta =
+      contras && contras.length > 0
+        ? { motivo: contras[0].motivo, criadoEm: contras[0].created_at }
+        : null
+
+    // 3. Documento proposta vigente (não-aluno/não-null)
+    const { data: doc } = await supabase
+      .from('documento_proposta')
+      .select('id, storage_path_original, storage_path_assinado, superado_em')
+      .eq('projeto_id', projetoId)
+      .is('deleted_at', null)
+      .is('superado_em', null)
+      .order('created_at', { ascending: false })
+      .limit(1)
+      .maybeSingle()
+
+    if (!doc) {
+      // Sem doc vigente (ex.: pós-contraproposta) — ainda assim devolve a contraproposta.
+      return { estadoProjeto, contraproposta, nRodadas }
+    }
+
+    // 4. Assinatura associada ao documento
+    const { data: assin } = await supabase
+      .from('assinatura')
+      .select('status, origem, provedor_doc_id, link_assinatura')
+      .eq('documento_id', doc.id)
+      .maybeSingle()
 
     // 5. Signed URLs (bucket privado 'propostas', TTL 3600)
     let documentoSignedUrl: string | null = null
@@ -145,11 +153,6 @@ export async function lerDadosProposta(
     const linkAssinatura =
       papel === 'representante' && assin?.origem === 'autentique'
         ? (assin.link_assinatura ?? null)
-        : null
-
-    const contraproposta =
-      contras && contras.length > 0
-        ? { motivo: contras[0].motivo, criadoEm: contras[0].created_at }
         : null
 
     return {

@@ -142,6 +142,21 @@ describe('T5.1 — SecaoProposta HOST — estado aguardando_proposta', () => {
     fireEvent.click(screen.getByRole('button', { name: /enviar proposta para assinatura/i }))
     await waitFor(() => expect(toastErro).toHaveBeenCalled())
   })
+
+  it('exibe o MOTIVO da contraproposta quando o rep devolveu (host precisa saber o porquê)', () => {
+    render(
+      <SecaoProposta
+        projetoId="proj-1"
+        papel="host"
+        dados={{
+          estadoProjeto: 'aguardando_proposta',
+          contraproposta: { motivo: 'Ajustar o prazo de entrega para 60 dias', criadoEm: '2026-06-21T00:00:00Z' },
+        }}
+      />
+    )
+    expect(screen.getByTestId('contraproposta-motivo')).toBeInTheDocument()
+    expect(screen.getByText(/ajustar o prazo de entrega para 60 dias/i)).toBeInTheDocument()
+  })
 })
 
 describe('T5.1 — SecaoProposta HOST — estado proposta_em_analise (pendente)', () => {

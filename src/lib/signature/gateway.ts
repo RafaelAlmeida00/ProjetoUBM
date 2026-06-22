@@ -11,6 +11,9 @@ export interface CriarPedidoParams {
   documentoId: string
   storagePath: string
   signatario: { nome: string; email: string }
+  /** Bytes do PDF — necessários para o upload multipart ao Autentique (createDocument
+   *  exige `$file: Upload!`). Opcional para o Fake/testes. */
+  pdfBuffer?: ArrayBuffer
   /** Inclui cláusula de aceite do meio eletrônico (RN6/CA4) — default true */
   clausulaAceiteMeioEletronico?: boolean
 }

@@ -80,6 +80,7 @@ export async function enviarProposta(params: EnviarPropostaParams): Promise<Acti
       documentoId: params.documentoId,
       storagePath,
       signatario,
+      pdfBuffer: arrayBuf,
       clausulaAceiteMeioEletronico: true,
     })
 
