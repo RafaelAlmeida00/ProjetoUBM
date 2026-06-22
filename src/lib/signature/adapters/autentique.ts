@@ -153,13 +153,16 @@ export class AutentiqueGateway implements SignatureGateway {
   }
 
   async baixarProvaAssinada(provedorDocId: string): Promise<BaixarProvaResult> {
-    // Busca o link de download do PDF assinado + manifesto via GraphQL
+    // Busca o link de download do PDF assinado + manifesto via GraphQL.
+    // Campos REAIS da API v2 (validado por introspecção): o hash do doc é `hashes.sha2`;
+    // ip/created_at vivem no Event `signed` (NÃO existem `Signature.ip` nem `certificate.sha256`).
     const query = `
       query BuscarDocumento($id: UUID!) {
         document(id: $id) {
           id
           files { signed }
-          signatures { name, email, ip, created_at, certificate { sha256 } }
+          hashes { sha2 }
+          signatures { name email signed { created_at ip } }
         }
       }
     `
@@ -167,7 +170,8 @@ export class AutentiqueGateway implements SignatureGateway {
       document: {
         id: string
         files: { signed: string | null }
-        signatures: { name: string; email: string; ip: string; created_at: string; certificate: { sha256: string } | null }[]
+        hashes: { sha2: string | null } | null
+        signatures: { name: string | null; email: string; signed: { created_at: string; ip: string | null } | null }[]
       }
     }
     const data = await this.gql<DocResult>(query, { id: provedorDocId })
@@ -189,13 +193,14 @@ export class AutentiqueGateway implements SignatureGateway {
     }
 
     const pdfBuffer = await pdfRes.arrayBuffer()
-    const sig = data.document.signatures[0]
+    // Pega a assinatura que de fato ASSINOU (tem `signed`), não a [0] (pode ser observador/CC).
+    const sig = data.document.signatures.find((s) => s.signed) ?? data.document.signatures[0]
     const manifesto: Record<string, unknown> = {
       provedor: 'autentique',
       doc_id: provedorDocId,
-      hash_sha256: sig?.certificate?.sha256 ?? null,
-      assinado_em: sig?.created_at ?? new Date().toISOString(),
-      ip_signatario: sig?.ip ?? null,
+      hash_sha256: data.document.hashes?.sha2 ?? null,
+      assinado_em: sig?.signed?.created_at ?? new Date().toISOString(),
+      ip_signatario: sig?.signed?.ip ?? null,
       email_signatario: sig?.email ?? null,
     }
 

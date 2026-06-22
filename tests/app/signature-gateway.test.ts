@@ -222,3 +222,50 @@ describe('AutentiqueGateway.criarPedido (multipart real)', () => {
     }
   })
 })
+
+describe('AutentiqueGateway.baixarProvaAssinada (campos REAIS da API v2)', () => {
+  it('consulta hashes.sha2 + signed{created_at,ip} e monta o manifesto do signatário que assinou', async () => {
+    process.env['AUTENTIQUE_API_TOKEN'] = 'tok-test'
+    const gqlResponse = {
+      ok: true,
+      status: 200,
+      json: async () => ({
+        data: {
+          document: {
+            id: 'doc-aut-1',
+            files: { signed: 'https://api.autentique.com.br/documentos/doc-aut-1/assinado.pdf' },
+            hashes: { sha2: 'abc123hash' },
+            signatures: [
+              // [0] = observador/CC (não assinou) — NÃO deve virar o manifesto
+              { name: null, email: 'cc@e.com', signed: null },
+              { name: 'Rep', email: 'rep@e.com', signed: { created_at: '2026-06-22T20:19:01.000000Z', ip: '189.84.181.239' } },
+            ],
+          },
+        },
+      }),
+    }
+    const pdfResponse = { ok: true, status: 200, arrayBuffer: async () => new Uint8Array([37, 80, 68, 70]).buffer }
+    const fetchMock = vi.fn().mockResolvedValueOnce(gqlResponse).mockResolvedValueOnce(pdfResponse)
+    const origFetch = global.fetch
+    global.fetch = fetchMock as unknown as typeof fetch
+    try {
+      const { getSignatureGateway } = await import('@/lib/signature/gateway')
+      const gw = getSignatureGateway()
+      const res = await gw.baixarProvaAssinada('doc-aut-1')
+      // A query usa os campos REAIS (sha2 + signed{...}), não os inexistentes (ip direto / certificate.sha256)
+      const body = JSON.parse((fetchMock.mock.calls[0][1] as { body: string }).body) as { query: string }
+      expect(body.query).toMatch(/hashes\s*\{\s*sha2/)
+      expect(body.query).toMatch(/signed\s*\{[^}]*ip/)
+      expect(body.query).not.toMatch(/certificate\s*\{\s*sha256/)
+      // Manifesto vem do signatário que ASSINOU (não do [0] observador)
+      expect(res.manifesto['hash_sha256']).toBe('abc123hash')
+      expect(res.manifesto['assinado_em']).toBe('2026-06-22T20:19:01.000000Z')
+      expect(res.manifesto['ip_signatario']).toBe('189.84.181.239')
+      expect(res.manifesto['email_signatario']).toBe('rep@e.com')
+      expect(res.pdfBuffer.byteLength).toBeGreaterThan(0)
+    } finally {
+      global.fetch = origFetch
+      delete process.env['AUTENTIQUE_API_TOKEN']
+    }
+  })
+})
