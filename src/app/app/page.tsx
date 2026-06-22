@@ -13,6 +13,14 @@ import {
   BancadaCoordenador,
   BancadaAdmin,
 } from '@/components/app/Bancada'
+import {
+  obterMeuResumo,
+  obterPainelEmpresa,
+  obterVisaoGeral,
+} from '@/lib/data/analytics'
+import { PainelPessoal } from '@/components/analytics/PainelPessoal'
+import { PainelEmpresa } from '@/components/analytics/PainelEmpresa'
+import { VisaoGeral } from '@/components/analytics/VisaoGeral'
 
 /**
  * ADR-0002 — /app (RSC) — Bancada por papel.
@@ -73,6 +81,12 @@ export default async function AppDashboardPage() {
       qtdProjetosPendentes = cp ?? 0
     } catch { /* fail-soft */ }
 
+    // 008 — analytics (B1 + B3 para admin)
+    const [resumoAdmin, visaoGeralAdmin] = await Promise.all([
+      obterMeuResumo().catch(() => null),
+      obterVisaoGeral().catch(() => ({ dados: null, locked: false, erro: true } as const)),
+    ])
+
     return (
       <div className="ubm-shell--blueprint p-[clamp(1.25rem,4vw,2rem)]">
         <BancadaAdmin
@@ -80,17 +94,27 @@ export default async function AppDashboardPage() {
           qtdDoresPendentes={qtdDoresPendentes}
           qtdProjetosPendentes={qtdProjetosPendentes}
         />
+        {/* 008 — Painel pessoal (B1 — Velocidade A) */}
+        <div style={{ marginTop: '2rem' }}>
+          <PainelPessoal dados={resumoAdmin} />
+        </div>
+        {/* 008 — Visão Geral (B3 — Velocidade B, admin vê tudo) */}
+        <div style={{ marginTop: '1.5rem' }}>
+          <VisaoGeral resultado={visaoGeralAdmin} />
+        </div>
       </div>
     )
   }
 
   // ── REPRESENTANTE ────────────────────────────────────────────────────────
   if (papelBase === 'representante') {
-    const [meusProjetos, contagemDores] = await Promise.all([
+    const [meusProjetos, contagemDores, resumoRep, painelEmp] = await Promise.all([
       listarMeusProjetos().catch(() => []),
       contarMinhasDoresPorStatus().catch(() => ({
         rascunho: 0, em_moderacao: 0, publicada: 0, arquivada: 0, total: 0,
       })),
+      obterMeuResumo().catch(() => null),          // 008 B1
+      obterPainelEmpresa().catch(() => null),       // 008 B2
     ])
 
     return (
@@ -100,6 +124,14 @@ export default async function AppDashboardPage() {
           meusProjetos={meusProjetos}
           contagemDores={contagemDores}
         />
+        {/* 008 — Painel pessoal (B1 — Velocidade A) */}
+        <div style={{ marginTop: '2rem' }}>
+          <PainelPessoal dados={resumoRep} />
+        </div>
+        {/* 008 — Painel da empresa (B2 — Velocidade A, sem nome de aluno) */}
+        <div style={{ marginTop: '1.5rem' }}>
+          <PainelEmpresa dados={painelEmp} />
+        </div>
       </div>
     )
   }
@@ -124,6 +156,12 @@ export default async function AppDashboardPage() {
     // Exclui a PRÓPRIA indicação do coordenador (não conta a si como candidato a revisar).
     const todasIndicacoes = indicacoesPorProjeto.flat().filter((i) => i.pessoa_id !== user!.id)
 
+    // 008 — analytics (B1 + B3 para coordenador)
+    const [resumoCoord, visaoGeralCoord] = await Promise.all([
+      obterMeuResumo().catch(() => null),
+      obterVisaoGeral().catch(() => ({ dados: null, locked: false, erro: true } as const)),
+    ])
+
     return (
       <div className="p-[clamp(1.25rem,4vw,2rem)]">
         <BancadaCoordenador
@@ -131,15 +169,24 @@ export default async function AppDashboardPage() {
           indicacoes={todasIndicacoes}
           hostDorId={hostDorId}
         />
+        {/* 008 — Painel pessoal (B1 — Velocidade A) */}
+        <div style={{ marginTop: '2rem' }}>
+          <PainelPessoal dados={resumoCoord} />
+        </div>
+        {/* 008 — Visão Geral (B3 — Velocidade B, coordenador vê seus cursos) */}
+        <div style={{ marginTop: '1.5rem' }}>
+          <VisaoGeral resultado={visaoGeralCoord} />
+        </div>
       </div>
     )
   }
 
   // ── ALUNO ────────────────────────────────────────────────────────────────
   if (papelBase === 'aluno') {
-    const [indicacoes, tarefas] = await Promise.all([
+    const [indicacoes, tarefas, resumoAluno] = await Promise.all([
       listarMinhasIndicacoes().catch(() => []),
       listarMinhasTarefasAbertas().catch(() => []),
+      obterMeuResumo().catch(() => null),          // 008 B1
     ])
 
     return (
@@ -149,6 +196,14 @@ export default async function AppDashboardPage() {
           indicacoes={indicacoes}
           tarefas={tarefas}
         />
+        {/* 008 — Painel pessoal (B1 — Velocidade A) */}
+        <div style={{ marginTop: '2rem' }}>
+          <PainelPessoal dados={resumoAluno} />
+        </div>
+        {/* 008 — VisaoGeral (B3) — aluno é negado pelo banco (42501 → .ubm-locked) */}
+        <div style={{ marginTop: '1.5rem' }}>
+          <VisaoGeral resultado={{ dados: null, locked: true }} />
+        </div>
       </div>
     )
   }
