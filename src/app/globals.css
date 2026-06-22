@@ -1123,11 +1123,11 @@
 
   /* ───────────── STAMP "ENCAIXADO" (clímax de publicação — T8/T9) ───────────── */
   .ubm-stamp {
-    display: inline-flex; align-items: center; gap: 0.5rem; padding: 0.4rem 0.85rem;
+    display: inline-flex; align-self: flex-start; align-items: center; gap: 0.5rem; padding: 0.4rem 0.85rem;
     font-family: var(--font-mono), monospace; text-transform: uppercase; letter-spacing: 0.14em;
     font-size: 0.74rem; font-weight: 700; color: hsl(var(--success));
     border: 1.5px solid hsl(var(--success)); border-radius: 2px;
-    transform: rotate(-3deg); animation: ubm-stamp-in 0.6s cubic-bezier(0.16, 1, 0.3, 1);
+    transform: rotate(-1.5deg); transform-origin: center; animation: ubm-stamp-in 0.6s cubic-bezier(0.16, 1, 0.3, 1);
   }
   .ubm-stamp > svg { width: 1rem; height: 1rem; }
 
@@ -2149,7 +2149,7 @@
 @keyframes ubm-step-in { from { opacity: 0; transform: translate(12px, 6px); } to { opacity: 1; transform: translate(0, 0); } }
 @keyframes ubm-pulse { 0%, 100% { opacity: 0.4; } 50% { opacity: 0.85; } }
 @keyframes ubm-shimmer { 0%, 100% { opacity: 1; } 50% { opacity: 0.45; } }
-@keyframes ubm-stamp-in { from { opacity: 0; transform: rotate(-3deg) scale(0.8); } to { opacity: 1; transform: rotate(-3deg) scale(1); } }
+@keyframes ubm-stamp-in { from { opacity: 0; transform: rotate(-1.5deg) scale(0.8); } to { opacity: 1; transform: rotate(-1.5deg) scale(1); } }
 @keyframes ubm-sk-sweep  { 100% { transform: translateX(100%); } }
 @keyframes ubm-sk-bounce { 0%,100% { opacity: 0.3; transform: translateY(0); } 50% { opacity: 1; transform: translateY(-0.2rem); } }
 /* 006 — gesto de inversão da contraproposta (a peça "desfaz o encaixe") */
