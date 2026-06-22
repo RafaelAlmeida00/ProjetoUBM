@@ -122,40 +122,17 @@ export class AutentiqueGateway implements SignatureGateway {
     }
 
     const doc = json.data!.createDocument
-    // DIAG-AUTENTIQUE (TEMPORÁRIO — remover): linha curta p/ caber no painel de logs.
-    const s0 = doc.signatures?.[0] as { public_id?: string; email?: string; link?: unknown } | undefined
-    console.error(
-      `[autentique][diag] create nSigs=${doc.signatures?.length} keys=${Object.keys(s0 ?? {}).join('|')} link=${JSON.stringify(s0?.link)}`,
-    )
-
-    // Link de assinatura do signatário (rep). Casa pelo e-mail; fallback ao 1º.
-    const pick = (sigs: { email: string; link: { short_link: string } | null }[]) =>
-      sigs.find((s) => s.email?.toLowerCase() === params.signatario.email.toLowerCase()) ?? sigs[0]
-
-    let link = pick(doc.signatures)?.link?.short_link ?? undefined
-
-    // Signatário por e-mail às vezes não traz o short_link inline na criação (o Autentique
-    // entrega por e-mail). Tenta buscar via document(id) — best-effort, NÃO quebra o envio.
-    if (!link) {
-      try {
-        const q = 'query DocLink($id: UUID!) { document(id: $id) { signatures { email link { short_link } } } }'
-        const d2 = await this.gql<{ document: { signatures: { email: string; link: { short_link: string } | null }[] } }>(
-          q,
-          { id: doc.id },
-        )
-        // DIAG-AUTENTIQUE (TEMPORÁRIO — remover)
-        const f0 = d2.document?.signatures?.[0] as { email?: string; link?: unknown } | undefined
-        console.error(`[autentique][diag] follow nSigs=${d2.document?.signatures?.length} link=${JSON.stringify(f0?.link)}`)
-        link = pick(d2.document.signatures)?.link?.short_link ?? undefined
-      } catch (e) {
-        // DIAG-AUTENTIQUE (TEMPORÁRIO — remover): registra o erro do follow-up
-        console.error(`[autentique][diag] follow-erro ${e instanceof Error ? e.message : String(e)}`)
-      }
-    }
+    // Link de assinatura do signatário (rep), SE o provedor retornar. Confirmado em produção:
+    // signatário COM e-mail recebe o link pelo e-mail e o Autentique devolve `link` nulo aqui
+    // (a UI orienta o rep a olhar o e-mail). Capturamos o link quando vier (ex.: signatário
+    // sem e-mail). Casa pelo e-mail; fallback ao 1º.
+    const sig =
+      doc.signatures?.find((s) => s.email?.toLowerCase() === params.signatario.email.toLowerCase()) ??
+      doc.signatures?.[0]
 
     return {
       provedor_doc_id: doc.id,
-      link_assinatura: link,
+      link_assinatura: sig?.link?.short_link ?? undefined,
       clausulaAceiteMeioEletronico: params.clausulaAceiteMeioEletronico ?? true,
       signatarios: [{ nome: params.signatario.nome, email: params.signatario.email }],
     }
