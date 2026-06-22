@@ -149,7 +149,8 @@ describe('0068b confirmar_assinatura', () => {
     await comoServiceRole(db)
     const doc2 = (await db.query<{ id: string }>(`select id from public.documento_proposta where projeto_id='${pid2}'`)).rows[0]!.id
 
-    // confirmar via upload_livre usando documento_id como chave
+    // confirmar via upload_livre (Caminho B) — chamado pelo REPRESENTANTE (gate de ator 0076)
+    await comoUsuario(db, { uid: REP })
     await db.query(`select public.confirmar_assinatura('upload_livre','${doc2}','propostas/assinado2.pdf','{"origem":"upload"}'::jsonb)`)
     const st2 = (await db.query<{ s: string }>(`select status s from public.projeto where id='${pid2}'`)).rows[0]!.s
     expect(st2).toBe('proposta_aprovada')
@@ -159,6 +160,7 @@ describe('0068b confirmar_assinatura', () => {
     await comoServiceRole(db)
     // muda assinatura para upload_livre
     await db.query(`update public.assinatura set origem='upload_livre', provedor_doc_id=null where documento_id='${docId}'`)
+    await comoUsuario(db, { uid: REP }) // Caminho B é chamado pelo representante (gate 0076)
     await db.query(`select public.confirmar_assinatura('upload_livre','${docId}','propostas/assinado.pdf','{"ok":true}'::jsonb)`)
     // 2ª chamada = no-op
     await db.query(`select public.confirmar_assinatura('upload_livre','${docId}','propostas/reenvio.pdf','{"ok":true}'::jsonb)`)
@@ -174,6 +176,25 @@ describe('0068b confirmar_assinatura', () => {
     // confirmar em doc superado → no-op
     await db.query(`select public.confirmar_assinatura('upload_livre','${docId}','propostas/assinado.pdf','{"ok":true}'::jsonb)`)
     // estado não avança
+    expect(await status()).toBe('proposta_em_analise')
+  })
+
+  it('0076: Caminho B sobre doc origem=autentique — rep casa por documento_id → upload_livre + aprovado', async () => {
+    // doc do seed tem origem='autentique' (status enviada). O rep opta por enviar o PDF
+    // assinado por conta própria: confirmar_assinatura(upload_livre, documento_id).
+    await comoUsuario(db, { uid: REP })
+    await db.query(`select public.confirmar_assinatura('upload_livre','${docId}','propostas/assinado-livre.pdf','{"origem":"upload_livre"}'::jsonb)`)
+    expect(await status()).toBe('proposta_aprovada')
+    expect(await assinaturaStatus()).toBe('assinada')
+    const o = (await db.query<{ o: string }>(`select origem o from public.assinatura where documento_id='${docId}'`)).rows[0]!.o
+    expect(o).toBe('upload_livre')
+  })
+
+  it('0076 SEGURANÇA: aluno/terceiro NÃO pode confirmar via upload_livre (gate de ator)', async () => {
+    await comoUsuario(db, { uid: ALUNO })
+    expect(await negado(
+      db.query(`select public.confirmar_assinatura('upload_livre','${docId}','propostas/x.pdf','{"x":1}'::jsonb)`)
+    )).toBe(true)
     expect(await status()).toBe('proposta_em_analise')
   })
 })

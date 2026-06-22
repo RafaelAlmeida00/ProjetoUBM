@@ -134,7 +134,9 @@ export async function enviarDocumentoAssinado(
       .from('propostas')
       .upload(storagePath, arrayBuf, {
         contentType: 'application/pdf',
-        upsert: true, // 2º upload do mesmo doc → sobrescreve (no-op da RPC garante idempotência)
+        // upsert:false — o bucket 'propostas' NÃO tem policy de UPDATE; upsert (ON CONFLICT
+        // DO UPDATE) seria negado por RLS (storage 400). INSERT puro passa pela policy do rep.
+        upsert: false,
       })
     if (uploadErr) return { ok: false, error: mapDbError(uploadErr.message) }
 

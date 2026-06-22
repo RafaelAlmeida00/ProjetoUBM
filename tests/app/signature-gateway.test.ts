@@ -10,8 +10,10 @@ const savedEnv: Record<string, string | undefined> = {}
 
 beforeEach(() => {
   savedEnv['AUTENTIQUE_API_TOKEN'] = process.env['AUTENTIQUE_API_TOKEN']
+  savedEnv['AUTENTIQUE_TOKEN'] = process.env['AUTENTIQUE_TOKEN']
   savedEnv['AUTENTIQUE_SANDBOX'] = process.env['AUTENTIQUE_SANDBOX']
   delete process.env['AUTENTIQUE_API_TOKEN']
+  delete process.env['AUTENTIQUE_TOKEN']
   delete process.env['AUTENTIQUE_SANDBOX']
 })
 
@@ -45,10 +47,25 @@ describe('getSignatureGateway() — factory por env', () => {
     process.env['VERCEL_ENV'] = 'production'
     try {
       const { getSignatureGateway } = await import('@/lib/signature/gateway')
-      expect(() => getSignatureGateway()).toThrow(/autentique/i)
+      // mensagem cita Autentique e NÃO contém "pdf"/"mime" (não confunde o mapDbError)
+      let msg = ''
+      try { getSignatureGateway() } catch (e) { msg = e instanceof Error ? e.message : String(e) }
+      expect(msg).toMatch(/autentique/i)
+      expect(msg).not.toMatch(/pdf|mime/i)
     } finally {
       if (saved === undefined) delete process.env['VERCEL_ENV']
       else process.env['VERCEL_ENV'] = saved
+    }
+  })
+
+  it('AUTENTIQUE_TOKEN (alias) também seleciona o Autentique (não Fake)', async () => {
+    process.env['AUTENTIQUE_TOKEN'] = 'tok-alias-xyz'
+    try {
+      const { getSignatureGateway } = await import('@/lib/signature/gateway')
+      const gw = getSignatureGateway()
+      expect((gw as Record<string, unknown>)['_isFake']).toBe(false)
+    } finally {
+      delete process.env['AUTENTIQUE_TOKEN']
     }
   })
 })

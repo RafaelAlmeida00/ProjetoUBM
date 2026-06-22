@@ -65,14 +65,17 @@ import { AutentiqueGateway } from './adapters/autentique'
  *   A mensagem contém "Autentique" para o mapDbError surgir ao usuário (use Caminho B).
  */
 export function getSignatureGateway(): SignatureGateway {
-  const token = process.env['AUTENTIQUE_API_TOKEN']
+  // Aceita AUTENTIQUE_API_TOKEN (canônico) OU AUTENTIQUE_TOKEN (alias) — evita falha
+  // silenciosa por divergência de nome de variável de ambiente.
+  const token = process.env['AUTENTIQUE_API_TOKEN'] || process.env['AUTENTIQUE_TOKEN']
   if (token) {
     return new AutentiqueGateway(token)
   }
   if (process.env['VERCEL_ENV'] === 'production') {
-    console.error('[signature] AUTENTIQUE_API_TOKEN ausente em produção — recusando o gateway Fake.')
+    console.error('[signature] token do Autentique ausente em produção — recusando o gateway Fake.')
+    // Mensagem SEM "pdf"/"mime" (senão o mapDbError a confunde com erro de arquivo).
     throw new Error(
-      'Assinatura via Autentique indisponível no momento. Use o Caminho B (upload do PDF assinado) ou contate o suporte.',
+      'Assinatura via Autentique indisponível no momento. Tente o envio livre do documento assinado ou contate o suporte.',
     )
   }
   return new FakeSignatureGateway()

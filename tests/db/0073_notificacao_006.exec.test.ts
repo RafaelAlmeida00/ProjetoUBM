@@ -194,6 +194,7 @@ describe('(b) proposta aprovada → host + equipe', () => {
       )
     ).rows[0]!.id
 
+    await comoUsuario(db, { uid: REP }) // Caminho B é chamado pelo representante (gate 0076)
     await db.query(
       `select public.confirmar_assinatura('upload_livre',$1,'propostas/signed.pdf','{"origem":"upload_livre"}'::jsonb)`,
       [docId],
@@ -214,6 +215,7 @@ describe('(b) proposta aprovada → host + equipe', () => {
       )
     ).rows[0]!.id
 
+    await comoUsuario(db, { uid: REP }) // Caminho B é chamado pelo representante (gate 0076)
     await db.query(
       `select public.confirmar_assinatura('upload_livre',$1,'propostas/signed.pdf','{"origem":"upload_livre"}'::jsonb)`,
       [docId],
@@ -299,6 +301,7 @@ describe('(f) mudança de estado do projeto → equipe', () => {
         `select id from public.documento_proposta where projeto_id='${projetoId}'`,
       )
     ).rows[0]!.id
+    await comoUsuario(db, { uid: REP }) // Caminho B é chamado pelo representante (gate 0076)
     await db.query(
       `select public.confirmar_assinatura('upload_livre',$1,'propostas/signed.pdf','{"origem":"upload_livre"}'::jsonb)`,
       [docId],
