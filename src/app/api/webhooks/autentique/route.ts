@@ -1,173 +1,117 @@
 /**
  * T4.5 — Route Handler POST /api/webhooks/autentique (server-only, service_role).
- * RS7: valida AUTENTIQUE_WEBHOOK_SECRET constant-time → 401 sem efeito se inválido (CA8).
- * RS8: idempotência por provedor_doc_id.
- * RS9: baixa prova → upload ANTES de chamar RPC (prova antes do status).
+ * Formato real do Autentique (doc oficial):
+ *   - Header `X-Autentique-Signature` = HMAC-SHA256(secret, rawBody) em hex (RS7/CA8).
+ *   - Body: { event: { type, data: { document } } } — type em 'signature.accepted' |
+ *     'document.finished' | 'signature.rejected'; data.document = id do documento.
+ * RS8: idempotência por provedor_doc_id (confirmar_assinatura é no-op se já assinada).
+ * RS9: baixa prova → upload ANTES de chamar a RPC (prova antes do status).
  * RS10: service_role SOMENTE aqui (único ponto privilegiado — ADR-0001/V1).
  * RS17: logs sem segredo/PII em claro.
- * CA10: recusa/expiração → marca status, não avança projeto.
  */
 import { NextRequest, NextResponse } from 'next/server'
+import crypto from 'node:crypto'
 import { createSupabaseAdminClient } from '@/lib/supabase/admin'
 import { getSignatureGateway } from '@/lib/signature/gateway'
 
-// Força execução apenas no Node.js (server-only — RS10)
+// Força execução apenas no Node.js (server-only — RS10; precisa de node:crypto)
 export const runtime = 'nodejs'
 
-// ── Comparação constant-time (anti-timing — RS7) ────────────────────────────
-
-function constantTimeEqual(a: string, b: string): boolean {
-  // Usa Buffer.from para garantir comparação constant-time mesmo com strings de comprimentos diferentes
+// ── HMAC-SHA256 do corpo cru + comparação constant-time (RS7) ────────────────
+function timingSafeEqualHex(a: string, b: string): boolean {
   const bufA = Buffer.from(a, 'utf8')
   const bufB = Buffer.from(b, 'utf8')
-  // Compara sempre o comprimento do segredo esperado para não vazar tamanho
-  if (bufA.length !== bufB.length) {
-    // Realiza a comparação de qualquer forma (mesmo resultado final: false) para não vazar timing
-    let diff = bufA.length ^ bufB.length
-    for (let i = 0; i < Math.min(bufA.length, bufB.length); i++) {
-      diff |= (bufA[i] ?? 0) ^ (bufB[i] ?? 0)
-    }
-    return diff === 0
-  }
-  let diff = 0
-  for (let i = 0; i < bufA.length; i++) {
-    diff |= (bufA[i] ?? 0) ^ (bufB[i] ?? 0)
-  }
-  return diff === 0
+  if (bufA.length !== bufB.length) return false
+  return crypto.timingSafeEqual(bufA, bufB)
 }
 
-// ── Tipos de payload do Autentique ──────────────────────────────────────────
-
-interface AutentiqueWebhookPayload {
-  event: string
-  document: {
-    id: string
-    status?: string
-  }
+// ── Tipo do payload do Autentique ─────────────────────────────────────────────
+interface AutentiqueEvent {
+  event?: { type?: string; data?: { document?: string } }
 }
-
-function isValidPayload(body: unknown): body is AutentiqueWebhookPayload {
-  if (!body || typeof body !== 'object') return false
-  const b = body as Record<string, unknown>
-  return (
-    typeof b['event'] === 'string' &&
-    !!b['document'] &&
-    typeof (b['document'] as Record<string, unknown>)['id'] === 'string'
-  )
-}
-
-// ── Handler principal ────────────────────────────────────────────────────────
 
 export async function POST(req: NextRequest): Promise<NextResponse> {
-  // RS7: ler e validar o segredo ANTES de qualquer operação
-  const expectedSecret = process.env['AUTENTIQUE_WEBHOOK_SECRET']
-  if (!expectedSecret) {
-    // Segredo não configurado → rejeita silenciosamente (sem vazar detalhes)
+  // RS7: segredo obrigatório
+  const secret = process.env['AUTENTIQUE_WEBHOOK_SECRET']
+  if (!secret) {
     console.error('[webhook/autentique] AUTENTIQUE_WEBHOOK_SECRET não configurado')
     return NextResponse.json({ error: 'Não autorizado' }, { status: 401 })
   }
 
-  const receivedSecret = req.headers.get('x-autentique-signature') ?? ''
-  if (!constantTimeEqual(receivedSecret, expectedSecret)) {
-    // RS7/CA8: segredo inválido → 401, NADA muda
-    console.warn('[webhook/autentique] Segredo inválido recebido — rejeitando sem efeito')
+  // Corpo CRU é necessário para validar o HMAC (assinatura é sobre os bytes exatos).
+  const raw = await req.text()
+  const headerSig = (req.headers.get('x-autentique-signature') ?? '').replace(/^sha256=/i, '').trim().toLowerCase()
+  const expectedSig = crypto.createHmac('sha256', secret).update(raw, 'utf8').digest('hex').toLowerCase()
+  if (!headerSig || !timingSafeEqualHex(headerSig, expectedSig)) {
+    // RS7/CA8: HMAC inválido → 401, NADA muda
+    console.warn('[webhook/autentique] HMAC inválido — rejeitando sem efeito')
     return NextResponse.json({ error: 'Não autorizado' }, { status: 401 })
   }
 
-  // Segredo válido — agora processa
-  let body: unknown
+  let body: AutentiqueEvent
   try {
-    body = await req.json()
+    body = JSON.parse(raw) as AutentiqueEvent
   } catch {
     return NextResponse.json({ error: 'Payload inválido' }, { status: 400 })
   }
 
-  if (!isValidPayload(body)) {
+  const tipo = body.event?.type
+  const provedorDocId = body.event?.data?.document
+  if (!tipo || typeof provedorDocId !== 'string') {
     return NextResponse.json({ error: 'Payload inválido' }, { status: 400 })
   }
-
-  const { event, document: doc } = body
-  const provedorDocId = doc.id
 
   // RS10: service_role SOMENTE aqui
   const adminClient = createSupabaseAdminClient()
   const gateway = getSignatureGateway()
 
   try {
-    // ── Evento: documento assinado ────────────────────────────────────────────
-    if (event === 'document.signed') {
-      // RS9: baixa prova ANTES de chamar a RPC (prova antes do status — RN11/CA6)
+    // ── Documento assinado / concluído → sela a proposta (idempotente RS8/CA7) ──
+    if (tipo === 'signature.accepted' || tipo === 'document.finished') {
+      // RS9: baixa a prova ANTES de chamar a RPC (prova antes do status — RN11/CA6)
       const { pdfBuffer, manifesto } = await gateway.baixarProvaAssinada(provedorDocId)
 
-      // Upload ao bucket 'propostas' via service_role (único caminho privilegiado)
       const storagePath = `webhooks/autentique/${provedorDocId}-assinado.pdf`
       const { error: uploadErr } = await adminClient.storage
         .from('propostas')
-        .upload(storagePath, pdfBuffer, {
-          contentType: 'application/pdf',
-          upsert: true, // idempotência: reentrega sobrescreve o mesmo arquivo
-        })
+        .upload(storagePath, pdfBuffer, { contentType: 'application/pdf', upsert: true })
 
       if (uploadErr) {
-        // Prova não pode ser persistida → NÃO avança o status (RS9/RN11)
         console.error('[webhook/autentique] Falha ao salvar prova no Storage — status não vira aprovado')
         return NextResponse.json({ error: 'Erro ao armazenar prova' }, { status: 500 })
       }
 
-      // RPC confirmar_assinatura — idempotente por (origem, provedor_doc_id) (RS8/CA7)
       const { error: rpcErr } = await adminClient.rpc('confirmar_assinatura', {
         p_origem: 'autentique',
         p_chave: provedorDocId,
         p_storage_path: storagePath,
-        p_evidencias: {
-          ...manifesto,
-          provedor: 'autentique',
-          webhook_event: event,
-        },
+        p_evidencias: { ...manifesto, provedor: 'autentique', webhook_event: tipo },
       })
 
       if (rpcErr) {
-        // Logar sem PII (RS17) — sem expor o erro interno na resposta
-        console.error('[webhook/autentique] Erro na RPC confirmar_assinatura — doc_id omitido nos logs')
+        console.error('[webhook/autentique] Erro na RPC confirmar_assinatura')
         return NextResponse.json({ error: 'Erro ao confirmar assinatura' }, { status: 500 })
       }
 
       return NextResponse.json({ ok: true }, { status: 200 })
     }
 
-    // ── Evento: documento recusado ────────────────────────────────────────────
-    if (event === 'document.refused') {
-      // CA10: marca status recusado via RPC — NÃO avança o projeto
+    // ── Assinatura recusada → marca status, NÃO avança o projeto (CA10) ──────────
+    if (tipo === 'signature.rejected') {
       try {
         await adminClient.rpc('registrar_recusa_assinatura', {
           p_provedor_doc_id: provedorDocId,
           p_motivo: 'recusado_pelo_signatario',
         })
       } catch {
-        // RPC pode não existir ainda (Onda 3) — falha silenciosa, notificação é do banco
         console.warn('[webhook/autentique] registrar_recusa_assinatura não disponível')
       }
       return NextResponse.json({ ok: true, status: 'recusado' }, { status: 200 })
     }
 
-    // ── Evento: documento expirado ────────────────────────────────────────────
-    if (event === 'document.expired') {
-      // CA10: marca status expirado — NÃO avança o projeto
-      try {
-        await adminClient.rpc('registrar_recusa_assinatura', {
-          p_provedor_doc_id: provedorDocId,
-          p_motivo: 'expirado_pelo_provedor',
-        })
-      } catch {
-        console.warn('[webhook/autentique] registrar_recusa_assinatura não disponível')
-      }
-      return NextResponse.json({ ok: true, status: 'expirado' }, { status: 200 })
-    }
-
-    // Evento desconhecido → 200 para não re-enfileirar (acknowledge sem processar)
+    // Evento não tratado → 200 (acknowledge sem re-enfileirar)
     return NextResponse.json({ ok: true, status: 'evento_ignorado' }, { status: 200 })
   } catch (err) {
-    // RS17: não expor internals / segredos na resposta
     const msg = err instanceof Error ? err.message : 'Erro interno'
     console.error('[webhook/autentique] Erro inesperado:', msg.slice(0, 120))
     return NextResponse.json({ error: 'Erro interno' }, { status: 500 })

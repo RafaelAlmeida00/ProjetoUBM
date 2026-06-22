@@ -710,10 +710,12 @@ function VisaoRepresentante({
         <div className="ubm-caminhos" data-testid="caminhos-assinatura">
           {/* Caminho A — Autentique */}
           <div className="ubm-caminho" data-testid="caminho-a">
-            <span className="ubm-caminho-rotulo">CAMINHO A · AUTOMÁTICO</span>
+            <span className="ubm-caminho-rotulo">CAMINHO A · AUTENTIQUE (AUTOMÁTICO)</span>
             <span className="ubm-caminho-titulo">Assinar via Autentique</span>
             <span className="ubm-caminho-desc">
-              Você assina no Autentique; a UBM confirma sozinha e sela a proposta.
+              Você recebeu o documento por e-mail do Autentique. Assine por lá — assim que
+              assinar, a UBM <strong>confirma automaticamente</strong> e sela a proposta (você não
+              precisa reenviar nada aqui).
             </span>
             {linkAssinatura ? (
               <a
@@ -743,14 +745,15 @@ function VisaoRepresentante({
             <span className="ubm-caminho-rotulo">CAMINHO B · ENVIO LIVRE</span>
             <span className="ubm-caminho-titulo">Enviar documento assinado</span>
             <span className="ubm-caminho-desc">
-              Assine por meios próprios e envie o PDF assinado de volta.
+              Assine o documento enviado no seu e-mail via Autentique ou por meios próprios e
+              envie o PDF assinado de volta.
             </span>
 
             {/* Aviso pró-gov.br (RN7c) */}
             <div className="ubm-govbr-aviso" data-testid="aviso-govbr">
               <Info aria-hidden="true" />
               <span>
-                Recomendamos assinar pelo{' '}
+                Em segundas vias de assinatura fora do Autentique, recomendamos assinar pelo{' '}
                 <strong>gov.br</strong> — assinador eletrônico gratuito e de alta credibilidade
                 institucional, ideal para órgãos públicos. Depois de assinar, valide e envie o PDF
                 aqui.{' '}
