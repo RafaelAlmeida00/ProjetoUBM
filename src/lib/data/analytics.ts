@@ -56,8 +56,31 @@ export interface VisaoGeral {
 // Adapters de leitura (ADR-0001: anon key + RLS, nunca service_role)
 // ---------------------------------------------------------------------------
 
+// Row individual retornada pela RPC get_rankings_publicos()
+interface RankingRow {
+  tipo: string
+  nome: string | null
+  rotulo_papel: string | null
+  rotulo_curso: string | null
+  projetos_finalizados: number
+  contagem: number
+  atualizado_em: string | null
+}
+
+const EMPTY_RANKINGS: RankingsPublicos = {
+  alunos: [],
+  coordenadores: [],
+  empresas: [],
+  atualizado_em: null,
+  outros_alunos: 0,
+  outros_coordenadores: 0,
+  outros_empresas: 0,
+}
+
 /**
  * Chama a RPC pública get_rankings_publicos() — anônima, zero filtro (CA12/CA17).
+ * A RPC retorna TABLE(tipo, nome, rotulo_papel, rotulo_curso, projetos_finalizados, contagem, atualizado_em).
+ * Este adapter agrupa as rows por tipo e monta o objeto RankingsPublicos.
  * Velocidade B (MV + carimbo).
  */
 export async function obterRankingsPublicos(): Promise<RankingsPublicos> {
@@ -66,26 +89,44 @@ export async function obterRankingsPublicos(): Promise<RankingsPublicos> {
 
   if (error) {
     console.error('[analytics] get_rankings_publicos error', error)
-    return {
-      alunos: [],
-      coordenadores: [],
-      empresas: [],
-      atualizado_em: null,
-      outros_alunos: 0,
-      outros_coordenadores: 0,
-      outros_empresas: 0,
-    }
+    return { ...EMPTY_RANKINGS }
   }
 
-  // A RPC retorna as seções como objeto JSON
-  return (data as RankingsPublicos) ?? {
-    alunos: [],
-    coordenadores: [],
-    empresas: [],
-    atualizado_em: null,
-    outros_alunos: 0,
-    outros_coordenadores: 0,
-    outros_empresas: 0,
+  // data é array de rows (TABLE return type no Supabase)
+  const rows = (data as RankingRow[] | null) ?? []
+  if (!Array.isArray(rows) || rows.length === 0) {
+    return { ...EMPTY_RANKINGS }
+  }
+
+  // atualizado_em: pega o mais recente entre todos os rows
+  const atualizado_em = rows.reduce<string | null>((acc, r) => {
+    if (!r.atualizado_em) return acc
+    if (!acc) return r.atualizado_em
+    return r.atualizado_em > acc ? r.atualizado_em : acc
+  }, null)
+
+  const toItem = (r: RankingRow, posicao: number): ItemRankingPublico => ({
+    posicao,
+    nome_publico: r.nome,
+    rotulo: [r.rotulo_papel, r.rotulo_curso].filter(Boolean).join(' · ') || r.tipo,
+    projetos_finalizados: r.projetos_finalizados,
+    count: r.contagem,
+  })
+
+  const alunoRows = rows.filter((r) => r.tipo === 'aluno')
+  const coordRows = rows.filter((r) => r.tipo === 'coordenador')
+  const empresaRows = rows.filter((r) => r.tipo === 'empresa')
+
+  // Top-5 visíveis (k-anonymity N=5 já aplicada no banco — HAVING count(*)>=5)
+  const TOP = 5
+  return {
+    alunos: alunoRows.slice(0, TOP).map(toItem),
+    coordenadores: coordRows.slice(0, TOP).map(toItem),
+    empresas: empresaRows.slice(0, TOP).map(toItem),
+    atualizado_em,
+    outros_alunos: Math.max(0, alunoRows.length - TOP),
+    outros_coordenadores: Math.max(0, coordRows.length - TOP),
+    outros_empresas: Math.max(0, empresaRows.length - TOP),
   }
 }
 
