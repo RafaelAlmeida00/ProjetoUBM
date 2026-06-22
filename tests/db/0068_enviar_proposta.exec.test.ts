@@ -165,6 +165,19 @@ describe('0068a enviar_proposta', () => {
     expect(r.status).toBe('pendente')
     expect(r.provedor_doc_id).toBeNull()
   })
+
+  it('0077: signatário preferido = AUTOR da dor quando é membro da empresa (não um membro qualquer)', async () => {
+    // O autor da dor (ALUNO) vira membro representante da empresa, junto do REP genérico.
+    await comoServiceRole(db)
+    await db.query(`insert into public.membro_empresa(user_id,empresa_id,papel) values ('${ALUNO}','${empresaId}','representante') on conflict do nothing`)
+    await comoUsuario(db, { uid: HOST })
+    await db.query(`select public.enviar_proposta('${projetoId}','propostas/orig.pdf','autentique')`)
+    await comoServiceRole(db)
+    const sig = (await db.query<{ signatario_id: string }>(
+      `select a.signatario_id from public.assinatura a join public.documento_proposta d on d.id=a.documento_id where d.projeto_id='${projetoId}'`
+    )).rows[0]!.signatario_id
+    expect(sig).toBe(ALUNO) // o autor da dor é preferido sobre o REP genérico
+  })
 })
 
 describe('0075 obter_signatario_proposta', () => {

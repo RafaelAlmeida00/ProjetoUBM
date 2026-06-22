@@ -733,7 +733,7 @@ function VisaoRepresentante({
                 style={{ fontSize: '0.8rem' }}
                 data-testid="autentique-pendente"
               >
-                Link de assinatura a caminho…
+                O link de assinatura foi enviado ao seu e-mail pelo Autentique — verifique sua caixa de entrada (e o spam).
               </span>
             )}
           </div>
