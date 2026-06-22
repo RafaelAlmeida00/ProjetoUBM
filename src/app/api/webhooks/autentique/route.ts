@@ -97,23 +97,6 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
       timingSafeEqualHex(headerSig, crypto.createHmac('sha256', secret).update(raw, 'utf8').digest('hex').toLowerCase()),
     )
 
-  // DIAG temporário (remover após validar o formato ao vivo) — sem segredo/PII (RS17).
-  // Revela: HMAC passou? qual event.type? quais chaves de event.data? Para travar o shape real.
-  {
-    let dt = '?'
-    let dk = '-'
-    try {
-      const b = JSON.parse(raw) as AutentiqueEvent
-      dt = b.event?.type ?? '?'
-      dk = b.event?.data ? Object.keys(b.event.data).join(',') : '-'
-    } catch {
-      /* corpo não-JSON */
-    }
-    console.log(
-      `[webhook/autentique][diag] hmacOk=${assinaturaOk} sig=${headerSig ? 'present' : 'absent'} type=${dt} dataKeys=${dk}`,
-    )
-  }
-
   if (!assinaturaOk) {
     // RS7/CA8: HMAC inválido → 401, NADA muda
     console.warn('[webhook/autentique] HMAC inválido — rejeitando sem efeito')
