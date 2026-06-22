@@ -122,10 +122,11 @@ export class AutentiqueGateway implements SignatureGateway {
     }
 
     const doc = json.data!.createDocument
-    // DIAG-AUTENTIQUE (TEMPORÁRIO — remover após investigação do short_link)
-    try {
-      console.error('[autentique][diag] createDocument=', JSON.stringify({ id: doc.id, signatures: doc.signatures }))
-    } catch { /* noop */ }
+    // DIAG-AUTENTIQUE (TEMPORÁRIO — remover): linha curta p/ caber no painel de logs.
+    const s0 = doc.signatures?.[0] as { public_id?: string; email?: string; link?: unknown } | undefined
+    console.error(
+      `[autentique][diag] create nSigs=${doc.signatures?.length} keys=${Object.keys(s0 ?? {}).join('|')} link=${JSON.stringify(s0?.link)}`,
+    )
 
     // Link de assinatura do signatário (rep). Casa pelo e-mail; fallback ao 1º.
     const pick = (sigs: { email: string; link: { short_link: string } | null }[]) =>
@@ -143,13 +144,12 @@ export class AutentiqueGateway implements SignatureGateway {
           { id: doc.id },
         )
         // DIAG-AUTENTIQUE (TEMPORÁRIO — remover)
-        try {
-          console.error('[autentique][diag] document(id).signatures=', JSON.stringify(d2.document?.signatures))
-        } catch { /* noop */ }
+        const f0 = d2.document?.signatures?.[0] as { email?: string; link?: unknown } | undefined
+        console.error(`[autentique][diag] follow nSigs=${d2.document?.signatures?.length} link=${JSON.stringify(f0?.link)}`)
         link = pick(d2.document.signatures)?.link?.short_link ?? undefined
       } catch (e) {
         // DIAG-AUTENTIQUE (TEMPORÁRIO — remover): registra o erro do follow-up
-        console.error('[autentique][diag] follow-up document(id) erro:', e instanceof Error ? e.message : String(e))
+        console.error(`[autentique][diag] follow-erro ${e instanceof Error ? e.message : String(e)}`)
       }
     }
 
