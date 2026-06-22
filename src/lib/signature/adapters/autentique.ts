@@ -123,13 +123,29 @@ export class AutentiqueGateway implements SignatureGateway {
 
     const doc = json.data!.createDocument
     // Link de assinatura do signatário (rep). Casa pelo e-mail; fallback ao 1º.
-    const sig =
-      doc.signatures.find((s) => s.email?.toLowerCase() === params.signatario.email.toLowerCase()) ??
-      doc.signatures[0]
+    const pick = (sigs: { email: string; link: { short_link: string } | null }[]) =>
+      sigs.find((s) => s.email?.toLowerCase() === params.signatario.email.toLowerCase()) ?? sigs[0]
+
+    let link = pick(doc.signatures)?.link?.short_link ?? undefined
+
+    // Signatário por e-mail às vezes não traz o short_link inline na criação (o Autentique
+    // entrega por e-mail). Tenta buscar via document(id) — best-effort, NÃO quebra o envio.
+    if (!link) {
+      try {
+        const q = 'query DocLink($id: UUID!) { document(id: $id) { signatures { email link { short_link } } } }'
+        const d2 = await this.gql<{ document: { signatures: { email: string; link: { short_link: string } | null }[] } }>(
+          q,
+          { id: doc.id },
+        )
+        link = pick(d2.document.signatures)?.link?.short_link ?? undefined
+      } catch {
+        // sem link in-app → o rep usa o convite por e-mail do Autentique
+      }
+    }
 
     return {
       provedor_doc_id: doc.id,
-      link_assinatura: sig?.link?.short_link ?? undefined,
+      link_assinatura: link,
       clausulaAceiteMeioEletronico: params.clausulaAceiteMeioEletronico ?? true,
       signatarios: [{ nome: params.signatario.nome, email: params.signatario.email }],
     }

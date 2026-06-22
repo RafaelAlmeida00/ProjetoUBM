@@ -204,6 +204,44 @@ describe('AutentiqueGateway.criarPedido (multipart real)', () => {
     }
   })
 
+  it('busca o short_link via document(id) quando o createDocument vem sem link', async () => {
+    process.env['AUTENTIQUE_API_TOKEN'] = 'tok-test'
+    const fetchMock = vi
+      .fn()
+      .mockResolvedValueOnce({
+        ok: true,
+        status: 200,
+        json: async () => ({
+          data: { createDocument: { id: 'doc-2', signatures: [{ public_id: 'p', email: 'rep@e.com', link: null }] } },
+        }),
+      })
+      .mockResolvedValueOnce({
+        ok: true,
+        status: 200,
+        json: async () => ({
+          data: { document: { signatures: [{ email: 'rep@e.com', link: { short_link: 'https://autentique.com.br/assinar/xyz' } }] } },
+        }),
+      })
+    const origFetch = global.fetch
+    global.fetch = fetchMock as unknown as typeof fetch
+    try {
+      const { getSignatureGateway } = await import('@/lib/signature/gateway')
+      const gw = getSignatureGateway()
+      const res = await gw.criarPedido({
+        projetoId: 'p',
+        documentoId: 'd',
+        storagePath: 's',
+        signatario: { nome: 'R', email: 'rep@e.com' },
+        pdfBuffer: new Uint8Array([1]).buffer,
+      })
+      expect(res.link_assinatura).toBe('https://autentique.com.br/assinar/xyz')
+      expect(fetchMock).toHaveBeenCalledTimes(2)
+    } finally {
+      global.fetch = origFetch
+      delete process.env['AUTENTIQUE_API_TOKEN']
+    }
+  })
+
   it('falha com mensagem clara quando falta o pdfBuffer', async () => {
     process.env['AUTENTIQUE_API_TOKEN'] = 'tok-test'
     try {
