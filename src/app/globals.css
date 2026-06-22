@@ -2142,6 +2142,94 @@
   /* ── .ubm-aviso--loop — alerta suave de loop de negociação (RN16b) ── */
   .ubm-aviso--loop { border-color: hsl(var(--warning) / 0.6); background: hsl(var(--warning) / 0.07); }
 
+  /* ═══════════════════════════════════════════════════════════
+     008 — analytics-views-rankings · primitivas de chart
+     Todas derivam de tokens HSL 007. Zero cor/hex nova.
+     ═══════════════════════════════════════════════════════════ */
+
+  /* Moldura de chart — peça cotada que embrulha qualquer gráfico */
+  .ubm-chart-frame {
+    position: relative;
+    background-color: hsl(var(--card));
+    border: 1px solid hsl(var(--border));
+    border-radius: var(--radius);
+    box-shadow: var(--shadow-sm);
+    padding: 1.1rem 1.2rem;
+    overflow: hidden;
+  }
+  .ubm-chart-frame:hover { box-shadow: var(--shadow-md); }
+
+  /* Tooltip tematizado (substitui o branco default do Tremor/Recharts) */
+  .ubm-chart-tooltip {
+    background-color: hsl(var(--card));
+    border: 1px solid hsl(var(--border));
+    border-radius: var(--radius);
+    box-shadow: var(--shadow-lg);
+    padding: 0.55rem 0.85rem;
+    font-size: 0.88rem;
+  }
+
+  /* Carimbo "atualizado há X min" — Velocidade B apenas (CA10) */
+  .ubm-data-stamp {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.35rem;
+    font-family: var(--font-mono), monospace;
+    font-size: 0.7rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.1em;
+    color: hsl(var(--muted-foreground));
+  }
+  .ubm-data-stamp--stale { color: hsl(var(--warning)); }
+
+  /* Número KPI — Bancada */
+  .ubm-kpi {
+    display: flex;
+    flex-direction: column;
+    gap: 0.25rem;
+  }
+  .ubm-kpi-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(10rem, 1fr));
+    gap: 0.75rem;
+  }
+
+  /* Pódio de honra (/rankings) */
+  .ubm-podium {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+  }
+  .ubm-podium-item { transition: transform 0.14s ease; }
+  .ubm-podium-item:hover { transform: translateX(2px); }
+  .ubm-podium-rank {
+    font-family: var(--font-mono), monospace;
+    font-weight: 700;
+    min-width: 2.5rem;
+  }
+  .ubm-podium-others {
+    margin-top: 0.5rem;
+    color: hsl(var(--muted-foreground));
+  }
+
+  /* Skeleton de chart — silhueta on-brand */
+  .ubm-chart-skeleton {
+    padding: 1rem;
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .ubm-podium-item:hover { transform: none; }
+    .ubm-podium-item { transition: none; }
+    .ubm-chart-frame:hover { box-shadow: var(--shadow-sm); }
+  }
+
 /* ════════════════════════════ KEYFRAMES ════════════════════════════ */
 @keyframes ubm-rotate { to { transform: rotate(360deg); } }
 @keyframes ubm-fade { from { opacity: 0; } to { opacity: 1; } }
