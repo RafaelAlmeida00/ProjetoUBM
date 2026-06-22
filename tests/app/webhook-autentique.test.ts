@@ -30,6 +30,7 @@ vi.mock('@/lib/signature/gateway', () => ({
 vi.mock('next/cache', () => ({ revalidatePath: vi.fn() }))
 
 const TEST_SECRET = 'test-webhook-secret-2026'
+const TEST_SECRET_DOC = 'test-webhook-secret-doc-2026'
 const FAKE_PDF = new Uint8Array([37, 80, 68, 70, 45, 49, 46, 52]) // %PDF-1.4
 
 function hmac(raw: string, secret: string): string {
@@ -49,7 +50,9 @@ const assinado = (docId: string) => ({ event: { type: 'signature.accepted', data
 
 beforeEach(() => {
   vi.clearAllMocks()
-  process.env['AUTENTIQUE_WEBHOOK_SECRET'] = TEST_SECRET
+  process.env['AUTENTIQUE_WEBHOOK_SECRET_SIGN'] = TEST_SECRET
+  process.env['AUTENTIQUE_WEBHOOK_SECRET_DOC'] = TEST_SECRET_DOC
+  delete process.env['AUTENTIQUE_WEBHOOK_SECRET']
   baixarProvaAssinadaMock.mockResolvedValue({ pdfBuffer: FAKE_PDF.buffer, manifesto: { hash_sha256: 'abc123' } })
   uploadMock.mockResolvedValue({ data: { path: 'webhooks/autentique/x-assinado.pdf' }, error: null })
   storageMock.mockReturnValue({ upload: uploadMock })
@@ -92,6 +95,14 @@ describe('POST /api/webhooks/autentique — HMAC válido (signature.accepted)', 
     expect(res.status).toBe(200)
     expect(rpcMock).toHaveBeenCalledWith('confirmar_assinatura', expect.objectContaining({ p_chave: 'aut-doc-789' }))
   })
+
+  it('aceita o HMAC do 2º webhook (segredo DOC) — document.finished', async () => {
+    const res = await POST(
+      makeRequest({ event: { type: 'document.finished', data: { document: 'aut-doc-doc' } } }, { secret: TEST_SECRET_DOC }),
+    )
+    expect(res.status).toBe(200)
+    expect(rpcMock).toHaveBeenCalledWith('confirmar_assinatura', expect.objectContaining({ p_chave: 'aut-doc-doc' }))
+  })
 })
 
 describe('POST /api/webhooks/autentique — HMAC inválido (CA8)', () => {
@@ -111,11 +122,13 @@ describe('POST /api/webhooks/autentique — HMAC inválido (CA8)', () => {
     expect(baixarProvaAssinadaMock).not.toHaveBeenCalled()
   })
 
-  it('401 quando AUTENTIQUE_WEBHOOK_SECRET não está configurado', async () => {
+  it('401 quando NENHUM secret está configurado', async () => {
+    delete process.env['AUTENTIQUE_WEBHOOK_SECRET_SIGN']
+    delete process.env['AUTENTIQUE_WEBHOOK_SECRET_DOC']
     delete process.env['AUTENTIQUE_WEBHOOK_SECRET']
     const res = await POST(makeRequest(assinado('x')))
     expect(res.status).toBe(401)
-    process.env['AUTENTIQUE_WEBHOOK_SECRET'] = TEST_SECRET
+    process.env['AUTENTIQUE_WEBHOOK_SECRET_SIGN'] = TEST_SECRET
   })
 })
 

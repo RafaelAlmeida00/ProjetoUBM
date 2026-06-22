@@ -31,18 +31,28 @@ interface AutentiqueEvent {
 }
 
 export async function POST(req: NextRequest): Promise<NextResponse> {
-  // RS7: segredo obrigatório
-  const secret = process.env['AUTENTIQUE_WEBHOOK_SECRET']
-  if (!secret) {
-    console.error('[webhook/autentique] AUTENTIQUE_WEBHOOK_SECRET não configurado')
+  // RS7: o Autentique aceita 1 categoria de evento por webhook → há 2 webhooks (assinatura e
+  // documento), cada um com SEU segredo. Aceitamos o HMAC que casar com QUALQUER um deles.
+  const secrets = [
+    process.env['AUTENTIQUE_WEBHOOK_SECRET_SIGN'],
+    process.env['AUTENTIQUE_WEBHOOK_SECRET_DOC'],
+    process.env['AUTENTIQUE_WEBHOOK_SECRET'], // compat: segredo único
+  ].filter((s): s is string => !!s && s.length > 0)
+
+  if (secrets.length === 0) {
+    console.error('[webhook/autentique] nenhum AUTENTIQUE_WEBHOOK_SECRET* configurado')
     return NextResponse.json({ error: 'Não autorizado' }, { status: 401 })
   }
 
   // Corpo CRU é necessário para validar o HMAC (assinatura é sobre os bytes exatos).
   const raw = await req.text()
   const headerSig = (req.headers.get('x-autentique-signature') ?? '').replace(/^sha256=/i, '').trim().toLowerCase()
-  const expectedSig = crypto.createHmac('sha256', secret).update(raw, 'utf8').digest('hex').toLowerCase()
-  if (!headerSig || !timingSafeEqualHex(headerSig, expectedSig)) {
+  const assinaturaOk =
+    !!headerSig &&
+    secrets.some((secret) =>
+      timingSafeEqualHex(headerSig, crypto.createHmac('sha256', secret).update(raw, 'utf8').digest('hex').toLowerCase()),
+    )
+  if (!assinaturaOk) {
     // RS7/CA8: HMAC inválido → 401, NADA muda
     console.warn('[webhook/autentique] HMAC inválido — rejeitando sem efeito')
     return NextResponse.json({ error: 'Não autorizado' }, { status: 401 })
