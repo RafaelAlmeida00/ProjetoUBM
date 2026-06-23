@@ -42,7 +42,6 @@ export function PodioRanking({
       <ol
         role="list"
         className="ubm-podium"
-        style={{ listStyle: 'none', padding: 0, margin: 0, display: 'flex', flexDirection: 'column', gap: '0.5rem' }}
       >
         {itens.map((item) => {
           const isPrimeiro = item.posicao === 1

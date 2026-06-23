@@ -38,14 +38,7 @@ export function PainelEmpresa({ dados, carregando }: PainelEmpresaProps) {
     <div className="ubm-bancada-bloco">
       <h2 className="ubm-cota" style={{ marginBottom: '0.75rem' }}>PAINEL DA EMPRESA</h2>
       {/* .ubm-kpi-grid — zero slot para nome de aluno (CA5a) */}
-      <div
-        className="ubm-kpi-grid"
-        style={{
-          display: 'grid',
-          gridTemplateColumns: 'repeat(auto-fit, minmax(10rem, 1fr))',
-          gap: '0.75rem',
-        }}
-      >
+      <div className="ubm-kpi-grid">
         <KpiCard
           rotulo="Dores registradas"
           valor={totalDores}

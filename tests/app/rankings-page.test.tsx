@@ -7,14 +7,6 @@ vi.mock('@/lib/data/analytics', () => ({
   obterRankingsPublicos: vi.fn(),
 }))
 
-// Mock next/dynamic to render chart components synchronously in test
-vi.mock('next/dynamic', () => ({
-  default: (_importFn: () => Promise<{ default: React.ComponentType }>) => {
-    // Return a placeholder that renders nothing (charts aren't testable in jsdom)
-    return function DynamicComponent() { return null }
-  },
-}))
-
 import { obterRankingsPublicos } from '@/lib/data/analytics'
 
 const mockRankings = {
