@@ -18,18 +18,6 @@ export default async function RankingsPage() {
 
   return (
     <div className="ubm-mesh" style={{ minHeight: '100dvh' }}>
-      {/* Header público (usa .ubm-header — reutiliza da landing) */}
-      <header className="ubm-header">
-        <div className="ubm-header-brand">
-          <span className="ubm-cota">UBM · PLATAFORMA</span>
-        </div>
-        <nav className="ubm-header-nav">
-          <a href="/">Início</a>
-          <a href="/dores">Dores</a>
-          <a href="/login">Entrar</a>
-        </nav>
-      </header>
-
       <main style={{ maxWidth: '70rem', margin: '0 auto', padding: 'clamp(2rem, 6vw, 4rem) clamp(1.25rem, 5vw, 3rem)' }}>
         {/* ── Cabeçalho da prova social ── */}
         <div style={{ marginBottom: 'clamp(2rem, 5vw, 3.5rem)' }}>
@@ -85,15 +73,6 @@ export default async function RankingsPage() {
             cta={{ label: 'Veja como funciona', href: '/' }}
           />
         )}
-
-        {/* ── Nota de método (transparência LGPD como confiança) ── */}
-        <footer
-          className="ubm-cota ubm-cota--muted"
-          style={{ marginTop: 'clamp(3rem, 6vw, 5rem)', paddingTop: '1.5rem', borderTop: '1px solid hsl(var(--border))' }}
-        >
-          Mostramos apenas quem escolheu aparecer e grupos com pelo menos 5 pessoas.
-          Nunca exibimos e-mail, telefone ou dados de contato.
-        </footer>
       </main>
     </div>
   )

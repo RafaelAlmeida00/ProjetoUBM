@@ -31,6 +31,7 @@ export function Header({ user = null }: { user?: HeaderUser | null }) {
         ) : (
          <>
           <Link href="/dores">Vitrine de Dores</Link>
+          <Link href="/rankings">Ranking</Link>
           <Link href="/login">Entrar</Link>
           </>
         )}
