@@ -10,7 +10,7 @@ export interface HeaderUser {
 }
 
 // Header das páginas PÚBLICAS (landing, /login, /propor, etc.). Consciente da sessão:
-// logado → nome + "Meu painel" + "Sair"; anônimo → "Entrar".
+// logado → "Meu painel" + "Sair"; anônimo → "Entrar".
 // Em /app e /admin a casca é o AppShell — o header público não renderiza (evita header duplicado).
 export function Header({ user = null }: { user?: HeaderUser | null }) {
   const pathname = usePathname()
@@ -24,7 +24,6 @@ export function Header({ user = null }: { user?: HeaderUser | null }) {
       <nav className="ubm-header-nav">
         {user ? (
           <>
-            <span style={{ color: 'hsl(var(--muted-foreground))', fontWeight: 500 }}>{user.nome}</span>
             <Link  href="/app">Meu painel</Link>
             <SignOutButton />
           </>

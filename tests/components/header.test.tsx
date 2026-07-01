@@ -22,10 +22,10 @@ describe('Header — consciente da sessão (bug: "Entrar" mesmo logado)', () => 
     expect(screen.queryByRole('button', { name: /sair/i })).toBeNull()
   })
 
-  it('logado: mostra nome + "Meu painel" (→ /app) + "Sair"; NÃO mostra "Entrar"', () => {
+  it('logado: mostra "Meu painel" (→ /app) + "Sair"; NÃO mostra nome nem "Entrar"', () => {
     pathRef.value = '/'
     render(<Header user={{ nome: 'Rafael Almeida' }} />)
-    expect(screen.getByText('Rafael Almeida')).toBeInTheDocument()
+    expect(screen.queryByText('Rafael Almeida')).toBeNull()
     expect(screen.getByRole('link', { name: /meu painel/i })).toHaveAttribute('href', '/app')
     expect(screen.getByRole('button', { name: /sair/i })).toBeInTheDocument()
     expect(screen.queryByRole('link', { name: /^entrar$/i })).toBeNull()
