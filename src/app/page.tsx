@@ -3,15 +3,16 @@ import Image from 'next/image'
 import { Node } from '@/components/brand/Node'
 import { QuickLogin } from '@/components/auth/QuickLogin'
 
-// Depoimentos do case (foto temporária person.png; textos placeholder até os reais).
+// Depoimentos do case. Sem foto: a mesma imagem de banco repetida enfraquecia a prova social
+// (revisão de Marketing, 24/09/2026). Nome/cargo/foto reais entram com a autorização de imagem.
 const ALUNOS = [
   { fala: 'Trabalhar numa dor real da cidade mudou a forma como eu programo — virou propósito, não exercício.' },
-  { fala: 'Saí da faculdade com um sistema de verdade no portfólio e gente usando o que eu construí.' },
+  { fala: 'Terminei o projeto com um sistema de verdade no portfólio e gente usando o que eu construí.' },
   { fala: 'Aprendi a ouvir o cliente antes de programar. Foi a melhor disciplina do curso.' },
 ]
 const PREFEITURA = [
   { fala: 'Levamos uma dor que não tínhamos como resolver e recebemos uma solução pensada com cuidado.' },
-  { fala: 'O cidadão sentiu a diferença. E aproximou de vez a prefeitura da universidade.' },
+  { fala: 'O cidadão sentiu a diferença, e o projeto aproximou de vez a prefeitura do UBM.' },
 ]
 
 export default function Home() {
@@ -28,11 +29,12 @@ export default function Home() {
           <span className="ubm-eyebrow ubm-cota">Extensão que resolve</span>
           <h1 className="ubm-hero-title">
             Sua empresa tem uma <b>dor.</b><br />
-            A UBM tem <b>talento</b> que <span className="charneira">encaixa.</span>
+            O UBM tem o <b>talento</b> que <span className="charneira">se encaixa.</span>
           </h1>
           <p className="ubm-hero-abstract">
-            Conectamos empresas, startups e órgãos públicos do Sul Fluminense aos cursos da UBM.
-            Conte a sua dor — ela pode virar um projeto de extensão, sem custo.
+            Conectamos empresas, startups e órgãos públicos do Sul Fluminense aos cursos do
+            Centro Universitário de Barra Mansa (UBM). Conte a sua dor — ela pode virar um projeto
+            de extensão, sem custo para a sua organização.
           </p>
           <div className="ubm-hero-cta">
             <Link href="/propor" className="ubm-btn ubm-btn-primary">Proponha sua dor →</Link>
@@ -51,8 +53,8 @@ export default function Home() {
           <span className="ubm-cota">Vitrine de dores</span>
           <h2 id="dores-vitrine-heading">Dores reais de empresas reais</h2>
           <p>
-            Empresas e órgãos públicos do Sul Fluminense já trouxeram seus desafios para a UBM.
-            Veja as dores publicadas e como a extensão universitária vira impacto de verdade.
+            Empresas e órgãos públicos do Sul Fluminense já trouxeram seus desafios ao UBM.
+            Veja os desafios publicados e como a extensão universitária vira impacto de verdade.
           </p>
         </div>
         <Link href="/dores" className="ubm-btn ubm-btn-secondary">
@@ -61,7 +63,7 @@ export default function Home() {
       </section>
 
       {/* ───────── CASE ───────── */}
-      <div className="ubm-divider"><span className="ubm-cota">O case · Governo Presente!</span></div>
+      <div className="ubm-divider"><span className="ubm-cota">Caso de sucesso · Governo Presente!</span></div>
       <section id="case" className="ubm-section">
         <div className="ubm-case">
           <figure className="ubm-case-figure">
@@ -69,7 +71,7 @@ export default function Home() {
               <div className="ubm-machined ubm-case-frame">
                 <Image
                   src="/bmcase.png"
-                  alt="App Governo Presente!, da Prefeitura de Barra Mansa, criado com a UBM"
+                  alt="App Governo Presente!, da Prefeitura de Barra Mansa, criado com o UBM"
                   width={1350}
                   height={1688}
                   className="ubm-case-img"
@@ -82,8 +84,8 @@ export default function Home() {
           <div>
             <blockquote className="ubm-quote">
               &ldquo;A Prefeitura de Barra Mansa levou uma dor real ao curso de Engenharia de Software
-              da UBM — e os alunos criaram o <b>Governo Presente!</b>, um app que integra os serviços
-              ao cidadão.&rdquo;
+              do UBM — e os alunos criaram o <b>Governo Presente!</b>, aplicativo que reúne os
+              serviços da prefeitura na palma da mão do cidadão.&rdquo;
             </blockquote>
 
             <div className="ubm-testimonials">
@@ -91,20 +93,18 @@ export default function Home() {
               {ALUNOS.map((t, i) => (
                 <article key={i} className="ubm-testimonial ubm-machined">
                   <div className="ubm-testimonial-head">
-                    <Image src="/person.png" alt="" width={64} height={64} className="ubm-avatar-photo" />
                     <div>
                       <div className="ubm-testimonial-name">Aluno(a)</div>
-                      <div className="ubm-cota ubm-cota--muted">Eng. de Software</div>
+                      <div className="ubm-cota ubm-cota--muted">Engenharia de Software</div>
                     </div>
                   </div>
                   <p>&ldquo;{t.fala}&rdquo;</p>
                 </article>
               ))}
-              <span className="ubm-cota col-span-full mt-2">O lado que tinha a dor</span>
+              <span className="ubm-cota col-span-full mt-2">O lado de quem trouxe a dor</span>
               {PREFEITURA.map((t, i) => (
                 <article key={i} className="ubm-testimonial ubm-testimonial--prefeitura ubm-machined">
                   <div className="ubm-testimonial-head">
-                    <Image src="/person.png" alt="" width={64} height={64} className="ubm-avatar-photo" />
                     <div>
                       <div className="ubm-testimonial-name">Servidor(a)</div>
                       <div className="ubm-cota ubm-cota--muted">Prefeitura de Barra Mansa</div>
@@ -124,7 +124,7 @@ export default function Home() {
         <div className="ubm-campus">
           <div className="ubm-map-frame ubm-machined">
             <iframe
-              title="Mapa do campus da UBM em Barra Mansa"
+              title="Mapa do campus do UBM em Barra Mansa"
               src="https://www.google.com/maps?q=R.+Ver.+Pinho+de+Carvalho,+267+-+Centro,+Barra+Mansa+-+RJ,+27330-550&output=embed"
               loading="lazy"
               referrerPolicy="no-referrer-when-downgrade"
@@ -132,23 +132,23 @@ export default function Home() {
           </div>
           <div>
             <h2 className="ubm-quote mb-3 not-italic text-[clamp(1.5rem,3vw,2rem)]">
-              Uma instituição do Sul Fluminense, de pé no polo industrial.
+              Uma instituição do Sul Fluminense, no coração do polo industrial.
             </h2>
             <p className="mb-2 leading-[1.6] text-[hsl(var(--muted-foreground))]">
-              A UBM forma profissionais em Barra Mansa há décadas. Conheça a estrutura, os cursos e a história.
+              O UBM forma profissionais em Barra Mansa há 65 anos. Conheça a estrutura, os cursos e a história.
             </p>
             <p className="ubm-cota ubm-cota--muted mb-4">
               R. Ver. Pinho de Carvalho, 267 — Centro, Barra Mansa/RJ
             </p>
             <a href="https://www.ubm.br" target="_blank" rel="noopener noreferrer" className="ubm-link">
-              Conheça a UBM ↗
+              Conheça o UBM ↗
             </a>
             <div className="ubm-campus-gallery">
               <div className="ubm-machined ubm-campus-cell">
-                <Image src="/ubmplace.png" alt="Campus da UBM" width={2560} height={1153} className="ubm-campus-img" />
+                <Image src="/ubmplace.png" alt="Campus do UBM" width={2560} height={1153} className="ubm-campus-img" />
               </div>
               <div className="ubm-machined ubm-campus-cell">
-                <Image src="/ubmplace2.png" alt="Campus da UBM" width={194} height={259} className="ubm-campus-img" />
+                <Image src="/ubmplace2.png" alt="Campus do UBM" width={194} height={259} className="ubm-campus-img" />
               </div>
             </div>
           </div>
@@ -165,7 +165,7 @@ export default function Home() {
           </div>
           <div className="ubm-contact-row">
             <span className="ubm-cota">Telefone</span>
-            <a href="tel:+552433000000">(24) 3300-0000</a>
+            <a href="tel:+552433250262">(24) 3325-0262</a>
           </div>
         </div>
         <div className="mt-8">

@@ -350,7 +350,7 @@ export function ProporSubmitForm({
               Qual é a dor?
             </label>
             <p className="ubm-step-microcopy">
-              Descreva o problema operacional que você gostaria que a UBM ajudasse a resolver.
+              Descreva o problema operacional que você gostaria que o UBM ajudasse a resolver.
             </p>
             <div className="ubm-step-field">
               <input

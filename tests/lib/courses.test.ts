@@ -14,7 +14,7 @@ describe('lib/courses', () => {
   it('valida pertencimento à lista fechada (allowlist — RS5)', () => {
     expect(isCursoValido('engenharia_de_software')).toBe(true)
     expect(isCursoValido('nao_sei')).toBe(true)
-    expect(isCursoValido('medicina')).toBe(false) // não ofertado pela UBM
+    expect(isCursoValido('medicina')).toBe(false) // não ofertado pelo UBM
     expect(isCursoValido('')).toBe(false)
   })
 

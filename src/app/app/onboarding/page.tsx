@@ -198,7 +198,7 @@ function OnboardingContent() {
             className="font-display"
             style={{ fontSize: 'clamp(1.6rem, 4vw, 2.2rem)', fontWeight: 600, marginBottom: '0.5rem' }}
           >
-            Como você chega à UBM?
+            Como você chega ao UBM?
           </h1>
           <p
             style={{
@@ -207,7 +207,7 @@ function OnboardingContent() {
               fontSize: '0.98rem',
             }}
           >
-            Escolha o papel que melhor descreve sua relação com a UBM.
+            Escolha o papel que melhor descreve sua relação com o UBM.
           </p>
 
           {/* RADIOGROUP — WAI-ARIA */}
@@ -388,7 +388,7 @@ function OnboardingContent() {
                   id="onb-email-corp-helper"
                   style={{ fontSize: '0.8rem', color: 'hsl(var(--muted-foreground))', marginTop: '0.2rem' }}
                 >
-                  É por aqui que a UBM fala com a sua empresa: avisamos quando uma dor é aprovada,
+                  É por aqui que o UBM fala com a sua empresa: avisamos quando uma dor é aprovada,
                   publicada ou recebe interesse de alunos. Use o e-mail da empresa — não é o seu login.
                 </p>
                 {emailCorporativoErro && (
@@ -475,7 +475,7 @@ function OnboardingContent() {
                 fontSize: '0.95rem',
               }}
             >
-              Informe seu nome e os cursos da UBM que você cursa.
+              Informe seu nome e os cursos do UBM que você cursa.
             </p>
 
             <div style={{ display: 'flex', flexDirection: 'column', gap: '1.25rem' }}>
@@ -505,7 +505,7 @@ function OnboardingContent() {
                 fontSize: '0.95rem',
               }}
             >
-              Informe seu nome e os cursos que você coordena na UBM. Seu acesso de coordenador
+              Informe seu nome e os cursos que você coordena no UBM. Seu acesso de coordenador
               é liberado após a aprovação de um administrador.
             </p>
 
@@ -547,7 +547,7 @@ function OnboardingContent() {
                   .map((s) => CURSOS_UBM.find((c) => c.value === s)?.label ?? s)
                   .join(', ')}
               </strong>
-              . Um administrador da UBM vai revisar e aprovar seu acesso. Você pode usar
+              . Um administrador do UBM vai revisar e aprovar seu acesso. Você pode usar
               a plataforma normalmente enquanto isso.
             </p>
             <div className="ubm-confirm-actions">

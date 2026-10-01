@@ -36,7 +36,7 @@ export default async function RankingsPage() {
             Os que transformam dor em entrega.
           </h1>
           <p style={{ color: 'hsl(var(--muted-foreground))', maxWidth: '52ch', marginBottom: '1.25rem' }}>
-            Rankings de alunos, coordenadores e empresas da UBM pelo número de projetos finalizados.
+            Rankings de alunos, coordenadores e empresas do UBM pelo número de projetos finalizados.
             Case Barra Mansa: a cidade que escolheu transformar suas dores em inovação.
           </p>
 

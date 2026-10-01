@@ -113,7 +113,7 @@ export function BancadaRepresentante({ meusProjetos, contagemDores, nome }: Banc
             <div className="ubm-empty-node" aria-hidden />
             <p className="ubm-empty-title">Nenhuma dor proposta ainda.</p>
             <p className="ubm-empty-msg">
-              Conte um problema real da sua empresa. A engenharia da UBM cuida do resto.
+              Conte um problema real da sua empresa. A engenharia do UBM cuida do resto.
             </p>
           </div>
         )}

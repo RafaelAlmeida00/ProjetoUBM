@@ -30,7 +30,10 @@ export function Header({ user = null }: { user?: HeaderUser | null }) {
         ) : (
          <>
           <Link href="/dores">Vitrine de Dores</Link>
-          <Link href="/rankings">Ranking</Link>
+          {/* title explica o recurso no menu (revisão de Marketing, 24/09/2026, pendência 4) */}
+          <Link href="/rankings" title="Quem mais entrega: alunos, coordenadores e empresas com mais projetos de extensão finalizados">
+            Ranking
+          </Link>
           <Link href="/login">Entrar</Link>
           </>
         )}

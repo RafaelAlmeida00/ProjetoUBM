@@ -123,7 +123,7 @@ export function AdminDoresPage({ doresEmModeracao, isAdmin }: AdminDoresPageProp
           <span className="ubm-cota">RESTRITO</span>
           <p className="ubm-locked-title">Área restrita à moderação.</p>
           <p className="ubm-locked-msg">
-            Acesso exclusivo ao time de moderação da UBM.
+            Acesso exclusivo ao time de moderação do UBM.
           </p>
         </div>
       </section>

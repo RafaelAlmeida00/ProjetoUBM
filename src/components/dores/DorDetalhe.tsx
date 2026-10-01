@@ -212,7 +212,7 @@ export function DorDetalhe({
           <span className="ubm-cota">RESTRITO</span>
           <p className="ubm-locked-title">Esta dor não está pública.</p>
           <p className="ubm-locked-msg">
-            Visível apenas ao autor e à moderação da UBM.
+            Visível apenas ao autor e à moderação do UBM.
           </p>
         </div>
       </article>
@@ -395,7 +395,7 @@ export function DorDetalhe({
               >
                 <p style={{ fontWeight: 600, marginBottom: '0.25rem' }}>Pronto para enviar?</p>
                 <p style={{ color: 'hsl(var(--muted-foreground))', fontSize: '0.92rem', marginBottom: '0.75rem' }}>
-                  Este rascunho só é visível para você. Envie para a moderação da UBM analisar e publicar.
+                  Este rascunho só é visível para você. Envie para a moderação do UBM analisar e publicar.
                 </p>
                 {erroEnvio && (
                   <p

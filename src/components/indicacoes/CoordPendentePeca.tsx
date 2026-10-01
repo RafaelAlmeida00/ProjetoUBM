@@ -24,7 +24,7 @@ export function CoordPendentePeca() {
         </span>
         <p className="ubm-locked-msg">
           Você poderá ver as indicações do seu curso assim que um administrador
-          aprovar seu cadastro. Aguardando aprovação de um administrador da UBM.
+          aprovar seu cadastro. Aguardando aprovação de um administrador do UBM.
         </p>
       </div>
     </section>

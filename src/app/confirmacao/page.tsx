@@ -13,7 +13,7 @@ export default function ConfirmacaoPage() {
     <div className="ubm-confirmacao">
       <h1>Recebemos sua proposta 🎉</h1>
       <p>
-        Obrigado! Sua dor foi registrada. A equipe da UBM vai analisar e, se fizer sentido para um
+        Obrigado! Sua dor foi registrada. A equipe do UBM vai analisar e, se fizer sentido para um
         projeto de extensão, entraremos em contato pelo e-mail da sua conta.
       </p>
       <Link href="/conta" className="ubm-btn ubm-btn-primary">

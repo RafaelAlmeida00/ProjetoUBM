@@ -114,7 +114,7 @@ function renderTemplate(template: string, dados: Record<string, string>): Render
             <td style="background:#f8fafc;padding:20px 40px;
                        border-top:1px solid #e2e8f0;text-align:center;">
               <p style="margin:0;font-size:12px;color:#94a3b8;">
-                Plataforma UBM — Conectando universidade, empresa e mercado.
+                Plataforma UBM — Conectando ensino, empresa e mercado.
               </p>
             </td>
           </tr>

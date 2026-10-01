@@ -72,7 +72,7 @@ export default async function NovaDorPage() {
         </div>
         <h1 className="ubm-page-title">Propor uma nova dor</h1>
         <p className="ubm-page-lead">
-          Conte o desafio da sua empresa em poucas linhas. A UBM analisa e, se encaixar, ela vira um
+          Conte o desafio da sua empresa em poucas linhas. O UBM analisa e, se encaixar, ela vira um
           projeto de extensão conduzido pelos nossos alunos — sem custo para você.
         </p>
       </header>

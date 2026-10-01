@@ -28,7 +28,7 @@ function htmlVerificacao(nome: string, link: string): string {
           <p style="margin:0 0 20px;font-size:13px;color:#1C5E91;word-break:break-all">${href}</p>
           <p style="margin:0;font-size:13px;color:#94a3b8">O link expira em 60 minutos. Se você não solicitou, ignore este e-mail.</p>
         </td></tr>
-        <tr><td style="padding:16px 28px;background:#f8fafc;font-size:12px;color:#94a3b8">Universidade de Barra Mansa — Plataforma UBM</td></tr>
+        <tr><td style="padding:16px 28px;background:#f8fafc;font-size:12px;color:#94a3b8">Centro Universitário de Barra Mansa — Plataforma UBM</td></tr>
       </table>
     </td></tr>
   </table></body></html>`

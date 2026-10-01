@@ -84,7 +84,7 @@ export default async function DoresVitrinePage() {
           </h1>
           <p className="ubm-page-lead">
             Empresas, startups e órgãos públicos do Sul Fluminense trouxeram seus desafios para os
-            alunos da UBM. Foi assim que nasceu o <strong>Governo Presente!</strong>, com a Prefeitura
+            alunos do UBM. Foi assim que nasceu o <strong>Governo Presente!</strong>, com a Prefeitura
             de Barra Mansa. Cada dor publicada aqui pode virar o próximo projeto de extensão.
           </p>
         </header>
@@ -116,7 +116,7 @@ export default async function DoresVitrinePage() {
         {/* CTA para propor */}
         <div className="ubm-dores-vitrine-cta">
           <p className="ubm-dores-vitrine-cta-txt">
-            Sua empresa tem uma dor que a UBM pode resolver?
+            Sua empresa tem uma dor que o UBM pode resolver?
           </p>
           <Link href="/propor" className="ubm-btn ubm-btn-primary">
             Proponha sua dor →

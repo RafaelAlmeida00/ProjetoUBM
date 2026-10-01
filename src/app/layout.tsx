@@ -22,7 +22,7 @@ const fraunces = Fraunces({
 export const metadata: Metadata = {
   title: 'Plataforma UBM — onde a dor encontra o talento',
   description:
-    'Empresas e órgãos do Sul Fluminense propõem dores reais; os cursos da UBM resolvem em projetos de extensão. Proponha a sua.',
+    'Empresas e órgãos do Sul Fluminense propõem dores reais; os cursos do UBM resolvem em projetos de extensão. Proponha a sua.',
 }
 
 // Lê o usuário da sessão (cookies) para o header público e para resolução de paleta.

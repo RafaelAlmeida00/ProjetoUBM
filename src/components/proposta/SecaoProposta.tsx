@@ -714,7 +714,7 @@ function VisaoRepresentante({
             <span className="ubm-caminho-titulo">Assinar via Autentique</span>
             <span className="ubm-caminho-desc">
               Você recebeu o documento por e-mail do Autentique. Assine por lá — assim que
-              assinar, a UBM <strong>confirma automaticamente</strong> e sela a proposta (você não
+              assinar, o UBM <strong>confirma automaticamente</strong> e sela a proposta (você não
               precisa reenviar nada aqui).
             </span>
             {linkAssinatura ? (
@@ -910,7 +910,7 @@ function VisaoAluno() {
       <span className="ubm-locked-title">Negociação reservada</span>
       <p className="ubm-locked-msg">
         Esta etapa é confidencial. O documento e a negociação ficam entre a coordenação do
-        projeto, o representante da empresa e a UBM. Acompanhe o avanço pela linha do tempo.
+        projeto, o representante da empresa e o UBM. Acompanhe o avanço pela linha do tempo.
       </p>
     </div>
   )

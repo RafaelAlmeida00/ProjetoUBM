@@ -1,4 +1,4 @@
-// Lista fechada de cursos da UBM (spec §9 / RN4). Valores espelham o enum `curso_ubm` (architecture §11).
+// Lista fechada de cursos do UBM (spec §9 / RN4). Valores espelham o enum `curso_ubm` (architecture §11).
 export const CURSOS_UBM = [
   { value: 'administracao', label: 'Administração' },
   { value: 'biomedicina', label: 'Biomedicina' },

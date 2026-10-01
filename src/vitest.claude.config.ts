@@ -6,7 +6,7 @@ import { fileURLToPath } from 'node:url';
 
 const __filename = fileURLToPath(import.meta.url);
 // workspace/src -> workspace -> ProjetoUBM (raiz)
-const ROOT = path.resolve(path.dirname(__filename), '../..').replace(//g, '/');
+const ROOT = path.resolve(path.dirname(__filename), '../..').replace(/\\/g, '/');
 
 export default defineConfig({
   test: {
@@ -19,11 +19,12 @@ export default defineConfig({
     ],
     fileParallelism: false,
     testTimeout: 15000,
-    // Garantir que vitest pode resolver modulos ESM fora de workspace/src
-    server: {
-      fs: {
-        allow: [ROOT, path.resolve(path.dirname(__filename))],
-      },
+  },
+  // Garantir que vitest pode resolver modulos ESM fora de workspace/src
+  // (fs.allow e opcao do servidor Vite, nao de `test`).
+  server: {
+    fs: {
+      allow: [ROOT, path.resolve(path.dirname(__filename))],
     },
   },
 });

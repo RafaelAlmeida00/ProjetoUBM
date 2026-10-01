@@ -16,7 +16,7 @@ export function Footer() {
         <div className="ubm-footer-col">
           <h4>Seções</h4>
           <Link href="/propor">Propor uma dor</Link>
-          <Link href="/#case">O case</Link>
+          <Link href="/#case">Caso de sucesso</Link>
           <Link href="/#campus">Campus</Link>
           <Link href="/#contato">Contato</Link>
         </div>
