@@ -1,6 +1,7 @@
 'use client'
-import { useEffect, useId, useRef, useState } from 'react'
-import { Loader2, Plus, Check } from 'lucide-react'
+import { useEffect, useId, useLayoutEffect, useRef, useState } from 'react'
+import { createPortal } from 'react-dom'
+import { Loader2, Plus, Check, AlertCircle } from 'lucide-react'
 import { buscarEmpresa, obterOuCriarEmpresa, type EmpresaResult } from '@/lib/actions/empresa'
 
 /**
@@ -59,7 +60,26 @@ export function EmpresaCombobox({
   const [results, setResults] = useState<EmpresaResult[]>([])
   const [activeIdx, setActiveIdx] = useState(-1)
   const [creating, setCreating] = useState(false)
+  const [erro, setErro] = useState<string | null>(null)
+  // Posição do popover (fixed, ancorado no input). O popover vai em portal no body para não ser
+  // recortado por containers com clip-path/overflow (ex.: painel "Gerir" em /admin/usuarios).
+  const [pos, setPos] = useState<{ top: number; left: number; width: number } | null>(null)
   const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+
+  useLayoutEffect(() => {
+    if (!open) return
+    const atualizar = () => {
+      const r = inputRef.current?.getBoundingClientRect()
+      if (r) setPos({ top: r.bottom + 6, left: r.left, width: r.width })
+    }
+    atualizar()
+    window.addEventListener('scroll', atualizar, true)
+    window.addEventListener('resize', atualizar)
+    return () => {
+      window.removeEventListener('scroll', atualizar, true)
+      window.removeEventListener('resize', atualizar)
+    }
+  }, [open])
 
   // sincroniza display quando valor externo muda
   useEffect(() => {
@@ -85,6 +105,7 @@ export function EmpresaCombobox({
 
   const handleInput = (e: React.ChangeEvent<HTMLInputElement>) => {
     setQuery(e.target.value)
+    setErro(null)
     buscar(e.target.value)
   }
 
@@ -122,6 +143,8 @@ export function EmpresaCombobox({
     if (result.ok) {
       onChange(result.empresa)
       setQuery(result.empresa.nome)
+    } else {
+      setErro(result.error)
     }
   }
 
@@ -196,12 +219,22 @@ export function EmpresaCombobox({
         )}
       </div>
 
-      {open && (
+      {erro && (
+        <p role="alert" className="ubm-field-error">
+          <AlertCircle aria-hidden />
+          {erro}
+        </p>
+      )}
+
+      {open && typeof document !== 'undefined' && createPortal(
         <div
           id={listboxId}
           role="listbox"
           className="ubm-combobox-popover"
           aria-label="Empresas encontradas"
+          style={pos ? { position: 'fixed', top: pos.top, left: pos.left, width: pos.width, right: 'auto' } : undefined}
+          // Mantém o foco no input: sem isto o onBlur fecha o popover antes do click registrar.
+          onMouseDown={(e) => e.preventDefault()}
         >
           {results.length === 0 && !loading && (
             <p className="ubm-combobox-empty">
@@ -239,7 +272,8 @@ export function EmpresaCombobox({
               Criar empresa &ldquo;{query}&rdquo;
             </button>
           )}
-        </div>
+        </div>,
+        document.body,
       )}
     </div>
   )
