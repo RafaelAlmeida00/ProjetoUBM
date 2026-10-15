@@ -33,7 +33,7 @@ export function AppShell({ children, role, papeis, isAdmin }: AppShellProps) {
       {/* OVERLAY do drawer mobile */}
       {drawerOpen && (
         <div
-          className="fixed inset-0 z-20 bg-black/40 md:hidden"
+          className="fixed inset-0 z-[100] bg-black/40 md:hidden"
           aria-hidden
           onClick={() => setDrawerOpen(false)}
         />
@@ -41,7 +41,7 @@ export function AppShell({ children, role, papeis, isAdmin }: AppShellProps) {
 
       {/* DRAWER MOBILE (sobrepõe o conteúdo) */}
       <div
-        className={`fixed inset-y-0 left-0 z-30 w-64 ubm-shell-rail md:hidden transition-transform duration-240 ${
+        className={`fixed inset-y-0 left-0 z-[120] w-64 ubm-shell-rail md:hidden transition-transform duration-240 ${
           drawerOpen ? 'translate-x-0' : '-translate-x-full'
         }`}
         role="dialog"
